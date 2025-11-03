@@ -1,0 +1,22 @@
+# Computer Vision {.unnumbered}
+
+## Overview
+
+Computer vision enables machines to extract meaning from visual data—a capability central to applications from autonomous driving to medical imaging. This chapter covers the architectural evolution from convolutional networks to transformers, the algorithmic frameworks for detection and segmentation, and modern paradigms including self-supervised learning and generative modeling.
+
+**Chapter Scope**:
+
+- **Convolutional Neural Networks** (§2.1): Core building blocks and design principles
+- **Object Detection** (§2.2): Localizing and classifying objects in images
+- **Semantic Segmentation** (§2.3): Pixel-level understanding
+- **Vision Transformers** (§2.4): Attention-based architectures for vision
+- **Foundation Models** (§2.5): Large-scale pre-trained systems (SAM)
+- **Self-Supervised Learning** (§2.6): Learning visual representations without labels
+- **Generative Models** (§2.7): Modeling visual data distributions
+- **Video Understanding** (§2.8): Temporal modeling and generation
+
+**Interview Relevance**: Companies like Meta (detection/segmentation), Tesla (autonomous vision), Waymo (3D perception), and Google (foundational models) rely on these techniques. Expect questions on architectural trade-offs, when to use CNNs vs. Transformers, optimization challenges at scale, and recent advances (DINO, SAM, Stable Diffusion).
+
+**Prerequisites**: Chapter 1 (neural network foundations, optimization, regularization). Familiarity with linear algebra (convolution as matrix multiplication), basic probability (likelihood estimation for generative models).
+
+---

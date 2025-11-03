@@ -1,0 +1,947 @@
+# Self-Supervised Learning
+
+## Motivation and Paradigm Overview
+
+**The Labeling Bottleneck**: Training large vision models requires massive datasets, but manual annotation is expensive and slow. ImageNet took 3 years and $50K to label 14M images. Modern foundation models need billions of images.
+
+**Self-Supervised Learning (SSL)**: Learn useful visual representations from unlabeled data by creating pretext tasks where supervision comes from the data itself.
+
+**Why SSL Works**: Natural images have rich structure—spatial coherence, semantic consistency across augmentations, predictable patterns. SSL exploits these properties to learn features transferable to downstream tasks.
+
+**Performance Evolution**: 
+- 2018: SSL lags supervised by 10%+ on ImageNet
+- 2020: SSL matches supervised (SimCLR, MoCo)
+- 2023: SSL outperforms supervised for transfer (DINOv2: 82.1% linear probe vs. 76.5% supervised)
+
+---
+
+## Taxonomy of Self-Supervised Approaches
+
+**Two Main Paradigms**:
+
+1. **Invariance-Based Learning**: Learn features invariant to augmentations 
+$(f(x) \approx f(\text{Aug}(x))$.   
+The main challenge is how to prevent collapse to the constant representation.
+   
+   a. **Similarity-Based Methods**  
+      - **Contrastive Learning**: Explicit negative samples (SimCLR, MoCo, PIRL)
+      - **Clustering**: Discrete cluster assignments (DeepCluster, SwAV)
+      - **Self-Distillation**: Asymmetry + momentum (BYOL, SimSiam, DINO)
+   
+   b. **Redundancy Reduction**
+      
+      - **Decorrelation Methods**: Feature covariance → identity (Barlow Twins, VICReg)
+
+2. **Reconstructive Learning**: Learn by predicting $x$ from corrupted/masked input $\tilde{x}$ 
+(MAE, VideoMAE).  
+No collapse issue (reconstruction target is informative).   
+The main challenge is how to avoid low-level texture copying.
+
+**Organization of This Chapter**: We first cover invariance-based methods (§6.3), 
+subdivided by their collapse prevention mechanism, then reconstructive approaches (§6.4).
+
+
+---
+
+## Invariance-Based Learning {.unnumbered}
+
+**Goal**: Learn features invariant to augmentations $f(x) \approx f(\text{Aug}(x))$.   
+
+**Challenge**: Avoiding Collapse.  Given the objective of "making features of augmented views similar" the network could simply learn the **Trivial Solution**:
+
+$$f_\theta(x) = c \quad \forall x$$
+
+where $c$ is a constant vector. This satisfies similarity but learns nothing.
+
+**Collapse Types**:  
+
+1. **Complete collapse**: All outputs identical
+2. **Dimensional collapse**: All variance in few dimensions
+3. **Mode collapse**: Different samples map to same points
+
+**Prevention Strategies** (organizing principle of this chapter):
+
+| Category | Strategy | Mechanism | Examples |
+|----------|----------|-----------|----------|
+| **Similarity-Based** | Contrastive | Explicit negatives | SimCLR, MoCo |
+| | Clustering | Discrete assignments | DeepCluster, SwAV |
+| | Self-Distillation | Asymmetry + momentum | BYOL, DINO |
+| **Redundancy Reduction** | Decorrelation | Feature covariance → identity | Barlow Twins, VICReg |
+
+
+## Similarity-Based Methods
+
+**Core Objective**: Maximize similarity between augmented views of same image.
+
+$$\mathcal{L}_{\text{sim}} = d(f_\theta(\text{Aug}_1(x)), f_\theta(\text{Aug}_2(x)))$$
+
+where $d$ is distance metric (cosine, MSE). Methods differ in collapse prevention.
+
+---
+
+### Contrastive Learning
+
+**Principle**: Explicitly push apart different images (negatives) while pulling together augmented views (positives).
+
+**General Contrastive Loss**:
+$$\mathcal{L} = -\log \frac{\exp(\text{sim}(f(x^+), f(x))/\tau)}{\exp(\text{sim}(f(x^+), f(x))/\tau) + \sum_{x^- \in \mathcal{N}} \exp(\text{sim}(f(x^-), f(x))/\tau)}$$
+
+where $x^+$ is positive pair, $\mathcal{N}$ is negative set, $\tau=0.1$ is temperature.
+
+**Key Design Choice**: How to obtain negative samples?
+
+---
+
+**SimCLR (2020): In-Batch Negatives**
+
+**Algorithm**:
+
+1. Sample mini-batch of $N$ images
+2. Apply two random augmentations to each → $2N$ views
+3. Encode: $\mathbf{z}_i = g(f(t_i(x)))$ where $g$ is projection MLP
+4. For each view $i$, compute loss against its positive pair $j$ and $2N-2$ negatives
+
+**InfoNCE Loss** (Noise Contrastive Estimation) also called  
+**NT-Xent Loss** (Normalized Temperature-scaled Cross-Entropy):
+$$\mathcal{L}_i = -\log \frac{\exp(\text{sim}(\mathbf{z}_i, \mathbf{z}_j)/\tau)}{\sum_{k=1}^{2N} \mathbb{1}_{k \neq i} \exp(\text{sim}(\mathbf{z}_i, \mathbf{z}_k)/\tau)}$$
+where $\text{sim}(\mathbf{u}, \mathbf{v}) = \mathbf{u}^\top \mathbf{v} / (\|\mathbf{u}\| \|\mathbf{v}\|)$ is cosine similarity, $\tau = 0.1$ is temperature.
+
+
+**Critical Components**:
+
+- **Large batches** (4096-8192): More negatives → better discrimination
+- **Strong augmentations**: Random crop, color jitter, Gaussian blur
+- **Projection head**: 2-layer MLP (128d output) improves features
+- **Temperature**: $\tau=0.1$ sharpens distribution
+
+**Performance**: ResNet-50, 69.3% ImageNet linear probe (200 epochs)
+
+**Limitation**: Requires very large batches (memory-intensive on multi-GPU).
+
+---
+
+**MoCo (2020) - Queue-Based Negatives**:
+
+**Innovation**: Decouple dictionary size from batch size using queue + momentum encoder.
+
+
+
+**Architecture Components**:
+
+```
+Query Encoder f_q: Learnable (gradient descent)
+Key Encoder f_k:   Momentum EMA of f_q  
+Queue:             K=65,536 encoded keys
+```
+
+**Algorithm**:
+
+1. Encode query: $\mathbf{q} = f_q(\text{aug}_1(x))$ (with gradient)
+2. Encode key: $\mathbf{k} = f_k(\text{aug}_2(x))$ (no gradient)
+3. Loss: $\mathbf{q}$ vs. $\mathbf{k}$ (positive) and all queue keys (negatives)
+4. Update queue: Enqueue $\mathbf{k}$, dequeue oldest
+5. Update $f_k$: $\theta_k \leftarrow m \theta_k + (1-m) \theta_q$ ,  where $m=0.999$
+
+**Why Momentum?** Queue contains keys from different training iterations. Momentum ensures slow encoder evolution → consistent dictionary.
+
+
+**Advantages**:
+
+- Large dictionary (65K) with small batches (256)
+- Memory-efficient: Queue stores features, not images
+- Consistent negatives across training
+
+**Performance**: ResNet-50, 71.1% ImageNet linear probe (MoCo v2, 200 epochs)
+
+---
+
+**PIRL (2020): Memory Bank Negatives**
+
+**Approach**: Negative samples from memory bank storing features of all training images.
+
+**Key Difference from MoCo**: 
+- PIRL: Memory bank stores features of all dataset images
+- MoCo: Queue stores recent mini-batch features
+
+**NCE Loss** (Noise Contrastive Estimation):
+$$\mathcal{L} = -\log \frac{\exp(f(x)^\top f(t(x))/\tau)}{\exp(f(x)^\top f(t(x))/\tau) + \sum_{i=1}^K \exp(f(x)^\top f(x_i^-)/\tau)}$$
+
+where $K$ negatives sampled uniformly from memory bank.
+
+**Performance**: Similar to MoCo v1 (~60% linear probe).
+
+---
+
+**Key Insight - Contrastive Methods**: Performance improves with: 
+
+1. More negatives (SimCLR: larger batches, MoCo: larger queues) 
+2. Consistent negatives (MoCo momentum encoder)
+3. Stronger augmentations (color jitter + blur critical)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+### Clustering-Based Methods
+
+**Core Principle**: Prevent collapse by assigning features to discrete clusters, then enforce consistency of cluster assignments across augmented views.
+
+**Advantage**: No explicit negatives needed  (cluster assignment provides discrimination).
+
+---
+
+**DeepCluster (2018): Offline Clustering**
+
+**Algorithm** (alternating optimization) - Repeat each epoch:  
+
+1. **Cluster Assignment**: Run k-means on all image features
+   $$c_i = \arg\min_k \|f(x_i) - \mu_k\|^2$$
+2. **Network Training**: Train with cluster labels as pseudo-labels
+   $$\mathcal{L} = -\sum_i \log p(c_i | x_i)$$
+
+**Analysis via Normalized Mutual Information**:  
+To evaluate how meaningful the learned clusters are, 
+DeepCluster compares its pseudo-labels $A$ with the ground-truth ImageNet class labels $B$ 
+using **Normalized Mutual Information**:
+$$\text{NMI}(A, B) = \frac{2 \cdot I(A; B)}{H(A) + H(B)}$$
+where:   
+$I(A;B)$ — *mutual information*: how much knowing the cluster assignment tells you about the true class.  
+   $$I(A;B) = \sum_{a \in A} \sum_{b \in B} p(a,b) \log \frac{p(a,b)}{p(a)\,p(b)}$$
+$H(A)$ and $H(B)$ — *entropies* of the cluster and class label distributions.
+  $$H(A) = -\sum_{a \in A} p(a)\log p(a), \quad H(B) = -\sum_{b \in B} p(b)\log p(b)$$
+**Interpretation:**  
+
+- NMI = 1 → perfect alignment (clusters perfectly match classes)  
+- NMI = 0 → no relation between clusters and classes  
+
+**Findings**:  
+
+- Learned Clusters stabilize after ~50 epochs.
+- Learned Clusters roughly align with ImageNet classes (NMI ~0.4)
+- Best performance with *k* ≈ 10,000 clusters (10× more than ImageNet's 1000 classes)
+
+**Limitation**: k-means over full dataset is slow bottleneck (~1 hour/epoch).
+
+---
+
+
+
+
+**SwAV (2020): - Swapped Assignment Prediction**
+
+**Key Innovation**: Online clustering** algorithm with Sinkhorn-Knopp normalization—no k-means needed.
+
+**Components**:
+
+- Encoder: $f_\theta$ (ResNet or ViT)
+- Prototype vectors: $\mathbf{C} = [\mathbf{c}_1, \ldots, \mathbf{c}_K]$ (learnable, $K$=3000 typically)
+
+**Algorithm**:
+
+1. Extract features for two augmentations: $\mathbf{z}_1 = f(\text{aug}_1(x))$, $\mathbf{z}_2 = f(\text{aug}_2(x))$
+2. Compute soft cluster assignments (codes):
+  $$\mathbf{q}_1 = \text{SinkhornKnopp}(\mathbf{z}_1^\top \mathbf{C} / \tau)$$
+   where $\mathbf{C} = [\mathbf{c}_1, \ldots, \mathbf{c}_K]$
+3. Swap Prediction:  Predict $\mathbf{q}_1$ from $\mathbf{z}_2$ and vice versa  
+   
+
+**Sinkhorn-Knopp**: Iterative normalization to make assignment matrix doubly stochastic
+
+   - Row constraint: Each sample distributes across clusters (sum to 1)
+   - Column constraint: Equal cluster usage (each cluster gets $B/K$ samples)
+
+**Loss**: Cross-entropy between predicted and target codes
+$$\mathcal{L} = \ell(\mathbf{z}_1, \mathbf{q}_2) + \ell(\mathbf{z}_2, \mathbf{q}_1)$$
+$$\ell(\mathbf{z}, \mathbf{q}) = -\sum_{k=1}^K q_k \log \frac{\exp(\mathbf{z}^\top \mathbf{c}_k / \tau)}{\sum_{k'} \exp(\mathbf{z}^\top \mathbf{c}_{k'} / \tau)}$$
+
+**Why Swapping?** Predict cluster of one view from features of another → enforces consistency.
+
+**Multi-Crop Strategy**:
+
+- 2 global crops (224×224)
+- 6 local crops (96×96)
+- Total 8 views per image → richer training signal
+
+**Key Advantages**:
+
+- Online clustering (no k-means needed)
+- Works with small batches (256)
+- Faster than DeepCluster
+
+**Performance**: ResNet-50, 71.8% ImageNet linear probe (200 epochs)
+
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Self-Distillation Methods
+
+**Principle**: Prevent collapse via **asymmetry** between two networks (no negatives needed).
+
+**General Framework**:  
+
+- **Online network**: Learnable encoder + predictor
+- **Target network**: Momentum encoder (no predictor)
+- **Key**: Asymmetry between the two architectures or between their gradient updates prevents collapse (such as stopping the gradient updates of target network)
+
+**Advantage**: No negatives or clustering needed.
+
+---
+
+**BYOL (2020) - Bootstrap Your Own Latent**:
+
+**Architecture**:
+```
+Online:  Encoder f_θ → Projection g_θ → Prediction h_θ
+Target:  Encoder f_ξ → Projection g_ξ  (EMA, no predictor)
+```
+
+
+**Algorithm**:
+
+1. Two augmentations: $v, v' \sim \text{Aug}(x)$
+2. **Online forward**: $\mathbf{q} = h_\theta(g_\theta(f_\theta(v)))$
+3. **Target forward**: $\mathbf{z}' = \text{stop-gradient}(g_\xi(f_\xi(v')))$
+4. **Loss** (L2 on normalized features): 
+$$\mathcal{L(v, v')} = \left\| \frac{\mathbf{q}}{\|\mathbf{q}\|_2} - \frac{\mathbf{z}'}{\|\mathbf{z}'\|_2} \right\|_2^2$$
+5. **Symmetrize**: Also compute loss $\mathcal{L}(v', v)$
+6. **Update** target: $\theta' \leftarrow \tau \theta' + (1-\tau)\theta$, &nbsp; where $\tau=0.99$
+
+**Why No Collapse?**
+
+- **Architecture Asymmetry**: Predictor $h$ only in online network
+- **Stop-gradient**: Target provides fixed targets (no gradient flow back)
+- **Momentum**: $\tau = 0.99$ stabilizes target network
+
+**Intuition**: Online network must predict target outputs, but target doesn't "see" online predictions → information flow is one-way.
+
+**Performance**: ResNet-50, 74.3% ImageNet linear probe (200 epochs)
+
+**Impact**: Showed negative samples are not strictly necessary with right architecture.
+
+---
+
+
+
+
+
+
+
+
+
+
+**SimSiam (2021) - Simplification**:
+
+**Insight**: Remove momentum encoder—just use stop-gradient!
+
+**Architecture**:
+```
+Branch 1: Encoder f → Projection g → Prediction h
+Branch 2: Encoder f → Projection g (shared, stop-gradient)
+```
+
+**Loss** (Negative cosine similarity, symmetrized over both views):
+$$\mathcal{L} = -\frac{h(g(f(x_1))) \cdot \text{stop-gradient}(g(f(x_2)))}{\|h(g(f(x_1)))\| \cdot \|\text{stop-gradient}(g(f(x_2)))\|}$$
+
+
+**Simpler than BYOL**:
+- ✗ No momentum encoder (same $f$ and $g$ for both views)
+- ✓ Still has predictor $h$ (critical for preventing collapse)
+- ✓ Still has Stop-gradient on one branch
+
+
+**Performance**: ResNet-50, 71.3% ImageNet linear probe (200 epochs)
+
+**Advantage**: Simplest SSL method — no negatives, no momentum, no clustering
+
+
+
+
+
+
+---
+
+
+
+**DINO (2021) - Self-Distillation with ViT**:
+
+**Innovation**: Apply self-distillation to Vision Transformers with centering to prevent dimensional collapse.
+
+**Architecture**:
+```
+Student: ViT (learned via gradient descent)
+Teacher: ViT (EMA of student, τ=0.996)
+```
+
+
+**Key Mechanisms**:
+
+1. **Multi-crop**: Teacher sees 2 global crops (224×224), student 2 global (224×224) + 8 local crops (96×96)
+2. **Centering**: (prevent dimensional collapse — 
+when one output dimension of the teacher consistently dominates, 
+causing embeddings to lose diversity): A running mean (called the *center*) of the teacher’s outputs is maintained and subtracted each iteration:
+$$
+c \leftarrow m \cdot c + (1 - m) \cdot \frac{1}{B} \sum_{i=1}^B g_t(f_t(x_i))
+$$
+where  
+- $ c $: running mean of teacher outputs  
+- $ m = 0.9 $: momentum for the update  
+- $ B $: batch size  
+- $g_t(f_t(x_i))$: pre-softmax teacher output for image \( $x_i$ \). 
+The centered teacher probability distribution is then computed as:
+
+$$
+P_t = \text{softmax}\!\left(\frac{g_t(f_t(x)) - c}{\tau_t}\right)
+$$
+
+3. **Temperature Sharpening**:
+- Teacher: $\tau_t = 0.04$ (sharp, confident pseudo-labels)
+- Student: $\tau_s = 0.1$ (smooth, easier optimization)
+
+
+**Loss**: Cross-entropy between teacher and student distributions
+$$\mathcal{L} = \sum_{i \in \text{crops}} H(P_t, P_s^{(i)})$$
+
+where $H(p, q) = -\sum_k p_k \log q_k$ is cross-entropy.
+
+
+
+**Emergent Properties**:
+
+- **Self-Attention Visualizations**: Attention maps segment objects without segmentation labels!
+   - ViT naturally learns to attend to object boundaries
+   - Can extract object masks directly from attention
+- Strong k-NN performance: 75% ImageNet with frozen features
+
+**Performance**:  
+ResNet-50, 75.3% ImageNet linear probe (300 epochs)  
+ViT-S/16, &nbsp; &nbsp; 77.0% ImageNet linear probe (300 epochs)
+
+::: {.callout-tip collapse="true" appearance="minimal"}
+
+## Pseudocode 
+
+
+```python
+# Student forward (all 10 crops)
+student_out = [student(crop) for crop in crops]  # 10 views
+student_probs = [softmax(out / tau_s) for out in student_out]
+
+# Teacher forward (2 global crops only)
+with torch.no_grad():
+    teacher_out = [teacher(global_crop) for global_crop in global_crops[:2]]
+    teacher_out_centered = [out - center for out in teacher_out]
+    teacher_probs = [softmax(out / tau_t) for out in teacher_out_centered]
+    
+    # Update center
+    center = momentum * center + (1 - momentum) * teacher_out[0].mean(dim=0)
+
+# Loss: each student view predicts each teacher view
+loss = 0
+for t_prob in teacher_probs:
+    for s_prob in student_probs:
+        loss += -torch.sum(t_prob * torch.log(s_prob), dim=-1).mean()
+```
+::: 
+___
+
+**DINOv2 (2023) - Scaling Up**:
+
+**Key Changes**:
+
+- **Data**: 142M curated images (from 1B web images via retrieval + deduplication)
+- **Training**: iBOT (masked prediction) + DINO + regularizers (Sinkhorn-Knopp, KoLeo)
+- **Scale**: ViT-L/14, longer training
+
+**Result**: 82.1% ImageNet linear probe (frozen features) — **outperforms supervised pre-training**.
+
+**Impact**: General-purpose features usable out-of-the-box for segmentation, detection, depth estimation.
+SOTA across 20+ benchmarks.
+
+---
+
+**DINOv3 (2025) - Gram Anchoring**:
+
+**Problem**: Long training (DINOv2 style) causes feature drift — 
+dense features become “blurry” or inconsistent, hurting pixel-level tasks.
+
+
+
+**Solution**: Preserve spatial feature correlations via Gram matrix loss,  
+matching second-order statistics (co-occurrence patterns of texture/style)
+rather than exact features.
+
+**Gram Matrix** (from neural style transfer - Gatys et al., 2015):
+$$\mathbf{G}_{ij} = \sum_{k=1}^{HW} F_{ki} F_{kj}$$
+
+where $F \in \mathbb{R}^{HW \times C}$ are spatial features ($HW$ locations, $C$ channels).
+
+
+**Gram Anchoring Loss**:
+$$\mathcal{L}_{\text{Gram}} = \|\bar{\mathbf{G}}_s - \bar{\mathbf{G}}_t\|_F^2$$
+
+where $\bar{\mathbf{G}}$ is normalized Gram matrix:
+$$\bar{\mathbf{G}} = \frac{\mathbf{G}}{\|\mathbf{G}\|_F}$$
+
+
+
+**Why This Works**:
+
+- Preserves second-order statistics (feature correlations)
+- Allows individual features to refine (first-order can change)
+- Maintains spatial consistency across training
+
+**Final Loss**: $\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{DINO}} + \lambda \mathcal{L}_{\text{Gram}}$
+
+**Result**: Stable dense features throughout long training, result in a large improvement on dense vision tasks such as segmentation and depth estimation:
+
+- **Classification Result:**  &nbsp; 88.4% ImageNet linear probe (frozen features)
+- **Detection Result:** &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 66.1% COCO mAP (self-supervised, frozen features)
+- **Segmentation Result:** 63.0% ADE20K mIoU (self-supervised, frozen features)
+
+
+---
+
+### Comparison of Similarity-Based Methods
+
+| Method | Negatives | Momentum | Asymmetry | Batch Size | Key Insight |
+|--------|-----------|----------|-----------|------------|-------------|
+| **SimCLR** (2020) | ✓ (in-batch) | ✗ | ✗ | 4096-8192 | More negatives → better |
+| **MoCo** <br>(2020) | ✓ (queue) | ✓ | ✗ | 256 | Decouple dictionary from batch |
+| **DeepCluster** (2018)  | ✗ | ✗ | Clustering | Full dataset | Offline k-means clustering with pseudo-labels |
+| **SwAV** <br>(2020) | ✗ | ✗ | Clustering | 256 | Online clustering prevents collapse |
+| **BYO** <br>(2020) | ✗ | ✓ | ✓ (predictor) | 4096 | Asymmetry sufficient |
+| **SimSiam** (2021) | ✗ | ✗ | ✓ (predictor) | 256 | Stop-gradient sufficient |
+| **DINO** <br>(2021-2025)| ✗ | ✓ | Centering | 1024 | Self-distillation + centering |
+
+---
+
+## Redundancy Reduction Methods
+
+**Different Approach**: Prevent collapse by decorrelating feature dimensions rather than using negatives or asymmetry.
+
+**Core Idea**: Encourage cross-correlation matrix of features to be identity:
+$$\mathbf{C} \approx \mathbf{I}$$
+
+where $C_{ij} = \text{corr}(z_i, z_j)$ (correlation between feature dimensions $i$ and $j$ across batch).
+
+**Intuition**:  
+
+- Diagonal = 1: Features are invariant to augmentations (same image → same features)  
+- Off-diagonal = 0: Features are non-redundant (different dimensions encode different information)
+
+---
+
+**Barlow Twins (2021)**:
+
+**Loss Function**:
+$$\mathcal{L}_{\text{BT}} = \sum_i (1 - C_{ii})^2 + \lambda \sum_i \sum_{j \neq i} C_{ij}^2$$
+
+where:
+
+- First term: &nbsp; &nbsp; &nbsp; &nbsp; Invariance to Augmentation  (diagonal should be 1)
+- Second term: &nbsp; Redundancy reduction (off-diagonal should be 0)
+- $\lambda = 0.005$ balances the two terms
+
+**Cross-Correlation Matrix** (computed over batch):
+$$C_{ij} = \frac{\sum_b z_{b,i}^A z_{b,j}^B}{\sqrt{\sum_b (z_{b,i}^A)^2} \sqrt{\sum_b (z_{b,j}^B)^2}}$$
+
+where $z_{b}^A, z_{b}^B$ are features from two augmentations, of an image $b$ in the batch.
+
+**Properties**:
+
+- Works with small batches (e.g. batch-size = 256) (unlike contrastive methods)
+- Highly dependent on augmentations (like contrastive methods)
+- Benefits from high-dimensional features (e.g. 8192d projection)
+
+**Performance**: ResNet-50, 73.2% ImageNet linear probe (300 epochs)
+
+---
+
+**VICReg (2021) - Variance-Invariance-Covariance Regularization**:
+
+**More Explicit Formulation**: Three separate loss terms.
+
+$$\mathcal{L} = \lambda \mathcal{L}_{\text{inv}} + \mu \mathcal{L}_{\text{var}} + \nu \mathcal{L}_{\text{cov}}$$
+
+**1. Invariance** (MSE between views):
+$$\mathcal{L}_{\text{inv}} = \frac{1}{d} \sum_{i=1}^d \|z_i^A - z_i^B\|^2$$
+
+**2. Variance** (prevent collapse to constant):
+$$\mathcal{L}_{\text{var}} = \frac{1}{d} \sum_{i=1}^d \max(0, \gamma - \sqrt{\text{Var}(z_i) + \epsilon})$$
+
+Encourages variance $\geq \gamma$ (typically $\gamma=1$) for each dimension.
+
+**3. Covariance** (decorrelate dimensions):
+$$\mathcal{L}_{\text{cov}} = \frac{1}{d} \sum_{i \neq j} \text{Cov}(z_i, z_j)^2$$
+
+**Typical Weights**: $\lambda=25$, $\mu=25$, $\nu=1$
+
+**Advantage**: More interpretable than Barlow Twins, similar performance.
+
+---
+
+**Why Redundancy Reduction Works**:
+
+- Decorrelation naturally prevents collapse (can't collapse to one dimension if off-diagonals penalized)
+- No need for negatives, momentum, or asymmetry
+- Elegant mathematical formulation
+
+---
+
+## Reconstructive Learning  {.unnumbered}
+
+**Different Paradigm**: Instead of learning invariances, learn by predicting masked or corrupted input.
+
+**No Collapse Issue**: Reconstruction target is informative (pixel values), prevents trivial solutions.
+
+**Challenge**: Avoid low-level texture copying—want semantic features, not pixel-level memorization.
+
+---
+
+## Masked Auto-Encoding 
+
+**MAE (2022) - Masked Auto-Encoding for Images**:
+
+**Core Idea**: Mask 75% of image patches, reconstruct from visible 25%.
+
+**Why 75% vs. BERT's 15%?**
+
+- Images more redundant than text (spatial continuity)
+- Low masking → local texture sufficient (too easy)
+- High masking → forces holistic understanding
+
+**Architecture**:
+
+1. **Encoder** (ViT):
+
+- Standard ViT transformer
+- Input: &nbsp ;&nbsp; Only visible patches (25%) → 4× speedup
+- Output: Encoded visible features
+
+2. **Decoder** (Small Transformer):
+- Smaller than encoder (8 layers vs. 24)
+- Input: &nbsp; &nbsp; Encoded visible + mask tokens (learned embeddings) 
+- Output: Reconstructed pixels for all patches
+
+**Loss**: MSE on masked patches only
+$$\mathcal{L} = \frac{1}{|\text{Masked}|} \sum_{p \in \text{Masked}} \|\mathbf{x}_p - \hat{\mathbf{x}}_p\|^2$$
+
+**Key Design**:
+
+- Asymmetric encoder-decoder (efficient)
+- Mask tokens added after encoder (encoder sees only 25%)
+- Minimal augmentation (just random crop)
+
+
+**ImageNet Results**:
+
+| Method | Linear Probe | Fine-tuning |
+|--------|--------------|-------------|
+| Supervised | - | 82.8% (ViT-L) |
+| MoCo v3 | 76.7% | 83.2% |
+| MAE | 75.2% | **83.6%** |
+
+**Observations**:
+
+- Linear probe lower than contrastive (features less "linearly separable")
+- Fine-tuning excellent (features capture rich structure)
+- Dense tasks benefit further (detection, segmentation)
+
+---
+
+
+
+
+**VideoMAE (2022)**
+
+**Adaptation for Video**:
+
+- Mask **90%** of spacetime patches (higher than image)
+- Input: Video clips (16 frames × 224×224)
+- Patches: 3D spacetime patches (2×16×16)
+
+**Why 90%?** Video has extreme redundancy:
+
+- Temporal: Adjacent frames very similar
+- Spatial: Image redundancy within each frame
+
+**Masking Strategies**: Spacetime-agnostic masking (Random) works best.
+<br>
+
+| Strategy | Description | Performance |
+|----------|-------------|-------------|
+| Random | Spacetime-agnostic | **Best** |
+| Tube | Mask temporal tubes | -1.2% |
+| Frame | Mask entire frames | -2.1% |
+| Running cell | Spatiotemporal blocks | -1.5% |
+<br>
+**Performance**: Spacetime Masked Autoencoders are SOTA on action recognition
+
+- Kinetics-400: &emsp; &emsp; &emsp; &emsp; &emsp; 81.1% top-1 (vs. 79.1% supervised)
+- Something-Something v2: &nbsp; 68.7% &emsp; &emsp;  (temporal reasoning dataset)
+
+---
+
+**AudioMAE (2022)**
+
+**Adaptation for Audio**:
+
+- Mask **80%** of Mel-spectogram patches
+- Input: Audio waveform → Mel-spectrogram (time-frequency representation)
+- Patches: 16×16 spectrogram patches
+
+**Data Preprocessing**:
+
+1. Audio → Short-Time Fourier Transform (STFT)
+2. Mel filterbank → Mel-spectrogram
+3. Divide into patches (2D grid)
+4. Flatten patches, linear projection to embeddings
+
+**Masking Strategy**: Unstructured (random) beats time/frequency-aware strategies.
+
+**Performance**:
+
+- AudioSet: 91.0 mAP (competitive with contrastive methods)
+- Further Benefits on dense prediction tasks (s.a. sound event detection)
+
+---
+
+**MAE - Multimodal Extensions**
+
+**ImageBind (2023)**: MAE-style pre-training across 6 modalities (image, video, audio, text, depth, IMU) with masked prediction across modalities.
+
+**Key Pattern**: The reconstructive pre-training objective of MAE generalizes well across modalities —the same principle applies to vision, audio, text, and more.
+
+---
+
+## Contrastive vs. Reconstructive Trade-offs {.unnumbered .unlisted}
+
+| Aspect | Contrastive (DINO) | Reconstructive (MAE) |
+|--------|-------------------|---------------------|
+| **Augmentation** | Critical (defines invariances) | Minimal (masking sufficient) |
+| **Linear probe** | Higher (77-82%) | Lower (68-75%) |
+| **Fine-tuning** | ~83-84% | ~83-84% |
+| **Dense tasks** | Excellent | Excellent |
+| **Compute** | Large batches or queue | Efficient (25% encoder input) |
+| **Best for** | Transfer, retrieval, few-shot | Dense prediction, scaling |
+
+<br>
+**Hybrid Approaches**: DINOv2 combines both (iBOT = DINO + masked prediction) → SOTA.
+
+---
+
+## Evaluation and Transfer Learning
+
+## Linear Probing {.unnumbered .unlisted}
+
+**Protocol**: Freeze pre-trained encoder, train linear classifier on top.
+
+**What it Measures**: 
+
+- Feature quality: Are learned representations linearly separable by class?
+- Out-of-the-box usability: How useful are frozen features?
+
+**Results** (ImageNet top-1):
+
+- Supervised ResNet-50: 76.5%
+- MoCo v2 ResNet-50: 71.1%
+- DINO ViT-S: 77.0%
+- MAE ViT-L: 75.2%
+- **DINOv2 ViT-L: 82.1%**
+
+**Key Insight**: DINOv2 surpasses supervised pre-training without using ImageNet labels!
+
+
+
+
+---
+
+## Dense Prediction Tasks {.unnumbered .unlisted}
+
+Plain ViTs output single-scale features, 
+but dense tasks (detection, segmentation) require multi-scale feature pyramids.
+
+Two frameworks are typically used to transfer the ViT features to dense tasks:
+
+**Feature Pyramid - ViT-Adapter (2023)**:
+- Augments ViT with lightweight conv + cross-attention adapters
+- Fuses intermediate ViT features into feature pyramid (FPN-like)
+- Provides scale-aware features for detecting small and large objects
+
+**Segmentation Head - Mask2Former (2022)**:
+Universal architecture with three components:
+
+1. **Backbone**: SSL pre-trained ViT (frozen or fine-tuned)
+2. **Pixel Decoder**: Upsamples ViT features to high resolution (interpolation + convs)
+3. **Transformer Decoder**: DETR-style queries predict class + mask
+   - At each layer: predicted masks → attention masks for next layer
+   - Iteratively refines object boundaries
+
+**Typical Dense Tasks Transfer Learning Pipeline**: 
+
+Feature Extraction ViT-L → ViT-Adapter (multi-scale features) → Mask2Former → masks + classes
+
+
+
+**Semantic Segmentation** (ADE20K):
+   
+   - DINOv2 ViT-L backbone  + ViT-Adapter + Mask2Former segmentation head.
+   - 59.3 Fine-tuned mIoU (Outperforms supervised pre-training mIoU 53.1)
+
+**Object Detection** (COCO):
+
+   - DINOv2 ViT-L backbone + ViT-Adapter + Mask R-CNN: 58.4 box AP (Outperforms supervised pre-training box AP 55.0)
+   - SSL features excel at dense tasks
+
+**Video**: DINOv2 features track across frames via k-NN (no temporal training needed).
+
+---
+
+## Summary and Interview Preparation
+
+### Core Concepts Checklist
+
+**Paradigms**:
+
+- [ ] Invariance-based: Learn features invariant to augmentations
+- [ ] Reconstructive: Predict masked/corrupted input
+- [ ] Collapse problem and prevention strategies
+
+**Similarity-Based Methods**:
+
+- [ ] Contrastive: Negatives prevent collapse (SimCLR, MoCo)
+- [ ] Clustering: Discrete assignments prevent collapse (DeepCluster, SwAV)
+- [ ] Self-Distillation: Asymmetry prevents collapse (BYOL, DINO)
+
+**Redundancy Reduction**:
+
+- [ ] Decorrelate features: Cross-correlation → identity (Barlow Twins, VICReg)
+
+**Reconstructive**:
+
+- [ ] MAE: 75% masking, asymmetric encoder-decoder
+- [ ] Why high mask ratio for images vs. BERT
+
+### Common Interview Questions
+
+1. **"Compare contrastive learning approaches—SimCLR vs. MoCo."**
+   - SimCLR: In-batch negatives, needs large batches (4096-8192)
+   - MoCo: Queue + momentum encoder, works with small batches (256)
+   - Both ~70-71% linear probe, MoCo more memory-efficient
+
+2. **"How does BYOL work without negatives?"**
+   - Asymmetry: Predictor only in online network
+   - Stop-gradient on target network (fixed targets)
+   - Momentum update stabilizes target
+   - SimSiam shows even momentum not strictly necessary
+
+3. **"Explain DINO's centering mechanism."**
+   - Prevents dimensional collapse (one feature dominating)
+   - Subtract running mean of teacher outputs
+   - Combined with sharp temperature (0.04) → confident pseudo-labels
+
+4. **"Barlow Twins vs. contrastive learning?"**
+   - Barlow: Decorrelate features (cross-correlation → identity)
+   - Contrastive: Explicit negatives
+   - Barlow: No negatives needed, works small batches, needs high-dim features
+
+5. **"Why does MAE use 75% masking?"**
+   - Images redundant (spatial continuity)
+   - Low (15%) → trivial texture matching
+   - High (75%) → forces semantic understanding
+   - 90%+ too hard (information loss)
+
+6. **"When to use invariance-based vs. reconstructive pre-training?"**
+   - **Invariance**: Better linear probe, good retrieval/few-shot
+   - **Reconstructive**: Better dense tasks, compute-efficient, less augmentation-sensitive
+   - **Hybrid** (DINOv2): Combines both → SOTA
+
+### Method Selection Guide
+
+**Choose Contrastive if**:
+
+- Have compute for large batches
+- Care about linear probe performance
+- Need strong retrieval/similarity features
+
+**Choose Self-Distillation if**:
+
+- Want simplicity (no negative sampling)
+- Using transformers (DINO family)
+- Need emergent segmentation
+
+**Choose Redundancy Reduction if**:
+
+- Small batches, limited memory
+- Want interpretable objective
+- High-dimensional features available
+
+**Choose Reconstructive if**:
+
+- Dense prediction is primary task
+- Limited augmentation expertise
+- Want compute efficiency (encoder sees 25% of tokens)
+
+### Company Context
+
+- **Meta**: DINOv2 (foundation model), MAE (LLAMA-vision backbone)
+- **Google**: SimCLR, ViT-MAE variants
+
+### Further Reading
+
+- **Contrastive**: [SimCLR](https://arxiv.org/abs/2002.05709), [MoCo](https://arxiv.org/abs/1911.05722)
+- **Self-Distillation**: [BYOL](https://arxiv.org/abs/2006.07733), [DINO](https://arxiv.org/abs/2104.14294), [DINOv2](https://arxiv.org/abs/2304.07193)
+- **Redundancy Reduction**: [Barlow Twins](https://arxiv.org/abs/2103.03230), [VICReg](https://arxiv.org/abs/2105.04906)
+- **Reconstructive**: [MAE](https://arxiv.org/abs/2111.06377)
+- **Survey**: [Self-Supervised Learning in Vision](https://arxiv.org/abs/2304.12210)
+
+---
+
+This completes Self-Supervised Learning—the paradigm enabling foundation models to learn from billions of unlabeled images, matching and exceeding supervised pre-training for transfer tasks.

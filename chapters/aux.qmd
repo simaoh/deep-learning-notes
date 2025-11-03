@@ -1,0 +1,156 @@
+
+
+### Probabilistic Formulation
+
+**Generative Model**: 
+1. Sample latent: $z \sim p(z) = \mathcal{N}(0, I)$
+2. Generate data: $x \sim p_\theta(x|z)$ (decoder)
+
+**Goal**: Maximize $\log p_\theta(x)$ (intractable: requires $\int p_\theta(x|z)p(z)dz$)
+
+**Solution**: Introduce approximate posterior $q_\phi(z|x)$ (encoder), derive **Evidence Lower Bound (ELBO)**:
+
+$$\mathcal{L}(\theta, \phi; x) = \underbrace{\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)]}_{\text{Reconstruction}} - \underbrace{D_{\text{KL}}(q_\phi(z|x) \| p(z))}_{\text{Regularization}}$$
+
+**Interpretation**:
+- **Reconstruction**: Decoder accuracy (like autoencoder loss)
+- **KL Regularization**: Keeps $q_\phi(z|x)$ close to $p(z) = \mathcal{N}(0,I)$ → enforces continuity/completeness
+
+**Why "Lower Bound"?** Since $\log p_\theta(x) = \mathcal{L} + \text{KL}(q_\phi \| p_\theta(z|x)) \geq \mathcal{L}$ (KL ≥ 0).
+
+---
+
+### Architecture and Training
+
+**Encoder**: Outputs distribution parameters, not single point
+$$q_\phi(z|x) = \mathcal{N}(z; \mu_\phi(x), \sigma_\phi^2(x) I)$$
+
+Architecture: $x \to \text{CNN} \to [\mu(x), \log \sigma^2(x)] \in \mathbb{R}^d$
+
+**Decoder**: $p_\theta(x|z) = \mathcal{N}(x; \mu_\theta(z), \sigma^2 I)$ or Bernoulli
+
+Architecture: $z \to \text{FC} \to \text{Transposed CNN} \to \hat{x} \in \mathbb{R}^D$
+
+---
+
+**Loss Function** (minimize negative ELBO):
+
+$$\mathcal{L}_{\text{VAE}} = \|x - \hat{x}\|^2 + \frac{1}{2}\sum_{j=1}^d \left(\mu_j^2 + \sigma_j^2 - \log \sigma_j^2 - 1\right)$$
+
+---
+
+**Reparameterization Trick**:
+
+**Problem**: Can't backpropagate through sampling $z \sim \mathcal{N}(\mu, \sigma^2)$
+
+**Solution**: Reparameterize as $z = \mu(x) + \sigma(x) \odot \epsilon$ where $\epsilon \sim \mathcal{N}(0, I)$
+
+Now gradients flow through $\mu, \sigma$ while $\epsilon$ is treated as constant.
+
+![](/images/reparameterization_trick.png){#fig-reparam width=70% fig-align="center"}
+
+---
+
+**Training**:
+```python
+μ, log_σ² = encoder(x)
+z = μ + exp(0.5 * log_σ²) ⊙ ε  # ε ~ N(0,I)
+x̂ = decoder(z)
+loss = ||x - x̂||² + 0.5 * sum(μ² + σ² - log σ² - 1)
+```
+
+**Generation**: Sample $z \sim \mathcal{N}(0, I)$, decode $\hat{x} = \text{decoder}(z)$
+
+---
+
+### VAE Variants
+
+**β-VAE**: Add weight $\beta > 1$ to KL term for disentangled representations
+$$\mathcal{L}_{\beta} = \text{Reconstruction} - \beta \cdot \text{KL}$$
+
+**Conditional VAE (CVAE)**: Condition on labels $y$
+- Encoder: $q_\phi(z|x, y)$, Decoder: $p_\theta(x|z, y)$
+- Generate specific classes
+
+---
+
+### Key Trade-offs
+
+| Aspect | VAE | Standard AE | GAN |
+|--------|-----|-------------|-----|
+| **Latent space** | Continuous, structured | Irregular | Implicit |
+| **Training** | Stable | Stable | Unstable |
+| **Sample quality** | Good (blurry) | N/A | Excellent |
+| **Likelihood** | Computable (ELBO) | N/A | N/A |
+| **Mode coverage** | Good | N/A | Poor (collapse) |
+
+**Common Issues**:
+- **Posterior collapse**: KL → 0, decoder ignores $z$ (fix: KL annealing, free bits)
+- **Blurry samples**: MSE averages modes (partial fix: perceptual loss, adversarial training)
+
+---
+
+### Applications
+
+- **Representation learning**: Unsupervised feature extraction
+- **Anomaly detection**: High reconstruction error → outlier
+- **Latent interpolation**: Smooth transitions between images
+- **Foundation for Stable Diffusion**: VAE compresses images to latent space for diffusion
+
+---
+
+This condensed version keeps the essential mathematical framework, architecture details, and practical considerations while removing redundant explanations and lengthy derivations.
+
+
+
+
+Let me break down both parts of that note:
+
+---
+
+### Part 1: "Log-variance output ensures σ² > 0"
+
+This is about the **encoder** output.
+
+**Problem**: Variance must be positive (σ² > 0), but if the encoder directly outputs σ², the neural network might produce negative values.
+
+**Solution**: Encoder outputs **log σ²** instead, then we compute:
+$$\sigma^2 = \exp(\log \sigma^2)$$
+
+Since $\exp(\cdot)$ is always positive, this **guarantees σ² > 0** no matter what the network outputs.
+
+**In code**:
+```python
+μ, log_σ² = encoder(x)      # Network can output any real number
+σ² = exp(log_σ²)            # Always positive
+σ = exp(0.5 * log_σ²)       # For reparameterization
+```
+
+---
+
+### Part 2: "For images, decoder likelihood becomes log p_θ(x|z) ∝ -||x̂ - x||²"
+
+This is about the **decoder** and why we use MSE loss.
+
+**If decoder is Gaussian**: $p_\theta(x|z) = \mathcal{N}(x; \mu_\theta(z), \sigma^2 I)$
+
+**Log-likelihood**:
+$$\log p_\theta(x|z) = -\frac{1}{2\sigma^2}\|x - \mu_\theta(z)\|^2 - \frac{D}{2}\log(2\pi\sigma^2)$$
+
+**If we treat σ² as a fixed constant** (not learned, say σ² = 1):
+$$\log p_\theta(x|z) = \text{constant} - \frac{1}{2}\|x - \hat{x}\|^2$$
+
+**The "∝" symbol** means "proportional to"—when optimizing, constants don't matter, so:
+$$\max \log p_\theta(x|z) \equiv \min \|x - \hat{x}\|^2$$
+
+**Bottom line**: The Gaussian assumption with fixed variance justifies using MSE as the reconstruction loss.
+
+---
+
+### Clearer Version:
+
+**Note**: Encoder outputs log-variance (ensures σ² > 0 via exponential). Decoder is modeled as Gaussian with fixed variance, making reconstruction loss equivalent to MSE: $\log p_\theta(x|z) \propto -\|x - \hat{x}\|^2$.
+
+---
+
+Does this make sense now? The first part is a practical trick for the encoder, the second is the theoretical justification for using MSE loss.

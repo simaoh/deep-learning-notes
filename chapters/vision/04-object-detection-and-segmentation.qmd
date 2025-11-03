@@ -1,0 +1,432 @@
+# Detection and Segmentation
+
+## Object Detection
+
+**Task Definition**: Given image $\mathbf{I}$, output set of bounding boxes $\{(x, y, w, h, c, p)\}$ where:
+- $(x,y)$ = box center
+- $(w,h)$ = width, height
+- $c \in \{1, \ldots, C\}$ = object class
+- $p \in [0,1]$ = confidence score
+
+**Challenges**:
+1. **Multiple objects**: Variable number per image
+2. **Scale variation**: Objects from 10×10 to 500×500 pixels
+3. **Occlusion**: Partially hidden objects
+4. **Dense overlapping predictions**: Must suppress duplicates
+
+**Paradigms**:
+- **Two-Stage** (R-CNN family): Propose regions → classify/refine
+- **Single-Stage** (YOLO, SSD): Directly predict boxes at multiple scales
+
+---
+
+### Two-Stage Detectors: Faster R-CNN
+
+**Architecture Overview**:
+```
+Image → CNN Backbone → Feature Maps 
+                         ↓
+                    [Stage 1: RPN]
+                         ↓
+                Region Proposals (~2000)
+                         ↓
+                    [ROI Pooling]
+                         ↓
+                   [Stage 2: R-CNN]
+                         ↓
+                (Class, Box Refinement)
+```
+
+#### Region Proposal Network (RPN)
+
+**Purpose**: Generate ~2000 candidate object locations (proposals).
+
+**Mechanism**:
+1. Slide 3×3 conv over feature map
+2. At each location, predict $k$ **anchor boxes** (different scales/ratios)
+   - Scales: {128², 256², 512²}
+   - Ratios: {1:1, 1:2, 2:1}
+   - Total: $k = 9$ anchors per location
+
+3. For each anchor, predict:
+   - **Objectness**: $p_{\text{obj}} \in [0,1]$ (object vs. background)
+   - **Box offsets**: $(t_x, t_y, t_w, t_h)$ to refine anchor
+
+**Anchor Box Parametrization**:
+Given anchor $(x_a, y_a, w_a, h_a)$, predicted box:
+$$x = x_a + w_a \cdot t_x, \quad y = y_a + h_a \cdot t_y$$
+$$w = w_a \cdot \exp(t_w), \quad h = h_a \cdot \exp(t_h)$$
+
+**Loss Function**:
+$$\mathcal{L}_{\text{RPN}} = \frac{1}{N_{\text{cls}}} \sum_i \mathcal{L}_{\text{cls}}(p_i, p_i^*) + \lambda \frac{1}{N_{\text{reg}}} \sum_i p_i^* \mathcal{L}_{\text{reg}}(\mathbf{t}_i, \mathbf{t}_i^*)$$
+
+where:
+- $\mathcal{L}_{\text{cls}}$ = binary cross-entropy (object vs. not)
+- $\mathcal{L}_{\text{reg}}$ = smooth L1 loss: $\text{smooth}_{L1}(x) = \begin{cases} 0.5x^2 & |x| < 1 \\ |x| - 0.5 & \text{otherwise} \end{cases}$
+- $p_i^* \in \{0,1\}$ = ground truth objectness
+- Regression loss only for positive anchors ($p_i^* = 1$)
+
+**Label Assignment**:
+- **Positive**: IoU > 0.7 with any ground truth, or highest IoU for a GT
+- **Negative**: IoU < 0.3 with all ground truths
+- **Ignore**: 0.3 ≤ IoU ≤ 0.7 (don't contribute to loss)
+
+**Training Details**:
+- Sample 256 anchors per image (128 positive, 128 negative)
+- Positive samples often scarce → pad with negatives
+- Cross-boundary anchors ignored during training
+
+---
+
+#### ROI Pooling
+
+**Purpose**: Extract fixed-size features from variable-size proposals.
+
+**Algorithm**:
+1. Project proposal onto feature map (divide coords by network stride)
+2. Divide region into $H \times W$ grid (e.g., 7×7)
+3. Max-pool within each grid cell
+
+**Example**: 
+- Proposal: 145×200 pixels at input
+- Feature map stride: 16 → proposal is 9.06×12.5 feature map cells
+- ROI Pooling: divide into 7×7 → each cell ~1.3×1.8 features → max-pool
+
+**Problem - Misalignment**: Quantization (rounding coords) causes misalignment, hurting segmentation.
+
+**Solution - ROI Align** (Mask R-CNN):
+- Use bilinear interpolation instead of rounding
+- Sample 4 points per grid cell, interpolate, then max-pool
+- **Result**: Better localization for masks
+
+---
+
+#### R-CNN Head (Stage 2)
+
+**Input**: Fixed 7×7×512 features from ROI Pooling
+
+**Architecture**:
+```
+ROI Features → FC(4096) → ReLU → Dropout
+             → FC(4096) → ReLU → Dropout
+             → Split:
+                 ├─ Classification: FC(C+1)  [C classes + background]
+                 └─ Box Regression: FC(4×C)  [per-class box refinement]
+```
+
+**Loss Function**:
+$$\mathcal{L} = \mathcal{L}_{\text{cls}}(c, c^*) + \lambda [c^* > 0] \mathcal{L}_{\text{box}}(\mathbf{t}^{c^*}, \mathbf{t}^{c^*}_{\text{gt}})$$
+
+- Classification: multi-class cross-entropy
+- Regression: smooth L1, only for non-background classes
+- $c^* = 0$ is background → no box loss
+
+**Training Strategy** (4-Step Alternating):
+1. Train RPN alone
+2. Train R-CNN with frozen RPN proposals
+3. Fine-tune RPN with R-CNN backbone frozen
+4. Fine-tune R-CNN head
+
+Modern implementations use **approximate joint training** (single-stage, more stable).
+
+---
+
+**Faster R-CNN Summary**:
+- **Pros**: High accuracy, flexible (any CNN backbone), strong for small objects
+- **Cons**: Slow (two-stage), complex training, many hyperparameters
+- **Use When**: Accuracy is critical (autonomous vehicles, medical imaging)
+- **Avoid When**: Real-time constraint (use YOLO instead)
+
+---
+
+### 2.2.2 Single-Stage Detectors: YOLO
+
+**Philosophy**: "You Only Look Once"—predict all boxes in one forward pass.
+
+**YOLO Architecture** (YOLOv3 as example):
+```
+Image → DarkNet-53 Backbone 
+       → Feature Pyramid (3 scales)
+       → Dense Predictions
+```
+
+**Grid-Based Prediction**:
+1. Divide image into $S \times S$ grid (e.g., 13×13)
+2. Each grid cell predicts $B$ bounding boxes (e.g., $B=3$)
+3. For each box, predict:
+   - Box coordinates: $(t_x, t_y, t_w, t_h)$
+   - Objectness: $p_{\text{obj}}$
+   - Class probabilities: $(p_1, \ldots, p_C)$
+
+**Total predictions**: $S \times S \times B \times (5 + C)$ values
+
+For $S=13$, $B=3$, $C=80$ (COCO): $13 \times 13 \times 3 \times 85 = 43{,}095$ predictions
+
+**Box Decoding** (relative to grid cell):
+$$b_x = \sigma(t_x) + c_x, \quad b_y = \sigma(t_y) + c_y$$
+$$b_w = p_w \cdot e^{t_w}, \quad b_h = p_h \cdot e^{t_h}$$
+
+where $(c_x, c_y)$ = grid cell offset, $(p_w, p_h)$ = anchor dimensions.
+
+**Loss Function** (YOLOv3):
+$$\mathcal{L} = \lambda_{\text{coord}} \sum_{i,j} \mathbb{1}_{ij}^{\text{obj}} \left[(t_x - \hat{t}_x)^2 + (t_y - \hat{t}_y)^2 + (t_w - \hat{t}_w)^2 + (t_h - \hat{t}_h)^2\right]$$
+$$+ \sum_{i,j} \mathbb{1}_{ij}^{\text{obj}} \text{BCE}(C_{ij}, \hat{C}_{ij})$$
+$$+ \lambda_{\text{noobj}} \sum_{i,j} \mathbb{1}_{ij}^{\text{noobj}} \text{BCE}(C_{ij}, \hat{C}_{ij})$$
+$$+ \sum_{i,j} \mathbb{1}_{ij}^{\text{obj}} \sum_{c \in \text{classes}} \text{BCE}(p_{ij}(c), \hat{p}_{ij}(c))$$
+
+where:
+- $\mathbb{1}_{ij}^{\text{obj}} = 1$ if box $j$ in cell $i$ is responsible for object
+- $\lambda_{\text{coord}} = 5$, $\lambda_{\text{noobj}} = 0.5$ (balance localization vs. classification)
+- BCE = binary cross-entropy
+
+**Key Insight**: 
+- **Coordinate loss**: Only when cell contains object
+- **No-object loss**: Down-weighted (most cells are background)
+- **Class loss**: Only for cells with objects
+
+**Multi-Scale Predictions** (YOLOv3+):
+- Predict at 3 scales: 13×13, 26×26, 52×52
+- Small objects → fine grid (52×52)
+- Large objects → coarse grid (13×13)
+- Uses Feature Pyramid Network (FPN) structure
+
+**YOLO Advantages**:
+- **Speed**: 30-60 FPS (real-time)
+- **Global context**: Sees entire image (vs. RPN local proposals)
+- **Fewer false positives** on background
+
+**YOLO Disadvantages**:
+- **Small objects**: Struggles when multiple objects in same grid cell
+- **Unusual aspect ratios**: Fixed anchor boxes may not fit well
+- **Localization**: Less precise than two-stage detectors
+
+**Interview Insight**: "YOLO vs. Faster R-CNN?" Answer framework:
+- **Speed**: YOLO 10× faster (single-stage)
+- **Accuracy**: Faster R-CNN slight edge on COCO mAP
+- **Small objects**: Faster R-CNN better (RPN + multi-scale RoIs)
+- **Deployment**: YOLO for real-time, Faster R-CNN when accuracy critical
+
+---
+
+### 2.2.3 Non-Maximum Suppression (NMS)
+
+**Problem**: Detectors generate many overlapping boxes for same object.
+
+**Algorithm**:
+```python
+def nms(boxes, scores, iou_threshold=0.5):
+    """
+    boxes: (N, 4) - [x1, y1, x2, y2]
+    scores: (N,) - confidence scores
+    """
+    # Sort by score descending
+    order = scores.argsort()[::-1]
+    keep = []
+    
+    while len(order) > 0:
+        i = order[0]
+        keep.append(i)
+        
+        # Compute IoU with remaining boxes
+        ious = compute_iou(boxes[i], boxes[order[1:]])
+        
+        # Keep only boxes with IoU < threshold
+        order = order[1:][ious < iou_threshold]
+    
+    return keep
+
+def compute_iou(box1, box2):
+    """IoU between two boxes"""
+    x1 = max(box1[0], box2[0])
+    y1 = max(box1[1], box2[1])
+    x2 = min(box1[2], box2[2])
+    y2 = min(box1[3], box2[3])
+    
+    intersection = max(0, x2 - x1) * max(0, y2 - y1)
+    area1 = (box1[2] - box1[0]) * (box1[3] - box1[1])
+    area2 = (box2[2] - box2[0]) * (box2[3] - box2[1])
+    union = area1 + area2 - intersection
+    
+    return intersection / union
+```
+
+**Complexity**: $O(N^2)$ IoU computations (can be optimized with spatial hashing)
+
+**Threshold Selection**:
+- **Low** (0.3-0.4): Aggressive suppression → fewer duplicates, may miss nearby objects
+- **High** (0.6-0.7): Keep more boxes → more duplicates, better recall
+
+**Per-Class NMS**: 
+In multi-class detection, run NMS separately per class (car boxes don't suppress person boxes).
+
+**Soft-NMS** (Bodla et al., 2017):
+Instead of hard removal, decay scores based on IoU:
+$$s_i = \begin{cases} s_i & \text{IoU}(\mathcal{M}, b_i) < N_t \\ s_i \cdot e^{-\frac{\text{IoU}(\mathcal{M}, b_i)^2}{\sigma}} & \text{otherwise} \end{cases}$$
+
+where $\mathcal{M}$ is the current maximum box.
+
+**Result**: Boxes with high IoU get down-weighted instead of removed → better recall.
+
+---
+
+## 2.3 Semantic Segmentation
+
+**Task**: Assign class label to every pixel: $f: \mathbb{R}^{H \times W \times 3} \rightarrow \{1, \ldots, C\}^{H \times W}$
+
+**Challenges**:
+- **Resolution**: Need pixel-level predictions (vs. classification's single label)
+- **Context**: Local and global information both matter
+- **Efficiency**: Dense predictions over full image
+
+---
+
+### 2.3.1 U-Net (2015)
+
+**Architecture Philosophy**: Encoder-decoder with skip connections.
+
+**Encoder** (Contracting Path):
+```
+Input (572×572)
+→ Conv-ReLU-Conv-ReLU → Skip1 (570×570, 64 ch)
+→ MaxPool
+→ Conv-ReLU-Conv-ReLU → Skip2 (280×280, 128 ch)
+→ MaxPool
+...
+→ Bottleneck (28×28, 1024 ch)
+```
+
+**Decoder** (Expansive Path):
+```
+Bottleneck
+→ UpConv → Concat(Skip4) → Conv-ReLU-Conv-ReLU
+→ UpConv → Concat(Skip3) → Conv-ReLU-Conv-ReLU
+...
+→ Conv 1×1 → Output (388×388, C classes)
+```
+
+**Key Innovation - Skip Connections**:
+- Encoder captures *what* (semantic information)
+- Decoder recovers *where* (spatial details)
+- Skip connections provide high-res features to decoder
+
+**Why This Works**:
+- Early layers: fine details (edges, textures)
+- Deep layers: semantic meaning (object identity)
+- Combining both: precise boundaries + correct labels
+
+**Loss**: Pixel-wise softmax cross-entropy
+$$\mathcal{L} = -\frac{1}{H \cdot W} \sum_{i,j} \sum_{c=1}^C y_{ij}^{(c)} \log \hat{y}_{ij}^{(c)}$$
+
+**U-Net Variants**:
+- **3D U-Net**: For volumetric data (medical CT/MRI)
+- **U-Net++**: Nested skip connections
+- **Attention U-Net**: Attention gates in skip connections
+
+**Applications**: Medical imaging (won ISBI challenge), satellite imagery, microscopy
+
+---
+
+### 2.3.2 DeepLab v3+ (2018)
+
+**Core Ideas**:
+1. **Atrous Spatial Pyramid Pooling (ASPP)**: Multi-scale context
+2. **Encoder-Decoder**: U-Net-like structure
+3. **Depthwise Separable Convs**: Efficiency
+
+**ASPP Module**:
+```
+Feature Map
+  ├─ 1×1 conv
+  ├─ 3×3 atrous conv, rate=6
+  ├─ 3×3 atrous conv, rate=12
+  ├─ 3×3 atrous conv, rate=18
+  └─ Global Average Pool → 1×1 conv → Upsample
+      ↓
+  Concatenate → 1×1 conv → Output
+```
+
+**Why Multiple Dilation Rates?**
+- rate=6: captures medium context (~13×13 effective)
+- rate=12: large context (~25×25 effective)
+- rate=18: very large context (~37×37 effective)
+- Global pooling: image-level features
+
+**Motivation**: Objects vary in scale—need multi-scale receptive fields.
+
+**Loss Function**: 
+- **Pixel-wise cross-entropy** (standard)
+- **Focal Loss** (optional, for class imbalance):
+$$\mathcal{L}_{\text{focal}} = -\alpha (1 - \hat{y})^\gamma \log \hat{y}$$
+
+where $\gamma=2$ down-weights easy examples (high $\hat{y}$), focuses on hard pixels.
+
+**DeepLab Performance**:
+- PASCAL VOC 2012: 89.0% mIoU
+- Cityscapes: 82.1% mIoU
+- Real-time variants exist (MobileNet backbone)
+
+---
+
+### 2.3.3 Mask R-CNN (2017)
+
+**Extension**: Faster R-CNN + instance segmentation head.
+
+**Architecture**:
+```
+Image → ResNet-FPN
+       → RPN → ROI Align
+       → Parallel Heads:
+           ├─ Box Classification (C+1 classes)
+           ├─ Box Regression (4 coords)
+           └─ Mask Prediction (C × 28×28 binary masks)
+```
+
+**Mask Head**:
+- Input: 14×14 ROI features from ROI Align
+- Architecture: 4× Conv(256, 3×3) → Deconv(256, 2×2) → Conv(C, 1×1)
+- Output: $C$ binary masks of size 28×28 (one per class)
+
+**Loss Function**:
+$$\mathcal{L} = \mathcal{L}_{\text{cls}} + \mathcal{L}_{\text{box}} + \mathcal{L}_{\text{mask}}$$
+
+where:
+$$\mathcal{L}_{\text{mask}} = -\frac{1}{m^2} \sum_{i,j} [y_{ij} \log \hat{y}_{ij} + (1-y_{ij}) \log(1-\hat{y}_{ij})]$$
+
+**Key Detail**: Loss computed only on ground-truth class mask (not all $C$ masks).
+
+**ROI Align (vs. ROI Pooling)**:
+- **ROI Pooling**: Quantizes coordinates → misalignment
+- **ROI Align**: Bilinear interpolation at sub-pixel locations → precise
+
+**Example**:
+- Proposal maps to feature map region [5.7, 8.3, 12.1, 15.9]
+- ROI Pooling rounds to [6, 8, 12, 16] → 0.3-0.9 pixel errors
+- ROI Align samples at exact 5.7, 8.3, etc. using interpolation
+
+**Impact**: Critical for mask accuracy (2-3% mIoU improvement).
+
+**Mask R-CNN Applications**:
+- Instance segmentation (COCO, LVIS datasets)
+- Keypoint detection (pose estimation)
+- Panoptic segmentation (with Stuff head)
+
+**Interview Question**: "Mask R-CNN vs. U-Net?" 
+**Answer**: 
+- U-Net: Semantic (no instances), faster, simpler
+- Mask R-CNN: Instance-aware, slower (two-stage), handles occlusion better
+- Use U-Net for medical imaging, Mask R-CNN for autonomous driving
+
+---
+### Interview Preparation Tips
+
+- **Architectural depth**: Know parameter counts, FLOPs for common models
+- **Training dynamics**: Batch size effects, learning rate schedules, convergence
+- **Trade-offs**: Accuracy vs. speed, memory vs. compute, model size vs. performance
+
+### Common Interview Questions
+1. **"YOLO vs. Faster R-CNN—when to use each?"**
+   - YOLO: real-time, simpler; Faster R-CNN: higher accuracy, better for small objects
+
+### Further Reading
+
+- **Detection**: [Object Detection in 20 Years](https://arxiv.org/abs/1905.05055)

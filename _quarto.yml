@@ -1,0 +1,63 @@
+project:
+  type: book
+
+book:
+  title: "deep_learning_notes"
+  author: "Simão Herdade"
+  date: "14/10/2025"
+  
+  chapters:
+    - index.qmd  
+
+    - part: "Part I: Foundations"
+      chapters:
+        - chapters/01-neural-networks-and-optimization.qmd
+        - chapters/02-generalization-and-learning-theory.qmd
+    
+    # COMPUTER VISION INTRODUCTION
+    - chapters/vision/_intro_computer_vision.qmd
+    - part: "Part II: Visual Understanding"
+      chapters:
+        - chapters/vision/03-cnns.qmd
+        - chapters/vision/04-object-detection-and-segmentation.qmd
+        - chapters/vision/05-vision-transformers.qmd
+
+    - part: "Part III: Self-Supervised Learning"
+      chapters:
+        - chapters/vision/06-self-supervised-learning.qmd
+        
+    
+    - part: "Part IV: Generative Modeling"
+      chapters:
+        - chapters/vision/_intro-generative-models.qmd
+        - chapters/vision/07-vaes.qmd
+        - chapters/vision/08-gans.qmd
+        - chapters/vision/09-diffusion-models.qmd
+        - chapters/_conclusion-generative-models.qmd
+        - chapters/aux.qmd  
+
+
+    - intro.qmd
+    - summary.qmd
+    - references.qmd
+
+
+bibliography: references.bib
+
+format:
+  html:
+    theme:
+      - cosmo
+      - brand
+    toc: true
+    number-sections: true
+    smooth-scroll: true
+    include-after-body: scripts.html
+    css: custom.css
+    fig-cap-location: bottom
+    fig-align: center
+  pdf:
+    documentclass: scrreprt
+
+
+

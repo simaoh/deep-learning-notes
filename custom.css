@@ -1,0 +1,83 @@
+/* Highlight a specific chapter in the TOC*/
+
+
+
+/* .sidebar-navigation a[href*="computer_vision"] {
+  color: #ff6b6b !important;
+} */
+
+/* .sidebar-navigation a[href*="computer_vision"] {
+  font-weight: 600 !important;
+  font-size: 1.1em !important;
+  background-color: #f3f4f6 !important; 
+  padding: 8px 12px !important;
+  border-radius: 4px !important;
+  margin: 8px 0 !important;
+  display: block !important;
+  color: #1f2937 !important;
+} */
+
+.sidebar-navigation a[href*="computer_vision"] {
+  /* font-weight: 550 !important;
+  font-size: 1.0em !important; */
+  background-color: #eff6ff !important;
+  padding: 8px 16px 8px 10px !important;
+  margin-left: -10px !important;
+  margin-right: -20px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  display: block !important;
+}
+
+/* 
+
+.sidebar-navigation a[href*="computer_vision"] {
+  border-left: 3px solid #6366f1 !important; 
+} */
+
+/*
+.callout-tip {
+  background-color: #f0fff0;
+  border-left: 3px solid #50c878;
+  color: #000000; 
+}
+*/
+
+/*lavender
+.callout-tip {
+  background-color: #faf5ff; 
+  border-left: 4px solid #9c27b0; 
+  color: #3d1e50; 
+}
+*/
+
+/*Medium gray
+.callout-tip {
+  background-color: #f9f9f9; 
+  border-left: 4px solid #616161;
+  color: #212121;
+}
+*/
+
+/* Blue */
+.callout-tip {
+  background-color: #f0f8ff; 
+  border-left: 4px solid #2196f3; 
+  /*color: #1a2332;*/
+  color: #000000;
+  font-size: 1em; /* Match the size of normal text */
+  font-weight: normal; /* Remove bold styling */
+  margin: 0; /* Remove extra margins */
+  padding: 0; /* Remove extra padding */
+}
+
+
+
+ 
+/* Green 
+.callout-tip {
+  background-color: #f6fff8; 
+  border-left: 4px solid #4caf50; 
+  color: #2d3728; 
+}
+*/

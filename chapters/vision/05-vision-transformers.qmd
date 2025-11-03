@@ -1,0 +1,769 @@
+# Vision Transformers
+
+
+
+## Motivation: From CNNs to Transformers
+
+**The Paradigm Shift**: Transformers, originally designed for sequence modeling in NLP, have proven equally powerful for vision. Unlike CNNs with hard-coded locality biases, transformers learn spatial relationships through self-attention.
+
+**Why Consider Transformers for Vision?**
+
+**CNN Limitations**:
+
+1. **Fixed receptive fields**: Even with dilated convolutions, receptive field growth is limited
+2. **Local bias**: Strong inductive bias may hurt when global context matters
+3. **Architecture complexity**: Different designs for different tasks
+
+**Transformer Advantages**:
+
+1. **Global receptive field**: Every patch can attend to all others (layer 1 onward)
+2. **Architecture Flexibility**: Same architecture across modalities (vision, language, multimodal)
+3. **Scalability**: Performance improves predictably with data and model size
+
+**The Trade-off**:  
+
+- **Transformers**: Data-hungry, computationally expensive, but better at scale
+- **CNNs**: Sample-efficient (strong inductive biases), faster, better for small datasets
+
+**Interview Context**: Companies like OpenAI (CLIP, DALL-E), Google (ViT, Imagen), Meta (DINOv2, SAM) have invested heavily in vision transformers. Understanding when to use transformers vs. CNNs is critical for system design interviews.
+
+---
+
+## Vision Transformer (ViT, 2020)
+
+**Core Idea**: Apply standard Transformer directly to images by treating them as sequences of patches.
+
+### Architecture Overview
+
+**Step 1: Patch Embeddings**
+
+Split image into non-overlapping patches and project to embedding space:
+
+1. **Partition**: Image $\mathbf{I} \in \mathbb{R}^{H \times W \times 3}$ → patches $\mathbf{x}_p \in \mathbb{R}^{P \times P \times 3}$
+   - Number of patches: $N = \frac{H \cdot W}{P^2}$
+   - Example: 224×224 image, 16×16 patches → $N = 196$ patches
+
+2. **Flatten**: Each patch $\mathbf{x}_p \in \mathbb{R}^{P \times P \times 3}$ → $\mathbf{x}_p \in \mathbb{R}^{P^2 \cdot 3}$
+
+3. **Linear Projection**: Map to embedding dimension $D$
+   $$\mathbf{z}_i^{(0)} = \mathbf{E} \cdot \text{Flatten}(\mathbf{x}_{p_i}), \quad \mathbf{E} \in \mathbb{R}^{D \times (P^2 \cdot 3)}$$
+
+4. **Prepend Class Token**: Add learnable $[\text{CLS}]$ token
+   $$\mathbf{z}_0^{(0)} = \mathbf{z}_{\text{cls}}$$
+
+5. **Add Position Embeddings**: Learnable 1D positional encodings
+   $$\mathbf{z}^{(0)} = [\mathbf{z}_{\text{cls}}; \mathbf{z}_1^{(0)}; \ldots; \mathbf{z}_N^{(0)}] + \mathbf{E}_{\text{pos}}$$
+   where $\mathbf{E}_{\text{pos}} \in \mathbb{R}^{(N+1) \times D}$
+
+**Result**: Sequence of $N+1$ tokens, each $D$-dimensional.
+
+---
+
+**Step 2: Transformer Encoder**
+
+Stack $L$ blocks, composed by a Multi-Head Self-Attention layer (MSA) and a Multi-Layer Perceptron (MPA):
+```
+z'= MSA(LayerNorm(z)) + z
+z = MLP(LayerNorm(z')) + z'
+```
+
+**MSA layer (Multi-Head Self-Attention layer)**:
+
+For each head $h$:
+$$\mathbf{Q}_h = \mathbf{z} \mathbf{W}_h^Q, \quad \mathbf{K}_h = \mathbf{z} \mathbf{W}_h^K, \quad \mathbf{V}_h = \mathbf{z} \mathbf{W}_h^V$$
+
+$$\text{head}_h = \text{softmax}\left(\frac{\mathbf{Q}_h \mathbf{K}_h^\top}{\sqrt{d}}\right) \mathbf{V}_h$$
+ $$(  d = D/H \text{ is the dimension per head} )$$
+
+Concatenate and project:
+$$\text{MSA}(\mathbf{z}) = \text{Concat}(\text{head}_1, \ldots, \text{head}_H) \mathbf{W}^O$$
+
+
+
+**MLP Block**:
+$$\text{MLP}(\mathbf{z}) = \mathbf{W}_2 \cdot \text{GELU}(\mathbf{W}_1 \mathbf{z} + \mathbf{b}_1) + \mathbf{b}_2$$
+
+$$\big(\text{typically a 4× expansion } \mathbf{W}_1 \in \mathbb{R}^{D \times 4D}, \mathbf{W}_2 \in \mathbb{R}^{4D \times D} \big)$$
+
+---
+
+**3. Classification**: MLP head on $[\text{CLS}]$ token → class logits
+
+$$y = \text{softmax}(\mathbf{W}_{\text{head}} \cdot \mathbf{z}_0^{(L)} + \mathbf{b}_{\text{head}})$$
+
+**Why $[\text{CLS}]$ token?**  
+
+- Aggregates global information through self-attention
+- Similar to BERT's $[\text{CLS}]$ for sentence classification
+- Alternative: Global average pooling over all patch embeddings
+
+---
+
+### ViT Variants
+
+| Model | Layers $L$ | Dim $D$ | Heads $H$ | Params | ImageNet (pre-trained on JFT-300M) |
+|---------------|-----------|---------|-----------|--------|----------------------------------|
+| **ViT-Base/16**  | 12 | 768    | 12       |  86M     |  84.2% |
+| **ViT-Large/16** | 24 | 1024   | 16       | 307M     |  85.2% |
+| **ViT-Huge/14**  | 32 | 1280   | 16       | 632M     |  88.5% |
+
+**/16 or /14** denotes patch size $P$.
+
+---
+
+### Computational Complexity
+
+**Self-Attention**: $O(N^2 \cdot D)$ per layer, where $N = (H/P)^2$ patches.  
+
+**Convolution Layer**: $O(H \cdot W \cdot C^2)$ where $C$ is channel count
+
+
+**Practical Implication**: ViT struggles with high-resolution images (e.g., 1024×1024).  
+Whereas CNNs scale linearly with image resolution, **ViT scale quadratically** ($O(N^2)$ complexity).
+
+---
+
+### Training Requirements and Performance
+
+**The Data Hunger Problem**:
+
+| Pre-training Dataset | ImageNet-1K Accuracy (ViT-Large/16) |
+|---------------------|-------------------------------------|
+| ImageNet-1K (1.3M) | 76.5% **(worse than ResNet-152)**|
+| ImageNet-21K (14M) | 85.3% |
+| JFT-300M (300M) | 88.4% |
+
+
+**Why?**
+
+- **No inductive bias**: CNNs encode locality and translation equivariance; but
+ ViT need to learn spatial relationships from scratch via attention - with enough data, this flexibility becomes an advantage.
+- **Over-parameterized**: 307M parameters for ViT-Large.
+
+**Transfer Learning Sweet Spot**:
+
+- Pre-train on large dataset (ImageNet-21K or JFT)
+- Fine-tune on downstream task → often outperforms CNNs
+
+---
+
+#### Implementation Example
+
+```python
+import torch
+import torch.nn as nn
+
+class PatchEmbed(nn.Module):
+    def __init__(self, img_size=224, patch_size=16, in_chans=3, embed_dim=768):
+        super().__init__()
+        self.num_patches = (img_size // patch_size) ** 2
+        # Conv2d with kernel=stride=patch_size acts as patching + projection
+        self.proj = nn.Conv2d(in_chans, embed_dim, 
+                             kernel_size=patch_size, stride=patch_size)
+        
+    def forward(self, x):
+        # x: (B, 3, H, W)
+        x = self.proj(x)  # (B, embed_dim, H/P, W/P)
+        x = x.flatten(2)  # (B, embed_dim, num_patches)
+        x = x.transpose(1, 2)  # (B, num_patches, embed_dim)
+        return x
+
+class VisionTransformer(nn.Module):
+    def __init__(self, img_size=224, patch_size=16, num_classes=1000,
+                 embed_dim=768, depth=12, num_heads=12, mlp_ratio=4.0):
+        super().__init__()
+        self.patch_embed = PatchEmbed(img_size, patch_size, 3, embed_dim)
+        num_patches = self.patch_embed.num_patches
+        
+        # Learnable parameters
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim))
+        
+        # Transformer encoder
+        self.blocks = nn.ModuleList([
+            TransformerBlock(embed_dim, num_heads, mlp_ratio)
+            for _ in range(depth)
+        ])
+        
+        self.norm = nn.LayerNorm(embed_dim)
+        self.head = nn.Linear(embed_dim, num_classes)
+        
+    def forward(self, x):
+        B = x.shape[0]
+        x = self.patch_embed(x)  # (B, N, D)
+        
+        # Prepend CLS token
+        cls_tokens = self.cls_token.expand(B, -1, -1)
+        x = torch.cat([cls_tokens, x], dim=1)  # (B, N+1, D)
+        
+        # Add position embeddings
+        x = x + self.pos_embed
+        
+        # Apply transformer blocks
+        for block in self.blocks:
+            x = block(x)
+        
+        x = self.norm(x)
+        
+        # Classification head on CLS token
+        return self.head(x[:, 0])
+
+class TransformerBlock(nn.Module):
+    def __init__(self, dim, num_heads, mlp_ratio=4.0):
+        super().__init__()
+        self.norm1 = nn.LayerNorm(dim)
+        self.attn = nn.MultiheadAttention(dim, num_heads, batch_first=True)
+        self.norm2 = nn.LayerNorm(dim)
+        self.mlp = nn.Sequential(
+            nn.Linear(dim, int(dim * mlp_ratio)),
+            nn.GELU(),
+            nn.Linear(int(dim * mlp_ratio), dim)
+        )
+    
+    def forward(self, x):
+        # Self-attention with residual
+        x = x + self.attn(self.norm1(x), self.norm1(x), self.norm1(x))[0]
+        # MLP with residual
+        x = x + self.mlp(self.norm2(x))
+        return x
+```
+
+**Key Implementation Details**:
+
+- Using Conv2d for patching is more efficient than reshaping
+- `batch_first=True` in PyTorch's MultiheadAttention
+- Pre-LayerNorm (norm before attention) is more stable than post-norm
+
+---
+
+**Interview Insights**:
+
+**Q: "Why does ViT need so much data?"**
+**A**: CNNs have built-in inductive biases (locality, translation equivariance). ViT has none—must learn spatial relationships from data. With enough data, this flexibility becomes an advantage (learns task-specific patterns).
+
+**Q: "When to use ViT over CNN?"**
+**A**: 
+- **Use ViT**: Large pre-trained models available, downstream task has sufficient data, need for global context (medical imaging, satellite)
+- **Use CNN**: Limited data, real-time inference (lower FLOPs), well-understood architectures
+
+**Q: "How to make ViT more efficient?"**
+**A**:
+ 
+1. Hierarchical architectures (Swin)
+2. Linear attention approximations
+3. Smaller patch sizes initially (higher resolution early, then merge)
+4. Hybrid CNN-Transformer (CNN stem + Transformer)
+
+---
+
+
+## DeiT: Data-Efficient Training (2021)
+
+**Problem**: ViT requires very large training datasets s.a. ImageNet-21K (14M images) or JFT (300M).
+
+**Solution**: Knowledge distillation enables training on ImageNet-1K only.  
+
+**Architecture:**
+
+Add **distillation token** $\mathbf{z}_{\text{dist}}$ alongside $[\text{CLS}]$ to a total of $N+2$ tokens:
+
+$$\mathbf{z}^{(0)} = [\mathbf{z}_{\text{cls}}; \mathbf{z}_{\text{dist}}; \mathbf{z}_1^{(0)}; \ldots; \mathbf{z}_N^{(0)}] + \mathbf{E}_{\text{pos}}$$
+
+Consider two classification heads:
+
+- $\mathbf{y}_{\text{cls}} = \text{softmax}(\mathbf{W}_{\text{cls}} \mathbf{z}_0^{(L)})$ — standard prediction
+- $\mathbf{y}_{\text{dist}} = \text{softmax}(\mathbf{W}_{\text{dist}} \mathbf{z}_1^{(L)})$ — distillation prediction
+
+**Loss**:
+$$\mathcal{L} = \mathcal{L}_{\text{CE}}(y, \hat{y}_{\text{cls}}) + \alpha \mathcal{L}_{\text{CE}}(y, \hat{y}_{\text{dist}}) + \beta \mathcal{L}_{\text{KD}}(y_{\text{teacher}}, \hat{y}_{\text{dist}})$$
+
+where $\mathcal{L}_{\text{KD}} = \text{KL}\left(\text{softmax}(y_{\text{teacher}}/T) \| 
+\text{softmax}(y_{\text{dist}}/T)\right)$  is the **Knowledge Distillation Loss** 
+(Hinton et al., 2015),
+ with $T$ the temperature parameter, typically $T=3$ for softer distributions.
+
+
+**Key Findings**:
+
+- CNN teacher (RegNetY-16GF) works better than Transformer teacher
+- Achieves 81.8% on ImageNet-1K without external pre-training
+- Inference: Can use $(\hat{y}_{\text{cls}} + \hat{y}_{\text{dist}})/2$ for best performance
+
+**Impact**: Democratized ViT training—no need for web-scale datasets.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+## Swin Transformer (2021)
+
+**Motivation**: ViT's $O(N^2)$ complexity doesn't scale to:
+
+
+- High-resolution images (detection, segmentation need 800×800+)
+- Dense prediction tasks (every pixel needs attention)
+
+**Solution**: Hierarchical architecture with **local windowed attention** + **shifted windows** for global receptive field.
+
+---
+
+### Key Mechanisms
+
+
+
+**1. Window Attention (W-MSA)**:
+
+- Partition into $M \times M$ non-overlapping windows (typically $M=7$)
+- Self-attention within each window only
+- Complexity: $O(hw \cdot M^2)$ — **linear in image size**
+
+**2. Shifted Window Attention (SW-MSA)**:
+
+- Alternate between regular and shifted ($M/2$ offset) window partitions
+- Enables cross-window communication
+- Implemented efficiently via cyclic shift + masking
+
+**3. Patch Merging** (like CNN pooling):
+
+- Concatenate 2×2 neighbors (4C channels)
+- Linear projection: $4C → 2C$
+- Result: $4×$ fewer tokens, $2×$ channels
+
+**Architecture** (4 Stages - analogous to CNN feature pyramid):
+
+```
+Input (224×224×3)
+  ↓ Patch Partition (4×4) → (56×56, 96 channels)
+  ↓ Stage 1: 2× Swin Blocks (56×56, 96 ch)
+  ↓ Patch Merging → (28×28, 192 ch)
+  ↓ Stage 2: 2× Swin Blocks (28×28, 192 ch)
+  ↓ Patch Merging → (14×14, 384 ch)
+  ↓ Stage 3: 6× Swin Blocks (14×14, 384 ch)
+  ↓ Patch Merging → (7×7, 768 ch)
+  ↓ Stage 4: 2× Swin Blocks (7×7, 768 ch)
+  ↓ Classification Head
+```
+
+**Key Properties**:
+
+- Spatial resolution decreases (like CNN pooling)
+- Channel count increases (compensation)
+- Produces multi-scale features (compatible with FPN for detection)
+
+---
+
+**Performance**:
+
+| Task | Metric | ResNet-50 | ViT-Base | Swin-Tiny | Swin-Base |
+|------|--------|-----------|----------|-----------|-----------|
+| ImageNet | Top-1 | 76.2% | 77.9% | 81.3% | 83.5% |
+| COCO Det | Box AP | 38.0 | - | 42.2 | 46.9 |
+| COCO Det | Mask AP | 34.4 | - | 39.1 | 42.3 |
+
+(Detection and Segmentation performed with Mask R-CNN, using each of the backbones above)
+
+
+**Why Swin Excels**:
+
+- Local windows → retains fine spatial details
+- Linear complexity → handles high resolution
+- Hierarchical features → compatible with FPN
+
+---
+
+**Interview Insights**:
+
+**Q: "Swin vs. ViT trade-offs?"**  
+**A**:
+
+- **Swin**: Efficient ($O(N)$), hierarchical features, better for dense tasks  
+- **ViT**: Simpler, global attention from layer 1, better for large-scale pre-training
+
+**Q: "Why shifted windows instead of overlapping windows?"**  
+**A**: Overlapping windows would increase computation (more tokens per window). Shifting provides cross-window communication with zero overhead via cyclic shift trick.
+
+**Q: "Can Swin replace CNNs entirely?"**   
+**A**: In many cases, yes—especially for detection/segmentation. CNNs still win for:
+ 
+- Very small datasets (better inductive bias)  
+- Real-time inference (lower latency)  
+- Hardware without optimized attention kernels
+
+
+---
+
+::: {.callout-tip collapse="true" appearance="minimal"}
+
+### Python Implementation 
+
+```python
+class SwinTransformerBlock(nn.Module):
+    def __init__(self, dim, num_heads, window_size=7, shift_size=0):
+        super().__init__()
+        self.window_size = window_size
+        self.shift_size = shift_size
+        
+        self.norm1 = nn.LayerNorm(dim)
+        self.attn = WindowAttention(dim, window_size, num_heads)
+        self.norm2 = nn.LayerNorm(dim)
+        self.mlp = MLP(dim, int(dim * 4))
+    
+    def forward(self, x):
+        H, W = self.H, self.W
+        B, L, C = x.shape
+        
+        shortcut = x
+        x = self.norm1(x)
+        x = x.view(B, H, W, C)
+        
+        # Cyclic shift if needed
+        if self.shift_size > 0:
+            shifted_x = torch.roll(x, shifts=(-self.shift_size, -self.shift_size), 
+                                   dims=(1, 2))
+        else:
+            shifted_x = x
+        
+        # Partition windows
+        x_windows = window_partition(shifted_x, self.window_size)
+        
+        # W-MSA or SW-MSA
+        attn_windows = self.attn(x_windows)
+        
+        # Merge windows
+        shifted_x = window_reverse(attn_windows, self.window_size, H, W)
+        
+        # Reverse cyclic shift
+        if self.shift_size > 0:
+            x = torch.roll(shifted_x, shifts=(self.shift_size, self.shift_size), 
+                          dims=(1, 2))
+        else:
+            x = shifted_x
+        
+        x = x.view(B, H * W, C)
+        
+        # Residual connection
+        x = shortcut + x
+        
+        # MLP with residual
+        x = x + self.mlp(self.norm2(x))
+        
+        return x
+```
+:::
+
+
+
+---
+
+## DETR: Detection Transformer (2020)
+
+**Paradigm**: Treat object detection as **direct set prediction** (no anchors, no NMS).
+
+**Key Components**:
+
+1. **Backbone**: Standard ResNet-50 (could be any CNN)
+2. **Encoder**: Processes image features with self-attention
+3. **Decoder**: 100 learnable **object queries** attend to encoder output
+4. **Prediction Head**: Each query predicts (class, box) or "no object"
+
+**Architecture**:
+```
+Image → CNN Backbone → Flatten + Positional Encoding
+      → Transformer Encoder (6 layers)
+      → Transformer Decoder (6 layers, 100 object queries)
+      → Prediction Heads → {class, bbox} × 100
+```
+
+**Object Queries**: 
+
+- 100 learnable embeddings $\mathbf{q}_1, \ldots, \mathbf{q}_{100} \in \mathbb{R}^D$ initialized randomly. 
+- Each of these queries can "search" for an object via cross-attention to encoder features.
+- COCO images have $<100$ objects on average. Excess queries predict “no object” class
+
+### Training with Bipartite Matching
+
+Ground truth has variable number of objects (1-100), predictions are fixed (100).  
+**Hungarian Algorithm** finds optimal one-to-one matching between predictions and ground truth:
+$$\sigma^* = \arg\min_{\sigma} \sum_{j} \left[-\hat{p}_{c_j}(\sigma(j)) + \mathcal{L}_{\text{box}}(\hat{\mathbf{b}}_{\sigma(j)}, \mathbf{b}_j)\right]$$
+
+**Loss**:
+$$\mathcal{L} = \sum_{j} \left[-\log \hat{p}_{c_j}(\sigma^*(j)) + \lambda_{\text{L1}}\|\hat{\mathbf{b}} - \mathbf{b}\|_1 + \lambda_{\text{GIoU}} \mathcal{L}_{\text{GIoU}}\right]$$
+
+**Key Innovation**: Set prediction with matching → **NMS unnecessary** (each object predicted once).  
+This is more elegant than setting a IoU threshold for NMS, a hand-crafted heuristic.
+
+
+### Limitations and Performance
+
+**COCO Detection AP**:
+
+| Model | Backbone | AP | AP₅₀ | AP₇₅ |
+|-------|----------|-----|------|------|
+| Faster R-CNN | ResNet-50 | 37.0 | 58.1 | 40.0 |
+| DETR | ResNet-50 | 40.6 | 61.1 | 43.5 |
+| DETR | ResNet-101 | 42.0 | 62.4 | 44.2 |
+
+**Advantages**:
+
+- ✓ Simpler pipeline (no anchors, NMS)
+- ✓ Better for large objects
+- ✓ Easier to extend (panoptic segmentation with mask head)
+
+**Disadvantages**:
+
+- ✗ Slow convergence (500 epochs vs. 12 for Faster R-CNN)
+- ✗ Poor small object performance (attention diffuses over large feature maps)
+- ✗ High memory (encoder processes full feature map)
+
+### Panoptic Segmentation Extension
+
+**Architecture**:
+Add **mask head** on top of decoder outputs:
+
+```python
+# For each object query
+mask_logits = mask_head(query_embedding, encoder_features)  
+# Output: (H, W) binary mask
+```
+
+**Training**: Add mask loss (binary cross-entropy) to classification loss + box loss.
+
+**Result**: DETR achieves state-of-art panoptic segmentation on COCO with minimal architecture changes.
+
+
+---
+
+## Deformable DETR (2021)
+
+**Problem**: DETR is slow (500 epochs) and struggles with small objects.
+
+**Solution - Deformable Attention**:
+
+- Attend to only $K=4$ learned reference points (vs. all $N$ pixels)
+- Multi-scale sampling from feature pyramid
+
+
+**Standard Attention** (query $\mathbf{q}$, keys $\{\mathbf{k}_1, \ldots, \mathbf{k}_N\}$):
+$$\text{Attn}(\mathbf{q}, \{\mathbf{k}_i\}_{i=1}^N) = \sum_{i=1}^N \alpha_i \mathbf{v}_i$$
+
+where $\alpha_i = \text{softmax}\left(\frac{\mathbf{q} \cdot \mathbf{k}_i}{\sqrt{d}}\right)$.
+
+
+
+**Deformable Attention**:  
+$$\text{DeformAttn}(\mathbf{q}, \mathbf{p}_{\text{ref}}) = \sum_{k=1}^K \alpha_{i} \cdot \mathbf{x}(\mathbf{p}_{\text{ref}} + \Delta \mathbf{p}_{mk})$$
+
+where $\Delta \mathbf{p}_{k}$ are learned offsets.
+where:
+
+- $\mathbf{p}_{\text{ref}} \in \mathbb{R}^2$ = reference point (e.g., query's current best guess)
+- $\Delta \mathbf{p}_{k} \in \mathbb{R}^2$ = **learned offset** for sampling point $k$
+- $\mathbf{x}(\mathbf{p})$ = feature at location $\mathbf{p}$ (bilinear interpolation if non-integer)
+- $\alpha_{k}$ = attention weight (learned)
+
+**Multi-Scale**: Sample from multiple FPN levels → better small object detection.
+
+$$\text{MSDeformAttn}(\mathbf{q}, \{\mathbf{p}_{\text{ref}}^l\}_{l=1}^L, \{\mathbf{x}^l\}_{l=1}^L) =
+\mathbf{W}_m \sum_{l=1}^L \sum_{k=1}^K \alpha_{mlk} \cdot \mathbf{x}^l(\mathbf{p}_{\text{ref}}^l + \Delta \mathbf{p}_{mlk})$$
+
+- Small objects → sample from high-res features
+- Large objects → sample from low-res features
+- Query learns which scales are relevant
+
+**Complexity**:  DETR: $O(N_q \cdot N_k \cdot D)$ → **quadratic**.  
+Deformable DETR: $O(N_q \cdot K \cdot D)$, where $K$ is constant → **linear**  
+
+
+**Performance**:
+
+| Model | Epochs | AP | AP_S (small) |
+|-------|--------|-----|--------------|
+| DETR | 500 | 40.6 | 20.5 |
+| Deformable DETR | 50 | 46.2 | 28.8 |
+
+**Key Improvements**: 10× faster training, +8.3 AP on small objects.
+
+---
+
+**Interview Insights**:
+
+**Q: "Why does deformable attention help small objects?"**
+**A**: Standard attention diffuses over large feature maps. Deformable attention focuses on a small learned set of relevant locations → sharper attention on small objects. Multi-scale sampling also helps by using high-resolution features.
+
+**Q: "Can deformable attention replace standard attention everywhere?"**
+**A**: Not always. Deformable attention assumes spatial structure (2D images). Standard attention is more general (works for any sequence). For vision at scale, deformable is often better.
+
+**Q: "How to implement bilinear sampling for non-integer coordinates?"**
+**A**: PyTorch's `F.grid_sample` with `mode='bilinear'`. Used in Spatial Transformer Networks (2015) and Deformable Convolutions (2017).
+
+
+
+
+---
+
+## Segment Anything Model (SAM, 2023)
+
+**Vision**: Foundation model for segmentation—segment any object from any prompt, zero-shot.  
+**Inspiration from NLP**: GPT-3 for language → SAM for segmentation.
+
+### Architecture
+
+1. **Image Encoder**: ViT-Huge (632M params, MAE pre-trained)
+   - Input: 1024×1024 → Output: 64×64×256 embedding
+   - Runs once per image (heavy)
+
+2. **Prompt Encoder** (lightweight):
+   - Points/boxes → positional encodings
+   - Masks → small CNN (4 conv layers)
+   - Text → CLIP text encoder (frozen)
+
+**3. Mask Decoder** (Lightweight Transformer):
+
+- 2-layer decoder with:
+  - Self-attention on prompt embeddings + mask tokens
+  - Cross-attention to image embeddings
+- Outputs 3 mask predictions + 3 IoU confidence scores
+
+**Design**: Heavy encoder (detailed features) + light decoder (real-time interaction).
+
+
+
+### The SA-1B Dataset
+
+**Scale**: 11M images, 1.1B masks (~100 masks/image)
+
+**Three-Stage Data Engine**:
+
+1. **Model-assisted** (4.3M): Humans refine SAM predictions
+2. **Semi-automatic** (5.9M): SAM auto-detects, humans fill gaps
+3. **Fully automatic** (1.1B): 32×32 grid prompts → filter by confidence + stability
+
+**Key**: Model-in-the-loop—SAM improves, enables more automation, generates more data.
+
+### Zero-Shot Transfer
+
+**Evaluated on 23 datasets** without fine-tuning:
+
+
+| Task | Prompt | Performance |
+|---------|------|---------------|
+| Edge Detection | 16×16 grid | Competitive with supervised ViT |
+| Object Proposals | Auto-generation | Outperforms EdgeBoxes |
+| Instance Segmentation | Box from detector | 94% of fully-supervised ViTDet |
+| Single-Point Segmentation | 1 foreground point | Better than RITM (interactive segmentation SOTA) |
+
+
+**Applications**: Photo editing, medical imaging, robotics, video tracking.
+
+**Interview Note**: SAM demonstrates that scaling (data + model) enables generalization in vision, similar to GPT in language. Companies building on SAM: Meta (integrated into products), medical AI startups (MedSAM), robotics companies (Dobb-E uses SAM).
+
+
+
+---
+
+##  Summary and Interview Preparation
+
+### Core Concepts Checklist
+
+**Vision Transformers**:
+
+- [ ] Patch embedding and positional encoding
+- [ ] Self-attention complexity: $O(N^2 \cdot D)$
+- [ ] Why ViT needs large datasets (no inductive bias)
+- [ ] When to use ViT vs. CNN
+
+**DeiT**:
+
+- [ ] Knowledge distillation with hard and soft labels
+- [ ] Distillation token mechanism
+- [ ] Training ViT on ImageNet-1K
+
+**Swin Transformer**:
+
+- [ ] Window-based vs. global attention
+- [ ] Shifted windows for cross-window communication
+- [ ] Patch merging for hierarchical features
+- [ ] Complexity: $O(N)$ vs. ViT's $O(N^2)$
+
+**DETR**:
+
+- [ ] Set prediction with Hungarian matching
+- [ ] Object queries and their role
+- [ ] Why NMS is unnecessary
+
+**Deformable DETR**:
+
+- [ ] Deformable attention with learned offsets
+- [ ] Multi-scale sampling
+- [ ] Complexity reduction: $O(N_q \cdot K)$ with $K$ constant
+
+**SAM**:
+
+- [ ] Promptable segmentation paradigm
+- [ ] Three-stage data collection engine
+- [ ] Zero-shot transfer capabilities
+- [ ] Image encoder vs. prompt encoder design
+
+
+
+### Common Interview Questions
+
+1. **"Why does ViT need more data than ResNet?"**
+   - No built-in locality/translation equivariance → must learn from data
+
+2. **"How does Swin achieve linear complexity?"**
+   - Window attention: $O(M^2)$ per window, $O(hw \cdot M^2)$ total vs. ViT's $O((hw)^2)$
+   - Shifted windows maintain global receptive field
+
+3. **"Why doesn't DETR need NMS?"**
+   - Bipartite matching ensures one-to-one assignment → no duplicate predictions
+
+4. **"Explain DETR's training process."**
+   - Hungarian matching: Bipartite matching between predictions and GT
+   - Loss: Classification (CE) + Box (L1 + GIoU)
+   - No NMS needed: One-to-one matching ensures unique predictions
+
+5. **"Deformable DETR vs. DETR trade-offs?"**
+   - 10× faster training, better small objects, slightly more complex architecture
+
+6. **"When to use transformer vs. CNN backbone?"**
+   - **Transformer**: Large pre-trained models available, global context critical
+   - **CNN**: Limited data, real-time constraints, edge deployment
+
+7. **"How does SAM handle ambiguous prompts?"**
+  
+   - Predicts 3 masks (whole, part, subpart)
+   - Loss computed on best-matching mask only
+   - IoU prediction allows model to rank outputs
+
+### Interview Preparation Tips
+
+- **Complexity analysis**: ViT: $O(N^2)$, Swin: $O(N)$, Deformable: $O(K)$, where $K$ is a constant
+- **Architecture comparisons**: Multi-dimensional trade-offs (accuracy, speed, memory, data)
+- **Implementation details**: Understand shifted window trick, bilinear sampling for deformable attention, Hungarian algorithm
+- **Recent advances**: DINOv2, SAM 2 (video), Depth Anything
+- **Company context**: Meta (SAM, DINO), Google (ViT, Swin), OpenAI (CLIP, and DALL-E which uses ViT), Tesla (bird’s eye view BEV transformers)
+
+### Further Reading
+- **Transformer Papers**: [ViT](https://arxiv.org/abs/2010.11929) • [Swin](https://arxiv.org/abs/2103.14030) • [DETR](https://arxiv.org/abs/2005.12872) • [SAM](https://arxiv.org/abs/2304.02643)
+- **Survey**: [Transformers in Vision: A Survey](https://arxiv.org/abs/2101.01169)
+
+---
+
+This completes the Vision Transformers section. The architecture evolution—from pure self-attention (ViT) to hierarchical efficient designs (Swin) to sparse adaptive attention (Deformable DETR) to foundation models (SAM)—represents the rapid maturation of transformers in computer vision over just 3 years (2020-2023).

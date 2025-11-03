@@ -1,0 +1,16 @@
+# Conclusion {.unnumbered .unlisted} 
+
+## Comparison: VAE vs. Autoencoder vs. GAN 
+
+| Aspect | Autoencoder | VAE | GAN |
+|--------|-------------|-----|-----|
+| **Latent space** | Irregular, gaps | Continuous, structured | Continuous (implicit) |
+| **Loss** | Reconstruction only | Reconstruction + KL | Adversarial |
+| **Training** | Stable | Stable | Unstable |
+| **Generation quality** | Poor (not generative) | Good | Excellent |
+| **Mode coverage** | N/A | Good (covers all modes) | Poor (mode collapse) |
+| **Likelihood** | N/A | Computable (lower bound) | Not computable |
+| **Latent inference** | Fast (one pass) | Fast (one pass) | Slow (optimization) or N/A |
+| **Use cases** | Compression, denoising | Generative modeling, latent space manipulation | High-fidelity synthesis |
+
+---
