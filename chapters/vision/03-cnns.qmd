@@ -31,7 +31,7 @@ Below is an animation illustrating how a standard convolution kernel slides acro
 ![Animation of a standard 2D convolution.
 A kernel scans the input spatially, computing weighted sums at each position to produce the output feature map.
 *Adapted from Dumoulin and Visin 
-[@dumoulin2016guide].*](/images/03_conv_gif_standard.gif){#standard_convolution width=40% fig-align="center"}
+[@dumoulin2016guide].*](/images/cnns/conv_gif_standard.gif){#standard_convolution width=40% fig-align="center"}
 
 
 
@@ -73,7 +73,7 @@ where $r$ is the **dilation rate**.
 
 ![Dilated convolution (atrous convolution).
 The kernel uses spaced sampling points, expanding receptive field without increasing parameters.
-*[@dumoulin2016guide]*](/images/03_conv_gif_dilated.gif){#dilated_convolution width=40% fig-align="center"}
+*[@dumoulin2016guide]*](/images/cnns/conv_gif_dilated.gif){#dilated_convolution width=40% fig-align="center"}
 
 
 **Effective Receptive Field**:
@@ -107,7 +107,7 @@ where $\Delta p_n = (\Delta x_n, \Delta y_n)$ is the **learned offset** for loca
 ![Deformable convolution with learned offsets. 
 The network predicts spatial offsets for each sampling position,
  allowing the receptive field to adapt to object geometry. 
- *[@dai2017deformable]*](/images/03_conv_deformable.png){#deformable_convolution width=60% fig-align="center"}
+ *[@dai2017deformable]*](/images/cnns/conv_deformable.png){#deformable_convolution width=60% fig-align="center"}
 
 **Key Advantages**:
 
@@ -135,7 +135,7 @@ Also called *Deconvolutions*.
 ![Transposed convolution.
 The operation expands spatial resolution by reversing the geometry of strided convolution, commonly used in decoders and generative models.
 *Adapted from Dumoulin and Visin 
-[@dumoulin2016guide].*](/images/03_conv_gif_strided.gif){#strided_convolution width=40% fig-align="center"}
+[@dumoulin2016guide].*](/images/cnns/conv_gif_strided.gif){#strided_convolution width=40% fig-align="center"}
 
 
 **Output Size**: For input $h \times w$, kernel $k$, stride $s$, padding $p$:
@@ -180,12 +180,12 @@ The following illustration shows the two steps of a separable convolution.
 ::: {.columns}
 
 ::: {.column width="30%"  style="border-right: 2px dashed #999; padding-right: 2%; margin-top: 1%;"}
-![](/images/03_conv_depthwise.png){width=100%}
+![](/images/cnns/conv_depthwise.png){width=100%}
 :::
 
 
 ::: {.column width="50%" }
-![](/images/03_conv_pointwise.png){width=100%}
+![](/images/cnns/conv_pointwise.png){width=100%}
 :::
 
 :::
@@ -223,6 +223,10 @@ $$\mathbf{Y}[i,j,c] = \max_{p,q \in \text{Window}} \mathbf{X}[si + p, sj + q, c]
 
 - Retains strongest activations (preserves edges/features)
 - Non-differentiable at non-max locations (subgradients used in backprop)
+
+![**Max pooling operation.**
+A downsampling layer that selects the maximum value in each region, reducing spatial resolution while preserving dominant features.
+*[@dumoulin2016guide]*](/images/cnns/max_pooling.gif){#max_pooling width=35% fig-align="center"}
 
 **Average Pooling**:
 $$\mathbf{Y}[i,j,c] = \frac{1}{k^2} \sum_{p,q \in \text{Window}} \mathbf{X}[si + p, sj + q, c]$$
@@ -356,7 +360,7 @@ where $\mathcal{F}$ is a stack of conv layers (e.g. Conv-BN-ReLU).
 :::
 
 ::: {.column width="34%" }
-![](/images/03_residual_graph.png){width=100% style="margin-top:1%;" fig-align="center"}
+![](/images/cnns/residual_graph.png){width=100% style="margin-top:1%;" fig-align="center"}
 :::
 
 :::
@@ -466,7 +470,7 @@ Image (224×224×3) → CNN Backbone → Global Pooling
 
 **Legacy**: Established conv-pool-fc pattern used for 15+ years.
 
-![LeNet-5 architecture overview. Image Source: [@ng2015coursera].](/images/03_cnn_lenet.png){#fig-cnn-lenet width=85% fig-align="center"}
+![LeNet-5 architecture overview. Image Source: [@ng2015coursera].](/images/cnns/cnn_lenet.png){#fig-cnn-lenet width=85% fig-align="center"}
 
 
 ---
@@ -503,7 +507,7 @@ Answer:
  (2) ReLU—enabled training deeper networks,  
  (3) Engineering—GPU implementation, dropout, data augmentation at scale.
 
-![AlexNet architecture overview. Image Source: [@ng2015coursera].](/images/03_cnn_alexnet.png){#fig-cnn-alexnet width=85% fig-align="center"}
+![AlexNet architecture overview. Image Source: [@ng2015coursera].](/images/cnns/cnn_alexnet.png){#fig-cnn-alexnet width=85% fig-align="center"}
 
 ---
 
@@ -531,7 +535,7 @@ Answer:
 
 **Legacy**: Showed depth matters, established 3×3 as standard kernel size.
 
-![VGG-16 architecture overview. Image Source: [@ng2015coursera].](/images/03_cnn_vgg.png){#fig-cnn-vgg width=85% fig-align="center"}
+![VGG-16 architecture overview. Image Source: [@ng2015coursera].](/images/cnns/cnn_vgg.png){#fig-cnn-vgg width=85% fig-align="center"}
 
 ---
 
@@ -551,7 +555,7 @@ Answer:
 - Global Average Pooling
 - FC (2048 → num_classes)
 
-![Resnet-50 architecture overview.](/images/03_cnn_resnet_50.png){#fig-cnn-resnet width=85% fig-align="center"}
+![Resnet-50 architecture overview.](/images/cnns/cnn_resnet_50.png){#fig-cnn-resnet width=85% fig-align="center"}
 
 
 **Bottleneck Block** (ResNet-50+):
@@ -608,7 +612,7 @@ Input
 
 **Trade-off**: More architectural complexity vs. parameter efficiency and multi-scale features.
 
-![Inception architecture overview. Image Source: [@ng2015coursera].](/images/03_cnn_inception.png){#fig-cnn-inception width=85% fig-align="center"}
+![Inception architecture overview. Image Source: [@ng2015coursera].](/images/cnns/cnn_inception.png){#fig-cnn-inception width=85% fig-align="center"}
 
 ---
 
