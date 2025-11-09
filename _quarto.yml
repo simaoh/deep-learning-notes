@@ -33,8 +33,7 @@ book:
         - chapters/vision/07-vaes.qmd
         - chapters/vision/08-gans.qmd
         - chapters/vision/09-diffusion-models.qmd
-        - chapters/_conclusion-generative-models.qmd
-        - chapters/aux.qmd  
+        - chapters/_conclusion-generative-models.qmd 
 
 
     - intro.qmd

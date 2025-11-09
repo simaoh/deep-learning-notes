@@ -1,1 +1,826 @@
-#  GANs
+# Generative Adversarial Networks (GANs)
+
+## Introduction
+
+**Generative Adversarial Networks** (GANs) learn to generate data through a two-player game between competing neural networks. Unlike VAEs which use explicit density modeling, GANs learn an implicit generative model through adversarial training.
+
+**Core Idea**: Train two networks in opposition:
+
+- **Generator** $G$: Creates fake samples to fool the discriminator
+- **Discriminator** $D$: Distinguishes real data from generated fakes
+
+**Key Insight**: The generator never sees real data directly—it only receives gradients from the discriminator's judgment. This indirect supervision produces remarkably sharp, high-quality samples.
+
+---
+
+### Minmax Game Formulation
+
+Generator and discriminator play a minimax game with value function $V(G, D)$:
+
+$$\min_G \max_D V(D, G) = \min_G \max_D \Big(\mathbb{E}_{x \sim p_{\text{data}}(x)}[\log D(x)] + \mathbb{E}_{z \sim p_z(z)}[\log(1 - D(G(z)))]\Big)$$
+
+
+
+**Discriminator's objective**:  
+Maximize $V(D, G)$; &nbsp; by correctly classifying real data ($D(x) \to 1$) and fake data ($D(G(z)) \to 0$).
+
+**Generator's objective**:  
+Minimize $V(D, G)$; &nbsp; by fooling the discriminator ($D(G(z)) \to 0$).
+
+---
+
+
+### Architecture Components
+
+**Generator** $G: \mathcal{Z} \to \mathcal{X}$:
+
+- Input: Latent code $z \sim p(z) = \mathcal{N}(0, I)$ (typically)
+- Output: Generated sample $\hat{x} = G(z) \in \mathbb{R}^D$
+- Architecture: Transposed convolutions (images) or MLPs (tabular)
+
+$$z \to \text{FC} \to \text{Reshape} \to \text{TransposedConv} \times N \to \text{Tanh} \to \hat{x}$$
+
+**Discriminator** $D: \mathcal{X} \to [0,1]$:
+
+- Input: Sample $x$ (real or fake)
+- Output: Probability that $x$ is real: $D(x) \in [0,1]$
+- Architecture: Convolutional network (images) or MLPs
+
+$$x \to \text{Conv} \times N \to \text{Flatten} \to \text{FC} \to \text{Sigmoid} \to D(x)$$
+
+---
+
+### Training Algorithm
+
+**Alternating optimization**—train discriminator and generator in turns:
+
+```python
+for epoch in epochs:
+    # Train Discriminator (k steps, typically k=1)
+    for _ in range(k):
+        # Sample real data
+        x_real ~ p_data(x)
+        
+        # Sample noise and generate fakes
+        z ~ p(z)
+        x_fake = G(z)
+        
+        # Discriminator loss (binary cross-entropy)
+        L_D = -[log D(x_real) + log(1 - D(x_fake))]
+        
+        # Update discriminator
+        θ_D ← θ_D - η ∇_θD L_D
+    
+    # Train Generator (1 step)
+    z ~ p(z)
+    x_fake = G(z)
+    
+    # Generator loss (non-saturating)
+    L_G = -log D(G(z))
+    
+    # Update generator
+    θ_G ← θ_G - η ∇_θG L_G
+```
+
+**Key design choice**: Update discriminator more frequently ($k$ times) per generator update to maintain discriminator strength.
+
+
+---
+
+
+
+
+
+
+
+## Unconditional Image Generation
+
+
+### DCGAN (Deep Convolutional GAN, 2015)
+
+**Key contribution**: Stable architecture guidelines for training GANs on images.
+
+**Architecture principles**:
+1. Replace pooling layers with strided convolutions (discriminator) and transposed convolutions (generator)
+2. Use batch normalization in both networks (except generator output and discriminator input)
+3. Remove fully connected hidden layers
+4. Use ReLU in generator (except output: Tanh)
+5. Use LeakyReLU in discriminator
+
+**Generator architecture** (for 64×64 images):
+```
+z (100) → FC(4×4×1024) → Reshape
+  → TransposedConv(512, 4×4, stride=2) → BN → ReLU  # 8×8
+  → TransposedConv(256, 4×4, stride=2) → BN → ReLU  # 16×16
+  → TransposedConv(128, 4×4, stride=2) → BN → ReLU  # 32×32
+  → TransposedConv(3, 4×4, stride=2) → Tanh          # 64×64
+```
+
+**Impact**: Enabled stable training, became foundation for future GAN research.
+
+
+---
+
+
+
+### WGAN (Wasserstein GAN ,2017)
+
+**Motivation**: Address training instability through better distance metric.
+
+**Key idea**: Instead of Jensen-Shannon divergence, use **Wasserstein distance** (Earth Mover's Distance): 
+
+$$W(p_r, p_g) = \sup_{\|f\|_L \leq 1} \mathbb{E}_{x \sim p_r}[f(x)] - \mathbb{E}_{x \sim p_g}[f(x)]$$
+
+**WGAN objective**:
+$$\min_G \max_{D \in \mathcal{D}} \mathbb{E}_{x \sim p_{\text{data}}}[D(x)] - \mathbb{E}_{z \sim p_z}[D(G(z))]$$
+
+**Key differences from standard GAN**:
+
+| Aspect | Standard GAN | WGAN |
+|--------|-------------|------|
+| Discriminator output | Sigmoid (probability) | Linear (score) |
+| Loss | Binary cross-entropy | Wasserstein distance |
+| Constraint | None | 1-Lipschitz |
+| Stability | Sensitive to hyperparameters | More stable |
+
+**Advantages**: Provides meaningful gradients even when distributions don't overlap, more stable training.
+
+**Enforcing Lipschitz constraint**: 
+The Wasserstein GAN optimizes the Earth-Mover distance, 
+which requires the critic to be **1-Lipschitz**. 
+This smoothness constraint is essential for the distance to be valid (via the Kantorovich–Rubinstein duality).
+The original WGAN enforces this constraint by **clipping the critic’s weights**, 
+a simple but crude way to bound the gradients.
+
+```python
+# Enforcing 1-Lipschitz constraint (original WGAN)
+for p in discriminator.parameters():
+    p.data.clamp_(-0.01, 0.01)
+```
+
+**Problems with weight clipping**:
+
+- Limits discriminator model capacity
+- Can lead to unstable or flat value surfaces
+- Slows Convergence
+
+---
+
+### WGAN-GP (2017)
+
+**Improvement**: Replace weight clipping with gradient penalty.
+
+**Gradient penalty**:
+$$\lambda \mathbb{E}_{\hat{x} \sim p_{\hat{x}}}[(\|\nabla_{\hat{x}} D(\hat{x})\|_2 - 1)^2]$$
+
+for any interpolated point $\hat{x}$ between a real data sample and a generated sample  
+(i.e., convex combinations of the form $\hat{x} = \epsilon x + (1-\epsilon)G(z), \, \epsilon \in [0,1]$).
+
+
+
+**Complete loss**:
+$$\mathcal{L}_D = \mathbb{E}_z[D(G(z))] - \mathbb{E}_x[D(x)] + \lambda \mathbb{E}_{\hat{x}}[(\|\nabla_{\hat{x}} D(\hat{x})\|_2 - 1)^2]$$
+
+**Benefits**: Better gradient behavior, no weight clipping issues. 
+
+**Standard practice** for Wasserstein GANs (typically $\lambda = 10$).
+
+---
+
+## Conditional Image Generation
+
+### Conditional GAN (cGAN, 2014)
+
+**Idea**: Condition both networks on labels $y$:
+
+$$\min_G \max_D \mathbb{E}_{x,y}[\log D(x|y)] + \mathbb{E}_{z,y}[\log(1 - D(G(z|y)|y))]$$
+
+**Implementation**:
+```python
+# Generator
+y_embedded = embedding(y)
+z_cond = concat([z, y_embedded])
+x = G(z_cond)
+
+# Discriminator  
+x_cond = concat([x, y_embedded])
+score = D(x_cond)
+```
+
+**Applications**:
+
+- Class-conditional image generation (ImageNet)
+- Text-to-image synthesis
+- Image-to-image translation (pix2pix)
+- Super-resolution
+
+
+
+---
+
+Having covered conditional GANs, we now move to advances in **unconditional high-resolution image generation**, which ultimately led to StyleGAN.
+
+---
+
+Prior to StyleGAN, **Progressive GAN** introduced progressive growing 
+— a key technique that allowed stable training at very high resolutions (up to 1024×1024), 
+and was later adopted in early versions of StyleGAN.
+
+### Progressive GAN (2017)
+
+**Key idea:** Train generator & discriminator by gradually increasing resolution  
+(4×4 → 8×8 → 16×16 → … → 1024×1024)
+
+**Fade-in mechanism:** Smooth transition when adding layers
+```python
+x_lowres = upsample(prev_block(x))
+x_highres = new_block(x)
+x = α * x_highres + (1 - α) * x_lowres  # α: ramps from 0→1
+```
+
+**Benefits:**
+
+* Stable training at high resolution
+* Faster convergence
+* Much sharper high-resolution results than prior GANs
+
+---
+
+### StyleGAN (2018-2019)
+
+**Key innovation**: Style-based generator with explicit control over image features at different scales.
+
+**Architecture overview**:
+
+**1. Mapping Network** $f: \mathcal{Z} \to \mathcal{W}$:
+
+- 8-layer MLP maps $z\in \mathcal{Z}$ to disentangled latent $w \in \mathcal{W}$
+
+
+**2. Synthesis Network**: Generates image from $w$
+
+- Starts from learned constant tensor (not latent vector)
+- Progressive upsampling; each layer modulated by style vector $w$ through 
+**Adaptive Instance Normalization (AdaIN)**
+
+**AdaIN (Style Modulation)**:
+Applies style controls by normalizing activations and re-scaling them with learned scale/bias from $w$:
+$$\text{AdaIN}(x_i, y) = y_{s,i} \frac{x_i - \mu(x_i)}{\sigma(x_i)} + y_{b,i}$$
+
+
+**3. Hierarchical Style Control**:
+
+- **Coarse** (4×4–8×8): pose, face shape
+- **Middle** (16×16–32×32): facial features, hair
+- **Fine** (64×64–1024×1024): colors, pores, micro-structure
+
+**Style mixing regularization**: Inject different $w$ vectors 
+at different layers to encourage disentanglement and prevent the network 
+from encoding all variation in early layers.
+
+**4. Noise Injection**: Per-pixel Gaussian noise at each layer 
+→ stochastic realism (hair strands, pores, skin variation)
+
+```python
+x = conv(x)
+x = x + noise * learned_weight  # Uncorrelated Gaussian noise
+x = activation(x)
+```
+
+**Results**: State-of-the-art 1024×1024 image quality (FID ~3 on FFHQ faces dataset).
+
+**StyleGAN2** later removed progressive growing and improved normalization to eliminate artifacts.
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+## Image-to-Image Translation
+
+**Goal:** Learn a mapping between two visual domains $X$ and $Y$.
+Given input $x \in X$, generate $y \in Y$.
+
+* **Paired setting**: explicit aligned pairs $(x_i, y_i)$ are available
+* **Unpaired setting**: only samples from each distribution, no direct correspondences
+
+
+### Pix2Pix (2016) — *Paired Translation*
+
+**Setting:** Learn $(G: X \rightarrow Y)$ with paired examples $(x, y)$.
+
+* **Generator:** U-Net (skip connections preserve spatial details)
+* **Discriminator:** PatchGAN (classifies local patches as real/fake)
+
+
+**Loss**:
+$$\mathcal{L}_\text{Pix2Pix} = \mathcal{L}_{\text{GAN}} + \lambda \mathcal{L}_{\text{L1}}$$
+
+ - $\mathcal{L}_{\text{L1}} = \mathbb{E}[\|y - G(x)\|_1]$
+ - $\mathcal{L}_{\text{GAN}} = \mathbb{E}_{x,y}[\log D(x,y)] + \mathbb{E}_{x}[\log(1 - D(x, G(x)))]$
+ - GAN loss encourages realistic textures; L1 keeps output close to the paired target.
+
+
+**Applications**: Conditional generation across paired domains, including:
+
+- edges → photos
+- labels → scenes (semantic → realistic)
+- image colorization
+- super-resolution
+
+
+### CycleGAN (2017) — *Unpaired Translation*
+
+**Setting:** Unsupervised translation (no paired data). Learn mappings both ways:
+$$
+G: X \rightarrow Y, \quad F: Y \rightarrow X
+$$
+
+**Key idea — Cycle Consistency:**
+Translating forward then back should reconstruct the original:
+
+$$
+F(G(x)) \approx x, \quad G(F(y)) \approx y
+$$
+
+**Loss**:
+$$\mathcal{L} = \mathcal{L}_{\text{GAN}}(G) + \mathcal{L}_{\text{GAN}}(F) + 
+\lambda_1 \mathcal{L}_{\text{cyc}} + 
+\lambda_2 \mathcal{L}_{\text{id}}
+$$
+
+*Adversarial loss*: &nbsp; enforces that translating to the other domain and back recovers the original image
+
+- $\mathcal{L}_{\text{GAN}}(G)= 
+\mathbb{E}_{y \sim p_{\text{data}}(y)}[(D_Y(y) - 1)^2]+ 
+\mathbb{E}_{x \sim p_{\text{data}}(x)}[D_Y(G(x))^2]$  
+$\mathcal{L}_{\text{GAN}}(F)=
+\mathbb{E}_{x \sim p_{\text{data}}(x)}[(D_X(x) - 1)^2]+
+\mathbb{E}_{y \sim p_{\text{data}}(y)}[D_X(F(y))^2]$
+
+
+ *Cycle Loss*: &nbsp; enforces that translating to the other domain and back recovers the original image
+
+- $\mathcal{L}_{\text{cyc}} =
+\mathbb{E}_{x \sim p(x)}[\|F(G(x)) - x\|_1] +
+\mathbb{E}_{y \sim p(y)}[\|G(F(y)) - y\|_1]$  
+
+
+*Identity Loss*: &nbsp; preserves content when input already resembles target domain
+
+- $\mathcal{L}_{\text{id}} \,\ = \mathbb{E}_{y \sim p(y)} \left[ \lVert G(y) - y \rVert_1 \right]+
+\mathbb{E}_{x \sim p(x)} \left[ \lVert F(x) - x \rVert_1 \right]$  
+
+
+**Applications**: Cross-domain translation without paired supervision, e.g.,
+
+- season transfer
+- horse ↔ zebra
+- apples ↔ oranges
+- photo ↔ painting style
+
+---
+
+## Evaluation Metrics
+
+Evaluating generative models is challenging because we cannot compute exact likelihoods for GANs. 
+Instead, we rely on proxy metrics that measure different aspects of generation quality. 
+
+
+### Inception Score (IS)
+
+**Motivation**: Good generated images should satisfy two properties:  
+
+1. **Sharpness**: Each image should clearly belong to one class → $p(y|x)$ has low entropy
+2. **Diversity**: Generated images should cover many classes → marginal $p(y)$ has high entropy
+
+**Formula**:
+$$\text{IS} = \exp\left(\mathbb{E}_{x \sim p_g}[\text{KL}(p(y|x) \| p(y))]\right)$$
+
+-  $p(y|x)$ is Inception-v3's predicted class distribution, 
+- $p(y) = \mathbb{E}_x[p(y|x)]$ is the marginal.
+
+**Intuition**:
+
+
+
+
+
+$$\ln(\text{IS}) = \underbrace{H(y)}_{\text{diversity across dataset}} - 
+\underbrace{\mathbb{E}[H(y|x)]}_{\text{avg. uncertainty per image}}$$
+
+::: {.callout-tip collapse="true" appearance="minimal" title="Mathematical Derivation (click to expand)"}
+
+
+$$\text{KL}(p(y|x) \| p(y)) = \sum_y p(y|x) \log p(y|x) - \sum_y p(y|x) \log p(y)$$
+$$= -H(y|x) - \sum_y p(y|x) \log p(y)$$
+
+Taking expectation over $x \sim p_g$:
+$$\mathbb{E}_x[\text{KL}(p(y|x) \| p(y))] = -\mathbb{E}_x[H(y|x)] + H(y)$$
+
+Therefore:
+$$\boxed{\ln(\text{IS}(G)) = H(y) - \mathbb{E}_{x}[H(y|x)]}$$
+
+:::
+
+<span style="display:block; height:0.4em;"></span>
+
+
+- High $H(y)$: Generator produces many different classes (diversity)
+- Low $H(y|x)$: Each image is sharp and recognizable (quality)
+
+
+
+**Critical limitation**: 
+  
+  - Depends on Inception network
+  - **IS evaluates $p_g$ in isolation—not comparing it to real distribution $p_{\text{data}}$**.  
+  A generator could game a high IS by:
+    - Producing a single perfect image per class (high $H(y)$, low $\mathbb{E}[H(y|x)]$)
+    - Memorizing training set (Overfitting)
+    - Generating unrealistic but sharp images (Deviation from real distribution)
+
+---
+
+### Fréchet Inception Distance (FID)
+
+Measure distance between real and generated distributions in feature space.
+
+**Key difference**: 
+
+- **IS**: Evaluates $p_g$ in isolation (requires only generated samples)
+- **FID**: Compares $p_g$ to $p_{\text{data}}$ (requires both real and generated samples)
+
+**Method**:
+
+1. Extract features from Inception-v3 (before final classification layer) for real and generated images
+2. Assume feature distributions follow multivariate Gaussians: 
+3. Compute Fréchet distance (Wasserstein-2 distance between Gaussians)
+
+**Formula**:
+$$\text{FID}(p_r, p_g) = \|\mu_r - \mu_g\|^2 + \text{Tr}\left(\Sigma_r + \Sigma_g - 2(\Sigma_r \Sigma_g)^{1/2}\right)$$
+
+
+- $\mu_r, \Sigma_r$ are mean and covariance of **real data** features
+- $\mu_g, \Sigma_g$ are mean and covariance of **generated data** features
+
+**Interpretation of terms**:
+
+1. **Lower FID is better**: closer match to real data. FID = 0 when distributions are identical.
+2. **$\|\mu_r - \mu_g\|^2$**: &nbsp; Distance between feature means.
+   - Measures how far the average generated sample is from the average real sample in feature space 
+   (if this term is large, the generator is producing images that, on average, 
+   look different from real ones - wrong global appearance, color tone, style bias, etc..).  
+3. **$\text{Tr}(\Sigma_r + \Sigma_g - 2\sqrt{\Sigma_r \Sigma_g})$**: &nbsp;  Difference in covariances.
+   - Measures if generated samples have similar diversity and correlations as real data
+   - Penalizes mode collapse (when generator produces only a few types of images). 
+
+**Best practice**: Use FID as primary metric (measures distance to real distribution),
+ IS for quick checks only.
+
+---
+
+### Precision and Recall
+
+FID is a single number that doesn't distinguish between quality and diversity failures.  
+Precision and Recall separately measure **quality from diversity**:
+
+- **Precision**: Fraction of generated samples that are realistic (quality)
+- **Recall**: Fraction of real data modes covered by generator (diversity)
+
+**Computation** (using k-NN in feature space):
+
+```python
+# Extract Inception features
+real_features = Inception(real_images)
+fake_features = Inception(generated_images)
+
+# Precision: fraction of fake samples with real neighbor nearby
+distances_fake_to_real = knn_distance(fake_features, real_features, k=3)
+precision = (distances_fake_to_real < threshold).mean()
+
+# Recall: fraction of real samples with fake neighbor nearby
+distances_real_to_fake = knn_distance(real_features, fake_features, k=3)
+recall = (distances_real_to_fake < threshold).mean()
+```
+
+**Diagnosis**:
+
+- High precision, low recall → mode collapse
+- Low precision, high recall → diverse but low quality
+
+**Use case**: Diagnose specific failures when FID insufficient.
+
+-----
+
+## Training Challenges
+
+### Mode Collapse
+
+**Problem**: Generator produces limited variety, ignoring parts of data distribution.
+
+**Symptoms**:
+
+- Generated samples look similar
+- Low Recall metric
+- Discriminator loss oscillates
+
+**Fixes**:
+
+- **WGAN-GP** (stable gradients)
+- **Minibatch discrimination** (penalize lack of diversity)
+- **Unrolled GANs** (look ahead in discriminator updates)
+
+---
+
+### Vanishing Gradients
+
+**Problem**: Discriminator becomes too strong → generator receives tiny or zero gradients.
+
+**Why it happens:**  
+In the vanilla GAN objective, when  $D(G(z)) \to 0, \,\, \nabla_G \log (1 - D(G(z))) \to 0$.
+
+**Fixes**:
+
+- **Non-saturating loss**: $\max_G \mathbb{E}[\log D(G(z))]$
+- **Feature matching**: Match statistics of discriminator's intermediate features
+- **One-sided label smoothing**: Real labels = 0.9 (not 1.0)
+
+---
+
+### Training Instability
+
+**Problem**: 
+GANs optimize a min–max game, not a single objective → unstable fixed point behavior. 
+Training dynamics can oscillate wildly and the minmax game may fail to converge.
+
+**Symptoms**:
+
+- Losses do not correlate with image quality
+- Discriminator and generator take turns “winning”
+- Sudden collapse in sample quality
+
+**Solutions**:
+
+- **Architecture Stabilization**:
+  - **Spectral normalization** → enforces Lipschitz constraint on $D$
+  - **Batch normalization in G** (avoid in final layer of $D$)
+  - **LeakyReLU in D** → prevents dead units
+  - **Residual connections / skip connections** (modern GANs)
+
+
+- **Optimization stabilization**
+  - **TTUR** (Two-Time-Scale Update Rule):
+```python
+# Two Time-Scale Update Rule (TTUR)
+lr_D = 4e-4  # Higher discriminator learning rate
+lr_G = 1e-4  # Lower generator learning rate
+optimizer = Adam(lr, betas=(0.0, 0.9))  # Different from default
+```
+  - **Balanced update ratio** e.g., 1 D step, per 1 G step; or 5:1 in WGANs.
+
+---
+
+## Training Monitoring
+
+**What to plot**:
+
+**1. Losses** (but interpret carefully):
+```python
+# Discriminator loss should be stable, not too low
+plot(D_loss_real, D_loss_fake, D_loss_total)
+
+# Generator loss should decrease (but may oscillate)
+plot(G_loss)
+```
+
+**⚠️ Warning**: GAN losses are NOT good indicators of quality!
+
+- Discriminator loss approaching 0 → too strong (generator gets no gradient)
+- Generator loss approaching 0 → fooling discriminator (might be mode collapse)
+- Oscillating losses can indicate healthy adversarial dynamics
+
+**2. Generated samples** (most important):   
+```python
+# Save samples every N iterations
+if iter % save_freq == 0:
+    with torch.no_grad():
+        fake = G(fixed_noise)  # Use same noise for comparison
+        save_image(fake, f'samples_{iter}.png')
+```
+
+**3. Evaluation metrics**:
+```python
+# Compute every epoch or few epochs
+if epoch % eval_freq == 0:
+    FID_score = compute_FID(real_images, generated_images)
+    IS_score = compute_IS(generated_images)
+    log(FID_score, IS_score)
+```
+
+**Red flags**:
+
+- Generator produces identical samples → *mode collapse*
+- Generator produces noise or blurry blobs → *vanishing gradient*
+- Discriminator loss drops to 0 early → *generator stops improving* (Discriminator is too strong)
+- Sudden quality degradation → *training instability*
+
+
+---
+
+## Comparison: GAN vs VAE vs Diffusion
+
+| Aspect | GAN | VAE | Diffusion |
+|--------|-----|-----|-----------|
+| **Sample quality** | ★★★★★ | ★★★☆☆ | ★★★★★ |
+| **Training stability** | ★★☆☆☆ | ★★★★★ | ★★★★☆ |
+| **Mode coverage** | ★★☆☆☆ | ★★★★★ | ★★★★★ |
+| **Speed** | ★★★★★ (1 pass) | ★★★★★ (1 pass) | ★☆☆☆☆ (1000 steps) |
+| **Likelihood** | ✗ | ✓ (lower bound) | ✓ |
+
+**When to use GANs**:
+
+- Need highest quality samples
+- Real-time generation required
+- Have expertise in adversarial training
+
+**Current trend**: Diffusion models dominating image generation, but GANs still used where speed matters.
+
+---
+
+## Interview Preparation
+
+### Core Concepts Checklist
+
+- [ ] GAN minimax objective and Nash equilibrium
+- [ ] Non-saturating loss vs saturating loss
+- [ ] Mode collapse: causes and solutions
+- [ ] Wasserstein distance vs JS divergence
+- [ ] WGAN-GP gradient penalty mechanism
+- [ ] FID vs Inception Score
+- [ ] StyleGAN architecture innovations
+
+---
+
+### Key Interview Questions
+
+**Q1: "What is mode collapse and how do you prevent it?"**
+
+**Answer**: Mode collapse is when generator produces limited variety, ignoring parts of data distribution. Generator finds samples that fool discriminator and exploits these without exploring other modes.
+
+**Detection**: Visual inspection (similar samples), low Recall metric, oscillating discriminator loss.
+
+**Solutions**:   
+
+1. WGAN-GP (better gradients, less prone to collapse)
+2. Minibatch discrimination (penalizes lack of diversity)
+3. Multiple discriminators/generators
+
+---
+
+**Q2: "Why use Wasserstein distance instead of Jensen-Shannon divergence?"**
+
+**Answer**: When real and fake sample distributions don't overlap:
+ 
+ -  **JS divergence** stops providing learning signal,   
+since $\text{JS}(p_{\text{data}} | p_g)  \equiv \log 2$ is constant 
+when $p_{\text{data}}$ and $p_g$ have disjoint supports.  
+ 
+ - **The Wasserstein distance** gives non-zero gradients during training,  
+since it always measures the "cost" of moving probability mass from $p_g$ to $p_r$.
+
+
+**Advantages**:
+
+- Continuous and differentiable everywhere
+- Provides meaningful gradients even with disjoint distributions
+- More stable training
+
+**Disadvantage:**: Requires enforcing Lipschitz constraint (gradient penalty).
+
+---
+
+**Q3: "Explain WGAN-GP's gradient penalty. Why better than weight clipping?"**
+
+**Answer**:
+
+**Goal**: Enforce 1-Lipschitz constraint on discriminator.
+
+**Weight clipping** (original WGAN):
+
+- Limits capacity (parameters stuck at boundaries)
+- Pathological optimization surfaces
+
+**Gradient penalty** (WGAN-GP):
+$$\lambda \mathbb{E}_{\hat{x}}[(\|\nabla_{\hat{x}} D(\hat{x})\|_2 - 1)^2]$$
+
+where $\hat{x}$ are interpolations between real and fake.
+
+**Why better**: Soft constraint, discriminator uses full parameter space, smoother optimization.
+
+---
+
+**Q4: "Compare GANs, VAEs, and Diffusion models."**
+
+**Answer**:
+
+| Model | Quality | Speed | Stability | Likelihood |
+|-------|---------|-------|-----------|------------|
+| GAN | Excellent | Fast | Hard | No |
+| VAE | Good (blurry) | Fast | Easy | Yes (lower bound) |
+| Diffusion | Excellent | Slow | Moderate | Yes |
+
+**Use GAN**: Need speed + quality (real-time applications).    
+**Use VAE**: Need stability + latent manipulation.  
+**Use Diffusion**: Need quality + diversity (current SOTA). 
+
+---
+
+**Q5: "How do you evaluate GAN performance?"**
+
+**Answer**:
+
+**FID** (primary metric):
+
+- Measures distance between real/generated distributions in feature space
+- Lower is better
+- Sensitive to mode collapse
+- Correlates with human judgment
+
+**Inception Score** (secondary):
+
+- Measures sharpness and diversity
+- Doesn't compare to real distribution
+- Can be fooled
+
+**Precision/Recall**:
+
+- Separately measure quality vs diversity
+- Diagnose specific failures
+
+**Best practice**: FID + visual inspection + Precision/Recall for diagnosis.
+
+---
+
+### Company Context
+
+**Anthropic**:
+
+- Focus is on safety & interpretability
+- GANs less central than transformers/diffusion
+- Safety research - GANs used in synthetic data augmentation for adversarial attacks/robustness; 
+- Interpretability research - GANs used in Understanding learned latent features.
+
+**Google DeepMind**:
+
+- Research on GAN theory and variants
+- BigGAN, VQ-GAN (for video)
+
+**NVIDIA**:
+
+- StyleGAN series (StyleGAN, StyleGAN2, StyleGAN3)
+- Focus on high-resolution generation
+
+**OpenAI / Stability AI**:
+
+- Moved away from GANs toward diffusion models
+- But GAN descriminators used in: latent compression (Stable Diffusion VAE), for sharper reconstructions
+
+---
+
+### Further Reading
+
+**Foundational Papers**:
+
+- [Generative Adversarial Networks](https://arxiv.org/abs/1406.2661) (GAN, Goodfellow et al., 2014)
+- [Unsupervised Representation Learning with DCGANs](https://arxiv.org/abs/1511.06434) (DCGAN, 2015)
+- [Wasserstein GAN](https://arxiv.org/abs/1701.07875) (WGAN, 2017)
+- [Improved Training of Wasserstein GANs](https://arxiv.org/abs/1704.00028) (WGAN-GP, 2017)
+- [Progressive Growing of GANs](https://arxiv.org/abs/1710.10196) (ProGAN, 2017)
+- [A Style-Based Generator Architecture](https://arxiv.org/abs/1812.04948) (StyleGAN, 2018)
+
+**Theoretical Analysis**:
+
+- [NIPS 2016 Tutorial: Generative Adversarial Networks](https://arxiv.org/abs/1701.00160) (Goodfellow)
+- [GANs Trained by a Two Time-Scale Update Rule](https://arxiv.org/abs/1706.08500) (TTUR)
+
+**Evaluation**:
+
+- [Improved Techniques for Training GANs](https://arxiv.org/abs/1606.03498) (Feature matching, minibatch discrimination)
+- [GANs Trained by a Two Time-Scale Update Rule Converge to a Local Nash Equilibrium](https://arxiv.org/abs/1706.08500) (FID metric)
+
+---
+
+**This completes the Generative Adversarial Networks** theory, 
+architectures and training techniques. While GANs revolutionized image synthesis through adversarial learning, 
+their training remains notoriously unstable.
+Diffusion models emerged as a more robust alternative — easier to train, 
+more interpretable, and capable of producing samples with unprecedented fidelity.
