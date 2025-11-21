@@ -42,7 +42,7 @@ $\textbf{Decoder:} \quad z \;\rightarrow\; \text{Transposed CNN/MLP} \;\rightarr
 ![Autoencoder Architecture: The encoder ($\mathbf{e}$) and decoder ($\mathbf{d}$) create a dimension 
 bottleneck by compressing the input $\mathbf{x}$ into a latent representation $\mathbf{z}$. 
 The model is trained to minimize the reconstruction error (typically MSE or $\ell_2$-norm) 
-between $\mathbf{x}$ and the reconstructed output $\hat{\mathbf{x}}$.  *Adapted from Rocca [@rocca2021vae].*](/images/07_autoencoder_loss.png){#fig-_autoencoder_loss width=85% fig-align="center"}
+between $\mathbf{x}$ and the reconstructed output $\hat{\mathbf{x}}$.  *Adapted from Rocca [@rocca2021vae].*](/images/vaes/autoencoder_loss.png){#fig-_autoencoder_loss width=85% fig-align="center"}
 
 
 **Problem for Generation**: Latent space is irregular—random samples $z \sim \mathcal{N}(0, I)$ often produce nonsensical reconstructions.
@@ -63,10 +63,10 @@ between $\mathbf{x}$ and the reconstructed output $\hat{\mathbf{x}}$.  *Adapted 
 
 ::: {.columns}
 ::: {.column width="50%"}
-![](/images/vae_latent_space_1.png){width=100%}
+![](/images/vaes/vae_latent_space_1.png){width=100%}
 :::
 ::: {.column width="50%"}
-![](/images/vae_latent_space_2.png){width=78%}
+![](/images/vaes/vae_latent_space_2.png){width=78%}
 :::
 :::
 
@@ -167,7 +167,7 @@ The overall structure of the VAE—encoder, sampling, and decoder—and the loss
 ![VAE architecture and loss. The encoder outputs a Gaussian $( \mu, \sigma )$, 
 from which $z$ is sampled and decoded to reconstruct $\hat{x}$. 
 The loss balances reconstruction fidelity and latent regularization via KL divergence.
-*Adapted from Rocca [@rocca2021vae].*](/images/07_vae_loss.png){#fig-vae-loss width=85% fig-align="center"}
+*Adapted from Rocca [@rocca2021vae].*](/images/vaes/vae_loss.png){#fig-vae-loss width=85% fig-align="center"}
 
 ---
 
@@ -185,7 +185,7 @@ The loss balances reconstruction fidelity and latent regularization via KL diver
 **Left**: Sampling directly from $\mathcal{N}(\mu, \sigma^2)$ blocks gradients.  
 **Right**: Reparameterization moves sampling to fixed $\epsilon$, 
 allowing gradients to flow through $\mu$ and $\sigma$.
- *Adapted from Rocca [@rocca2021vae].*](/images/07_reparametrization_trick.png){#fig-reparam width=100% fig-align="center"}
+ *Adapted from Rocca [@rocca2021vae].*](/images/vaes/reparametrization_trick.png){#fig-reparam width=100% fig-align="center"}
 
 
 ---
@@ -299,7 +299,7 @@ The Quantization step then maps the latent vectors to the nearest vector from a 
 learned Codebook of embeddings, forming the discrete latent code z_q(x).
 This discrete code is then passed to the decoder D(z_q(x)) to reconstruct the image. 
 The diagram on the right illustrates the nearest-neighbor lookup in the 
-embedding space.](/images/07_vq_vae.png){#fig-vqvae-architecture width=85% fig-align="center"}
+embedding space.](/images/vaes/vq_vae.png){#fig-vqvae-architecture width=85% fig-align="center"}
 
  - **Codebook**: Learnable embedding table $\mathcal{E} = \{e_1, \ldots, e_K\} \subset \mathbb{R}^d$ with $K$ vectors (e.g., $K=512$).
 
