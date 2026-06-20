@@ -1,0 +1,19 @@
+# 3D Data {.unnumbered}
+
+## Overview
+
+2D images are projections of a 3D world. Recovering that third dimension—and building models that reason natively in 3D—is central to robotics, autonomous driving, augmented reality, and a growing share of computer vision research. This part covers the geometry, representations, and learning algorithms needed to work with 3D data.
+
+**Chapter Scope**:
+
+- **3D Scene Representations** (§11.1): Point clouds, voxels, meshes, and implicit surfaces
+- **Camera Geometry** (§11.2): Intrinsics, extrinsics, and the perspective projection pipeline
+- **3D Reconstruction** (§11.3): Structure-from-Motion, Neural Radiance Fields, and 3D Gaussian Splatting
+- **Point Cloud Learning** (§11.4): PointNet and PointNet++ for unordered 3D sets
+- **Human Pose Estimation** (§11.5): 2D and 3D joint localization and body model fitting
+
+**Interview Relevance**: 3D understanding is central to roles at Waymo, Tesla, and Aurora (autonomous driving), Meta Reality Labs and Apple (AR/VR and spatial computing), Boston Dynamics and Figure (robotics), and Stability AI (3D generative models). Expect questions on camera projection, the NeRF-vs-Gaussian trade-off, and how to handle the permutation invariance of point clouds.
+
+**Prerequisites**: Part II (CNNs, Vision Transformers). Familiarity with linear algebra (matrix decompositions, homogeneous coordinates), and 2D convolution.
+
+---

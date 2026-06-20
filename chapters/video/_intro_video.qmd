@@ -1,0 +1,17 @@
+# Video {.unnumbered}
+
+## Overview
+
+Video extends images with a temporal dimension, turning visual understanding into a spatiotemporal problem. This section covers the full stack across three chapters: representing and measuring motion and the discriminative architectures built on top of it, vision-language models that understand, retrieve, and reason over video, and generative models that synthesize temporally coherent clips.
+
+**Chapter Scope**:
+
+- **Video Fundamentals: Motion and Spatiotemporal Architectures** (Chapter 10): Video as a spatiotemporal signal, optical flow (classical and learned), 3D CNNs (C3D, I3D, R(2+1)D, SlowFast), video transformers (TimeSformer, Video Swin, ViViT), and self-supervised pretraining (VideoMAE, V-JEPA)
+- **Video-Language Models for Understanding** (Chapter 11): Architectures from Q-Former to M-RoPE, token compression and temporal positional encoding, the Qwen-VL evolution, encoder-only and contrastive video models, two-stage video retrieval, and the downstream task and benchmark landscape
+- **Video Generation** (Chapter 12): Diffusion fundamentals for video (3D-VAE compression, DiT vs. U-Net), training-from-scratch (VDM, Imagen Video, Sora, CogVideoX), fine-tuning image models (Make-A-Video, Video LDM, SVD), training-free adaptation (Text2Video-Zero), autoregressive video generation, and evaluation (FVD, VBench)
+
+**Interview Relevance**: Video understanding and generation are central to roles at Meta (Reels ranking, Movie Gen), Google DeepMind (Gemini, Veo, Genie), OpenAI (Sora), Tesla and Waymo (temporal scene understanding), and TikTok/YouTube (recommendation and moderation at scale). Expect questions on extending image architectures to video efficiently, token-budget trade-offs for long-context video LLMs, how modern video generators (Sora, CogVideoX) differ architecturally from image diffusion models, and how to evaluate video generation quality.
+
+**Prerequisites**: Part II (CNNs, Vision Transformers), Part III (Self-Supervised Learning), Part IV (Diffusion Models), and the Vision-Language Models chapter. Familiarity with 2D convolution, multi-head self-attention, rotary positional embeddings, and the DDPM training objective.
+
+---

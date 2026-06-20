@@ -1,0 +1,126 @@
+# Text Embedding Models & Evaluation
+
+Many NLP tasks — semantic search, clustering, deduplication, named entity linking, retrieval-augmented generation (@sec-memory-compute) — require a fixed-size **semantic representation** of a document, sentence, or token, such that semantically similar texts map to nearby vectors. This chapter covers how such **embedding (representation) models** are built and trained, and how language models and embeddings are evaluated.
+
+---
+
+## Text Embedding Models {#sec-text-embeddings}
+
+The dominant paradigm for training embedding models is **contrastive learning** (Part: Self-Supervised Learning): pull together the representations of **positive pairs** (e.g., a sentence and its paraphrase, or a query and a relevant document), and push apart the representations of **negative pairs** (unrelated texts).
+
+### Cross-Encoder
+
+The most direct way to score a pair of sentences with a pre-trained Transformer (e.g., BERT) is to concatenate them and pass the pair jointly through the model, with a classification head on top:
+
+![A cross-encoder concatenates sentence A and sentence B as a single input to a shared encoder (e.g., BERT), with a classifier head producing a similarity/relevance score.](/images/nlp/cross_encoder.png){#fig-cross-encoder width=40% fig-align="center"}
+
+This is accurate (the model can attend jointly across both sentences) but has two major drawbacks:
+
+- **No standalone sentence embeddings** — the model only produces a *pairwise* score, not a vector representation of either sentence in isolation.
+- **Quadratic inference cost** for retrieval/clustering: finding the most similar pair among $n$ sentences requires $\binom{n}{2}$ forward passes through the full encoder — for $n=10{,}000$, that's ~50 million forward passes, intractable for real-time search.
+
+### Bi-Encoder
+
+A **bi-encoder** instead encodes each sentence *independently* (with shared weights) and pools the token embeddings (e.g., mean pooling) into a single sentence vector, comparing two sentence vectors via **cosine similarity**:
+
+![A bi-encoder independently encodes sentence A and sentence B, pools each into a fixed-size vector, and compares the two vectors with cosine similarity.](/images/nlp/bi_encoder.png){#fig-bi-encoder width=40% fig-align="center"}
+
+$$\text{sim}(u,v) = \frac{u \cdot v}{\|u\|\,\|v\|}$$
+
+Because each sentence's embedding is computed independently of any other, embeddings for an entire corpus can be **precomputed once** and indexed (e.g., with approximate nearest-neighbor search) — retrieval then costs one forward pass for the query plus a fast vector lookup, not $O(n^2)$ encoder passes.
+
+**Training losses**:
+
+**Pairwise MSE loss** — given a labeled similarity score $y_i \in [0,1]$ for sentence pair $i$, regress the cosine similarity toward it:
+
+$$\mathcal{L}_{\text{MSE}} = \frac{1}{N}\sum_{i=1}^N \left(\text{sim}(u_i, v_i) - y_i\right)^2$$
+
+This works but is sensitive to **class imbalance** between positive and negative pairs — and labeled *positive* pairs are typically much scarcer than negatives.
+
+**InfoNCE loss** (preferred in practice) — for an anchor $u_i$ with positive $v_{i^+}$ and a batch of $M$ candidates (the positive plus in-batch negatives):
+
+$$\boxed{\mathcal{L}_{\text{InfoNCE}} = -\log \frac{\exp(\text{sim}(u_i, v_{i^+})/\tau)}{\sum_{j=1}^{M} \exp(\text{sim}(u_i, v_j)/\tau)}}$$
+
+where $\tau > 0$ is a **temperature** that sharpens (small $\tau$) or smooths (large $\tau$) the distribution over candidates. The denominator sums over *all* candidates in the batch (including the positive itself), so this is effectively an $M$-way classification: "pick out the true positive among $M$ candidates."
+
+**Negative mining**: the choice of negatives strongly affects what the model learns:
+
+- **Easy negatives**: other (unrelated) sentences randomly sampled from the batch — trivial to distinguish, weak training signal once the model is reasonably good.
+- **Semi-hard negatives**: sentences identified as topically related (but not equivalent) by *another* embedding model — harder to distinguish, stronger signal.
+- **Hard negatives**: explicitly labeled contradicting/related sentence pairs from human annotation — the strongest (and most expensive) signal.
+
+**Labeled data sources**: **natural language inference (NLI)** datasets provide sentence pairs labeled as **entailment** (same meaning), **contradiction**, or **neutral** (neither implies the other). Entailment pairs become positives; contradiction and neutral pairs become negatives. These datasets are high-quality but small.
+
+### Training Methods
+
+- **Domain-adaptive MLM**: before contrastive fine-tuning, continue pre-training (masked language modeling) on an in-domain corpus — adapts the base encoder's vocabulary and representations to the target domain (e.g., legal, biomedical text) without requiring any labeled pairs.
+- **Supervised — SBERT (Sentence-BERT)**: fine-tune a bi-encoder on labeled sentence pairs (e.g., NLI data) with the losses above — the canonical approach when sufficient labeled pairs exist.
+- **Semi-supervised — Augmented SBERT**: labeled ("gold") pairs are scarce, but a **cross-encoder** (accurate but too slow for retrieval) can be trained on them; use that cross-encoder to *label additional unlabeled pairs* ("silver" data), then train a bi-encoder (SBERT) on the combined gold + silver dataset — distilling the cross-encoder's accuracy into a fast bi-encoder.
+- **Unsupervised — TSDAE (Transformer-based Sequential Denoising Auto-Encoder)**: corrupt input sentences (e.g., randomly delete/shuffle tokens), encode the corrupted sentence into a single vector with the bi-encoder, and train a decoder to reconstruct the *original* sentence from that vector — requires no labels, and the resulting encoder produces useful sentence embeddings.
+- **LDA (Latent Dirichlet Allocation)**: a classical (non-neural) topic-modeling baseline — represents a document collection as mixtures over latent topics, where each topic is itself a distribution over words, with both distributions governed by Dirichlet priors. Useful as a cheap, interpretable baseline for document representation/clustering.
+
+---
+
+## Evaluation
+
+### Metrics
+
+These metrics compare model outputs *for a given task* (e.g., two summarization models) — they are not meaningful for comparing models *across different tasks*.
+
+**ROUGE** (Recall-Oriented Understudy for Gisting Evaluation) — for a generated text and a reference text:
+
+- **ROUGE-N Recall** $= \dfrac{\#\text{overlapping } n\text{-grams}}{\#\,n\text{-grams in reference}}$, **ROUGE-N Precision** $= \dfrac{\#\text{overlapping } n\text{-grams}}{\#\,n\text{-grams in generated}}$, **ROUGE-N F1** $= \dfrac{2PR}{P+R}$.
+- **ROUGE-L** replaces $n$-gram overlap with the **Longest Common Subsequence (LCS)** between generated and reference text: Recall $=\frac{\text{LCS}}{\#\text{unigrams in reference}}$, Precision $=\frac{\text{LCS}}{\#\text{unigrams in generated}}$, F1 the harmonic mean of the two.
+
+**BLEU** (Bilingual Evaluation Understudy) — **BLEU-N** is the precision of $n$-grams (with clipping, so a generated $n$-gram can't be "matched" more times than it appears in the reference); the overall **BLEU score** is (a brevity-penalized) combination of BLEU-1 through BLEU-4.
+
+**Perplexity** — the exponentiated cross-entropy between the true data distribution and the model's predictions:
+
+$$\boxed{\text{PPL}(W) = \exp\left(-\frac{1}{N}\sum_{i=1}^N \log P(w_i \mid w_{<i})\right)}$$
+
+Intuitively, perplexity is the (geometric-mean) **effective branching factor** of the model's predictive distribution — "the number of equally-likely word choices the model is choosing among at each step." A perplexity of 1 is a perfect (deterministic) model; a perplexity equal to the vocabulary size corresponds to a uniform-random model.
+
+### Benchmarks
+
+Benchmarks aggregate many tasks into a single suite, enabling comparison **across** models (and, to a degree, across task types):
+
+- **GLUE** (General Language Understanding Evaluation, 2018) — a suite of sentence- and sentence-pair classification tasks.
+- **SuperGLUE** (2019) — a harder successor to GLUE, with tasks requiring more reasoning.
+- **MMLU** (Massive Multitask Language Understanding, 2021) — multiple-choice questions across 57 academic/professional subjects, evaluated zero/few-shot.
+- **BIG-bench** (2022) — a large, crowd-sourced collection of tasks (with "BIG-bench Lite" and "BIG-bench Hard" subsets) probing capabilities expected to emerge at scale.
+- **HELM** (Holistic Evaluation of Language Models, 2022) — evaluates models across accuracy, calibration, robustness, fairness, bias, toxicity, and efficiency simultaneously, rather than accuracy alone.
+- **TOFU** (Task of Fictitious Unlearning, 2024) — benchmarks **machine unlearning**: how completely can a model be made to "forget" specific training examples (e.g., for privacy/IP compliance, @sec-memory-compute) without degrading general performance.
+
+**Interview Insight**: Single-number leaderboards (e.g., aggregate MMLU score) are convenient but lossy — a model's rank can vary substantially across HELM's individual axes (accuracy vs. robustness vs. toxicity), and benchmarks saturate or leak into training data over time (motivating newer, harder, or more holistic suites like BIG-bench Hard and HELM). When asked to evaluate or compare LLMs, anchor the discussion to *which capability* a benchmark actually measures, not just its headline number.
+
+---
+
+## Interview Questions
+
+**Q: Why is a bi-encoder preferred over a cross-encoder for large-scale semantic search, despite being less accurate per-pair?**
+
+A cross-encoder requires both texts as joint input, so comparing a query against $n$ candidates costs $n$ full forward passes (and comparing all pairs in a corpus costs $O(n^2)$) — infeasible beyond small $n$. A bi-encoder encodes each text independently into a fixed vector; corpus embeddings can be precomputed and indexed once, reducing query-time cost to one encoder pass plus an approximate nearest-neighbor lookup, which scales to millions of documents. In practice, a common pattern is to use a bi-encoder for fast first-stage retrieval and a cross-encoder to re-rank only the top-$k$ candidates — combining bi-encoder scalability with cross-encoder accuracy.
+
+---
+
+**Q: Why is InfoNCE generally preferred over pairwise MSE for training sentence embeddings?**
+
+Pairwise MSE regresses the cosine similarity directly toward a target label, which requires reliable similarity *scores* and is sensitive to the (typically severe) imbalance between abundant negative pairs and scarce labeled positive pairs. InfoNCE instead frames training as in-batch classification — given an anchor and its positive among $M$ in-batch candidates (mostly negatives), maximize the softmax probability assigned to the positive. This only requires knowing *which* pairs are positive (not a calibrated similarity score), naturally leverages many negatives per positive from within a batch, and the temperature $\tau$ gives direct control over how sharply the model is pushed to separate positives from negatives.
+
+---
+
+**Q: What is Augmented SBERT, and what problem does it solve?**
+
+Labeled sentence-pair data (e.g., from NLI datasets) is accurate but scarce, while a cross-encoder trained on that scarce data is accurate but too slow for retrieval. Augmented SBERT uses the cross-encoder as a **labeling function** for a much larger pool of unlabeled pairs (producing "silver" labels), then trains a bi-encoder (SBERT) on the combination of gold (human-labeled) and silver (cross-encoder-labeled) pairs. This is effectively **knowledge distillation** from an accurate-but-slow cross-encoder into a fast bi-encoder, while also addressing the small-labeled-data problem.
+
+---
+
+**Q: Why can't ROUGE/BLEU scores be used to compare models across different tasks, but MMLU can?**
+
+ROUGE and BLEU measure $n$-gram (or LCS) overlap between a *generated* output and a *task-specific reference* — their absolute values depend heavily on the nature of the reference texts for that task (e.g., summarization references vs. translation references have very different length and vocabulary distributions), so a ROUGE score of 0.4 on one task is not comparable to 0.4 on another. MMLU (and similar benchmarks) instead measure **accuracy on a fixed, multiple-choice format** spanning many subjects — the metric (accuracy) has the same meaning and scale regardless of subject, making aggregate scores meaningfully comparable across models and (within MMLU) across subject areas.
+
+---
+
+**Q: What does perplexity actually measure, and what's a key limitation of using it to compare models?**
+
+Perplexity is $\exp$ of the average negative log-likelihood the model assigns to held-out text — equivalently, the effective number of equally-likely choices the model is "choosing between" at each token, on average. Lower perplexity means the model assigns higher probability to the true continuation. The key limitation: perplexity is only comparable between models that share the **same tokenizer/vocabulary** — a model with a coarser tokenization (fewer, longer tokens) will tend to have higher per-token perplexity than one with finer tokenization, even if both predict the underlying text equally well, since the "difficulty" of each prediction step differs.

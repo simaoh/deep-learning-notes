@@ -1,0 +1,333 @@
+# Vision-Language Multimodal Models
+
+## Modalities and the Vision-Language Setting
+
+**Modality**: two data sources correspond to different modalities if the representation of at least one cannot be mapped unambiguously into the other — a pixel grid and a token sequence encode fundamentally different information and cannot be losslessly converted into each other.
+
+**Vision-Language (VL) modeling** learns statistical patterns relating image and text data. Modern VL models are **pre-trained on large image-text datasets** via a general pretext task, then adapted to downstream tasks of interest via **transfer learning** or **knowledge distillation**.
+
+### Core Tasks
+
+| Task | Input | Output |
+|---|---|---|
+| Text-to-Image Retrieval | Text query, image database | Best-matching image |
+| Image Captioning | Image | Natural-language description |
+| Visual Question Answering (VQA) | Image, question | Answer |
+| Grounding / Referring Expressions | Image, region description | Bounding box |
+| Visual Dialog | Image, dialog history, question | Answer to the last question |
+| Image Generation | Text description | Image |
+
+### Task Examples
+
+The same generic architecture — a visual encoder $h(\cdot)$, a language encoder $g(\cdot)$, and a combination function $f(\cdot)$ — instantiates each task below by varying the inputs and output of $f(\cdot)$.
+
+::: {layout="[[1,1], [1,1], [1,1], [1,1], [1,1], [1]]"}
+![Text-to-Image Retrieval: $f(\cdot)$ outputs an image-caption similarity score.](/images/vision_language/task_image_retrieval_diagram.png){#fig-task-retrieval-diagram}
+
+![Retrieval result for the query "Grey haired man in black and yellow tie."](/images/vision_language/task_image_retrieval.png){#fig-task-retrieval-example}
+
+![Image Captioning: a visual encoder feeds a language decoder that generates a caption autoregressively.](/images/vision_language/task_image_captioning_diagram.png){#fig-task-captioning-diagram}
+
+![Captioning example: "Two young girls are playing with lego toy."](/images/vision_language/task_captioning.png){#fig-task-captioning-example}
+
+![VQA: $f(\cdot)$ combines image and question embeddings to produce an answer.](/images/vision_language/task_VQA_diagram.png){#fig-task-vqa-diagram}
+
+![VQA example. Q: "What is the mustache made of?" A: "bananas"](/images/vision_language/task_VQA.png){#fig-task-vqa-example}
+
+![Grounding / Referring Expressions: $f(\cdot)$ scores image-patch / phrase pairs.](/images/vision_language/task_grounding_diagram.png){#fig-task-grounding-diagram}
+
+![Grounding example: the box marks the region matching "Woman with the white shirt."](/images/vision_language/task_grounding.png){#fig-task-grounding-example}
+
+![Visual Dialog: the language encoder consumes both the dialog history and the new question.](/images/vision_language/task_dialog_diagram.png){#fig-task-dialog-diagram}
+
+![Visual Dialog example: a multi-turn Q&A grounded in the same image.](/images/vision_language/task_dialog.png){#fig-task-dialog-example}
+
+![Image Generation example (DALL-E): "An armchair in the shape of an Avocado."](/images/vision_language/task_generation.png){#fig-task-generation-example}
+:::
+
+---
+
+## Pre-Training
+
+![Overview: VL model pre-training (contrastive, generative, and alignment objectives), transfer learning (prompt tuning, feature adaptation), and knowledge distillation to task-specific architectures.](/images/vision_language/vision_language_training_phases.png){#fig-vl-training-phases width=85% fig-align="center"}
+
+Two challenges dominate VL pre-training:
+
+- **Data Alignment**: learning the semantic correspondence between the two modalities.
+- **Complexity**: the computational cost of training and serving a large multimodal model.
+
+VL models differ primarily along two axes: **architecture** (how the modalities are fused) and **pre-training objective** (what signal drives the alignment).
+
+### Architecture: Modality Fusion
+
+![The three modality-fusion architectures: (a) Two-Tower / Late Fusion, (b) Two-Leg / Intermediate Fusion, (c) One-Tower / Early Fusion.](/images/vision_language/architecture2.png){#fig-modality-fusion width=95% fig-align="center"}
+
+| Fusion | Description | Examples |
+|---|---|---|
+| **Late Fusion** (Two-Tower) | Two independent encoders process each modality separately; outputs combined only via a similarity score (e.g. dot product) | CLIP, ALIGN |
+| **Intermediate Fusion** (Two-Leg / Cross-Attention) | Two separate networks, connected by cross-attention layers between modalities | Flamingo, BLIP-2 |
+| **Early Fusion** (Single-Tower / Self-Attention) | A single encoder embeds both modalities into a shared token sequence, processed by joint self-attention | BEiT-3, VisualBERT |
+
+**Interview Insight**: "Which fusion strategy for retrieval vs. reasoning?" Late fusion is the only architecture that scales to retrieval over millions of images — embeddings are pre-computed once and compared via a single dot product at query time. Early and intermediate fusion enable much richer cross-modal reasoning (needed for VQA, captioning, grounding) but require a full forward pass through the joint model for every query, making them unsuitable for large-scale retrieval.
+
+### Pre-Training Objectives
+
+1. **Contrastive Learning**: distinguish a matched (image, caption) pair from mismatched pairs.
+2. **Masked Token Learning**: predict masked input tokens (image patches and/or text tokens) from the unmasked context.
+3. **Generative Learning**: autoregressive next-token prediction on the language output, conditioned on the image via cross-attention.
+
+---
+
+## Models
+
+### A. Contrastive Learning Objective
+
+#### CLIP / ALIGN (2021)
+
+**Architecture**: dual encoder — a Transformer text encoder and a ResNet or ViT image encoder, projecting both modalities into a shared embedding space.
+
+**Training**: given a batch of $N$ (image, caption) pairs, encode each into normalized embeddings $\mathbf{v}_i, \mathbf{t}_i$ and minimize the symmetric InfoNCE loss over the $N \times N$ similarity matrix $S_{ij} = \mathbf{v}_i^\top \mathbf{t}_j / \tau$:
+$$\boxed{\mathcal{L}_{\text{CLIP}} = \frac{1}{2N}\sum_{i=1}^N \left[-\log\frac{\exp(S_{ii})}{\sum_{j=1}^N \exp(S_{ij})} -\log\frac{\exp(S_{ii})}{\sum_{j=1}^N \exp(S_{ji})}\right]}$$
+where $\tau$ is a learnable temperature. The two terms are the image→text and text→image classification losses: each image must pick out its matching caption among the $N$ in the batch, and vice versa.
+
+![CLIP training: the $N \times N$ matrix of cosine similarities between image and text embeddings; the diagonal entries are the positive pairs.](/images/vision_language/clip_training.png){#fig-clip-training width=80% fig-align="center"}
+
+**Inference**: for zero-shot classification, encode each class label as a text prompt (e.g. "a photo of a {class}") and assign the image to the class whose text embedding has the highest cosine similarity with the image embedding.
+
+![CLIP zero-shot inference: class names are embedded as "a photo of a {object}" prompts, and the image is assigned to the class with the highest image-text similarity.](/images/vision_language/clip_inference.png){#fig-clip-inference width=80% fig-align="center"}
+
+**Scaling**: data size, batch size, and model size all improve accuracy — larger batches give a harder contrastive task (more negatives per positive), which is one reason CLIP-style training benefits disproportionately from scale.
+
+![CLIP's contrastive "bag of words" objective reaches a given zero-shot ImageNet accuracy with far fewer images processed than a transformer language-modeling objective.](/images/vision_language/clip_large_scale.png){#fig-clip-large-scale width=70% fig-align="center"}
+
+**Interview Insight**: "Why does CLIP need such large batch sizes?" Every other sample in the batch serves as a negative for the contrastive loss. Small batches give few, easy negatives — the model can satisfy the loss without learning fine-grained distinctions. Large batches (32k+ in the original CLIP) make the discrimination task hard enough to drive useful representation learning.
+
+#### Improvements Combining CLIP with Other Objectives
+
+- **FLIP (2022)**: randomly drops a large fraction of image patches before encoding, reducing compute and acting as data augmentation — the efficiency gains can be reinvested as accuracy gains at a fixed compute budget.
+- **CoCa (2022)**: trains a single model with *both* a contrastive loss (image-text matching) and a captioning (generative) loss, unifying the two paradigms.
+- **Florence (2021)**: a unified image representation pre-trained with a contrastive objective, transferable across classification, retrieval, detection, and captioning.
+- **DeCLIP (2022)**: supplements the contrastive signal with self-supervision (image-image, text-text) and nearest-neighbor supervision, improving data efficiency.
+- **FILIP (2021)** — fine-grained alignment between image patches and text tokens. Given $N$ image patch embeddings $\{\mathbf{v}_k\}$ and $M$ text token embeddings $\{\mathbf{t}_r\}$, the image-text similarity is the average, over image patches, of the maximum similarity to any text token:
+$$\text{sim}(\mathbf{V}, \mathbf{T}) = \frac{1}{N}\sum_{k=1}^N \max_{r=1,\ldots,M} \mathbf{v}_k^\top \mathbf{t}_r$$
+This token-level max-similarity replaces the single global cosine similarity in the InfoNCE loss, giving a much finer-grained training signal than CLIP's pooled embeddings.
+
+![FILIP's cross-modal late interaction (left) computes token-wise image-to-text and text-to-image similarities. The token-level attention maps (right) localize which image patches each word attends to — much sharper than CLIP's global similarity.](/images/vision_language/filip.png){#fig-filip width=95% fig-align="center"}
+
+#### SigLIP (Sigmoid Loss for Language-Image Pre-training, 2023)
+
+SigLIP keeps CLIP's dual-encoder architecture but replaces the softmax-based InfoNCE loss with a **pairwise sigmoid loss**. Each (image, text) pair in the batch is treated as an *independent binary classification* — match or non-match — rather than a multi-way classification over the batch:
+$$\boxed{\mathcal{L}_{\text{SigLIP}} = -\frac{1}{N}\sum_{i=1}^N\sum_{j=1}^N \log\sigma\!\left(z_{ij}\,(t\,\mathbf{v}_i^\top\mathbf{t}_j + b)\right)}, \qquad z_{ij} = \begin{cases} +1 & i = j \\ -1 & i \neq j \end{cases}$$
+where $t$ is a learnable temperature, $b$ a learnable bias, and $\sigma$ the sigmoid function.
+
+![CLIP's softmax loss normalizes over all $N$ pairs in each row/column of the similarity matrix; SigLIP's sigmoid loss treats every $(i,j)$ pair as an independent binary classification.](/images/vision_language/siglip_loss.png){#fig-siglip-loss width=90% fig-align="center"}
+
+**Why it matters**:
+
+- SigLIP **outperforms CLIP at small batch sizes** — the per-pair loss doesn't degrade when there are fewer negatives.
+- SigLIP is **more memory-efficient at very large batch sizes**, because the sigmoid loss decomposes over individual $(i,j)$ pairs — no global softmax normalization (and the associated cross-device all-gather of the full similarity matrix) is required.
+
+![Zero-shot ImageNet accuracy vs. batch size: the sigmoid loss matches or exceeds the softmax loss across the range, with its advantage most visible at small batch sizes.](/images/vision_language/siglip_batch_size.png){#fig-siglip-batch-size width=55% fig-align="center"}
+
+#### SigLIP2 (2025)
+
+![SigLIP2 architecture: alongside the sigmoid image-text matching loss (SigLIP v1), an EMA teacher provides self-distillation/masked-prediction targets (SILC/TIPS), and an autoregressive decoder adds a captioning loss (LocCa).](/images/vision_language/siglip_2.png){#fig-siglip2 width=70% fig-align="center"}
+
+SigLIP2 combines SigLIP's sigmoid image-text matching objective with auxiliary self-supervised losses that improve **un-pooled (per-patch) image features**:
+
+| Auxiliary Objective | Type of Loss | Primary Benefit |
+|---|---|---|
+| Captioning-based Pretraining (LocCa) | Image-to-Text, Region-to-Text | **Localization** — image captioning, referring expression prediction, and grounded captioning force the vision encoder to be location-aware |
+| Self-Distillation (Global-Local) | Self-Supervised | **Dense feature semantics** — a student matches a teacher's full-image representation from local crops, encouraging consistent local-to-global features |
+| Masked Prediction | Self-Supervised | **Richer per-patch representations** — the student predicts teacher features of masked patches |
+
+---
+
+### B. Masked Token Learning Objective
+
+#### BEiT / BEiT-2 / BEiT-3 (2021–2023)
+
+**Pre-training task**: BEiT-3 extends BERT-style masked modeling to image tokens, text tokens, and image-text pairs in a unified manner — randomly masking 15% of tokens in unimodal text, 50% of tokens in text paired with images, and 40% of image patches (block-wise masking, as in BEiT).
+
+**Model**: a **Multiway Transformer** — shared self-attention modules followed by three modality-specific feed-forward "experts" (vision, language, vision-language), allowing a single backbone to specialize per modality while sharing the attention computation.
+
+![BEiT-3's Multiway Transformer: images, text, and image-text pairs share a multi-head self-attention module, then route through modality-specific feed-forward "experts" (V-FFN, L-FFN, VL-FFN).](/images/vision_language/beit.png){#fig-beit3 width=85% fig-align="center"}
+
+**Data**: ~21M image-text pairs for multimodal pre-training, plus 14M unimodal images (ImageNet-21K) and 160GB of text corpora (Wikipedia, BookCorpus, OpenWebText, CC-News, Stories).
+
+**Advantage over contrastive pre-training**: masked-token pre-training requires a **much smaller batch size**. BEiT-3 uses batches of 6,144 samples total (2,048 images + 2,048 texts + 2,048 image-text pairs) — orders of magnitude smaller than the 32k+ batches needed for contrastive learning, because the loss is computed per-token rather than relying on in-batch negatives.
+
+---
+
+### C. Generative Objective and Large Multimodal Models (LMMs)
+
+The **generative objective** is an autoregressive loss on the language output, with the image injected via cross-attention from text tokens to image features:
+$$\mathcal{L}_{\text{gen}} = -\sum_{l=1}^{L} \log p_\theta(y_l \mid y_{<l}, \mathbf{X}_{\text{img}})$$
+
+![The language model predicts each next token from the visual tokens and all preceding text tokens; the causal attention mask (right) allows every token to attend to the visual tokens but only to earlier text tokens.](/images/vision_language/text_generative_ojective.png){#fig-generative-objective width=90% fig-align="center"}
+
+This objective underlies most modern **Large Multimodal Models (LMMs)**, which connect a pre-trained vision encoder to a pre-trained (often frozen) LLM via a lightweight **connection module**.
+
+![The generic LMM stack: a (frozen) vision encoder, a trainable connection module, and a (frozen) language model.](/images/vision_language/architecture1.png){#fig-lmm-stack width=45% fig-align="center"}
+
+| | GIT (2022) | BLIP-2 (2023) | Flamingo (2022) |
+|---|---|---|---|
+| Language Model | From scratch | Frozen: FLAN-T5 / OPT | Frozen: 70B Chinchilla |
+| Connection Module | — | **Q-Former** (trained) | **Perceiver Resampler** + gated cross-attention (trained) |
+| Vision Encoder | Pre-trained: Florence/CLIP | Frozen: EVA/CLIP | Frozen: NFNet (CLIP-like) |
+
+![GIT: image features from a pre-trained image encoder are prepended to the text embeddings, and a Transformer text decoder autoregressively generates the output text.](/images/vision_language/git_vlm.png){#fig-git width=70% fig-align="center"}
+
+**Q-Former (BLIP-2)** — a trainable module connecting a frozen image encoder to a frozen LLM, itself composed of an image Transformer and a text Transformer sharing self-attention:
+
+![BLIP-2's two-stage training: (1) the Q-Former learns vision-language representations from a frozen image encoder; (2) the Q-Former's output queries are fed to a frozen LLM as a generative bridge.](/images/vision_language/blip_2.png){#fig-blip2 width=80% fig-align="center"}
+
+- The image Transformer takes a **fixed number of learnable query tokens** as input (à la DETR), which interact with frozen image features via cross-attention.
+- **Stage 1 (representation learning)**: jointly optimizes three losses — Image-Text Contrastive learning, Image-grounded Text Generation, and Image-Text Matching (binary classification with hard negatives).
+- **Stage 2 (generative pre-training)**: a linear projection maps the query embeddings into the LLM's input embedding space; the projected queries are prepended to the text sequence as "soft visual prompts," and the frozen LLM is trained to generate captions conditioned on them.
+
+![Q-Former internals: the same learned queries interact with image features via cross-attention and with text via self-attention, under different attention masks for each Stage-1 loss (bidirectional for ITM, multi-modal causal for image-grounded generation, uni-modal for the contrastive loss).](/images/vision_language/q_former_details.png){#fig-qformer-details width=90% fig-align="center"}
+
+**Perceiver Resampler (Flamingo)** — converts a variable-length (and for video, spatiotemporal) sequence of vision-encoder features into a **fixed small number of tokens** (64), via cross-attention from a fixed set of learnable query tokens to the vision features — the same query-based compression idea as Q-Former and DETR.
+
+Flamingo chains the Perceiver Resampler with newly-initialized, trainable **gated cross-attention layers** inserted between the frozen LLM's self-attention blocks:
+$$\mathbf{h}' = \mathbf{h} + \tanh(\alpha)\cdot \text{CrossAttn}(\mathbf{Q}=\mathbf{h}, \mathbf{K}=\mathbf{V}=\mathbf{X}_{\text{img}})$$
+The gate $\alpha$ is initialized to zero, so at initialization the block is the identity — the frozen LLM's behavior is preserved until the cross-attention layers learn to use the visual input. Flamingo accepts an interleaved sequence of images and text and generates text.
+
+![Flamingo architecture: each image/video is independently encoded by a frozen vision encoder and a trainable Perceiver Resampler, then injected into the frozen LLM via trainable GATED XATTN-DENSE layers interleaved between the LLM's blocks.](/images/vision_language/flamingo.png){#fig-flamingo width=90% fig-align="center"}
+
+![Flamingo's interleaved chat-like input: a few-shot prompt of images and text lets the frozen LLM generalize to new questions about the final image, including comparisons across images.](/images/vision_language/flamingo_chat_like_input.png){#fig-flamingo-chat width=90% fig-align="center"}
+
+**LLaVA (Large Language-and-Vision Assistant, 2023)** — a single LLM consumes both text tokens and image tokens (projected into the language embedding space by a linear layer), with **two-stage training**:
+
+- **Stage 1 — Lightweight alignment**: only the projection matrix is trained, on a subset of Conceptual Captions (CC3M).
+- **Stage 2 — Supervised fine-tuning (SFT)**: both the projection matrix and the LLM are updated on visual instruction data (multi-turn chat) and Science QA (multimodal reasoning).
+
+![LLaVA architecture: image features $\mathbf{Z}_v$ from a frozen vision encoder are mapped by a trainable projection $\mathbf{W}$ into the language embedding space ($\mathbf{H}_v$), then concatenated with the language instruction tokens $\mathbf{H}_q$ and fed to the language model $f_\phi$ to produce the response $\mathbf{X}_a$.](/images/vision_language/llava_training_objective.png){#fig-llava-architecture width=85% fig-align="center"}
+
+#### LMM Improvements
+
+1. **Architecture**: LLM backbone size matters most for final performance. Vision encoder size matters less than its *training data and representation quality* — a CLIP-pretrained encoder is the strongest single choice, and mixing multiple vision encoders can further help.
+
+2. **Visual tokens — higher resolution matters**:
+   - **Multi-crop / dynamic high resolution**: tile a high-resolution image into multiple fixed-size crops, each encoded independently, to support resolutions beyond the encoder's native input size.
+
+   ![Dynamic high resolution: the input image is split into crops (and separately resized to a low-resolution overview), each encoded independently and flattened into the LLM's input sequence.](/images/vision_language/llava_high_res.png){#fig-llava-high-res width=90% fig-align="center"}
+
+   - **Token reduction**: with up to $576 \times 5$ visual tokens for a multi-crop high-res image, strategies include adaptive sampling, nested/elastic token organization, and stacking tokens across layers (rather than only along the sequence at the input layer) to keep sequence length tractable.
+
+3. **Visual prompts**: vision foundation models (Grounding DINO, SAM, SEEM) provide grounding signals, injected via two strategies:
+   - **Feature-based**: points, masks, boxes encoded and passed as additional tokens to the LLM.
+   - **Pixel-based**: points, masks, boxes overlaid directly on image pixels — simpler to implement and apply.
+
+4. **Training strategy**: the best recipe is to fully fine-tune the model on high-quality "recap" data, after an initial projector-only warm-up followed by fine-tuning on general data.
+
+5. **Video**: LLaVA-NeXT extends the dynamic-high-resolution mechanism (originally for high-resolution *images*) to handle **multiple frames**, trained with Direct Preference Optimization (DPO) on high-quality video data. At inference, relative positional embeddings across frames support longer videos than seen during training.
+
+   ![LLaVA-NeXT extends multi-patch processing for high-resolution images (left) to multi-frame processing for video (right), reusing the same split-encode-flatten pipeline across frames.](/images/vision_language/llava_next_video.png){#fig-llava-next-video width=80% fig-align="center"}
+
+**Emergent abilities**: large VL models (e.g. Flamingo) display capabilities — implicit counting, arithmetic, celebrity recognition, OCR — that are **emergent**: absent in smaller models, present only once scale crosses some threshold, and not directly optimized for during pre-training.
+
+![Examples of Flamingo's emergent few-shot abilities: visual dialogue, OCR-based reasoning, arithmetic, counting, multilingual captioning, and reasoning about "out of distribution" images (e.g. a 3D-rendered flamingo).](/images/vision_language/emergent_abilities.png){#fig-emergent-abilities width=85% fig-align="center"}
+
+---
+
+## Transfer Learning
+
+Pre-trained VL models often underperform on downstream tasks due to mismatches in **data distribution** (image and text statistics of the target task) and **training objective** (the pretext task differs from the downstream task). Four strategies adapt a pre-trained VL model:
+
+| Strategy | Description |
+|---|---|
+| **Prompt Tuning** | Learn a continuous text prompt prepended to the input sequence, and/or a visual prompt added to the input image; the backbone is frozen |
+| **Feature Adaptation** | Insert a small trainable network (e.g. a few linear layers, as in CLIP-Adapter) after the frozen encoders, trained with the task-specific loss |
+| **Fine-Tuning** | Update the whole model (or a subset of layers) on task-specific data |
+| **Instruction Fine-Tuning** | Fine-tune on machine-generated instruction-following data, improving zero-shot performance on novel instructions |
+
+![Prompt Tuning: (a) a learnable continuous text prompt is prepended to the class label; (b) a learnable visual prompt is added to the input image. The frozen encoders are unchanged.](/images/vision_language/prompt_tuning.png){#fig-prompt-tuning width=90% fig-align="center"}
+
+![Feature Adaptation (CLIP-Adapter): a small trainable network is inserted after the frozen image encoder, and its output is combined with the original visual features before the classification loss.](/images/vision_language/feature_adaptation.png){#fig-feature-adaptation width=70% fig-align="center"}
+
+**Instruction tuning for VL (LLaVA)**: for each MS-COCO (image, 5 captions) pair, a text-only GPT-4 generates instruction-following data **from the captions alone** — conversations, detailed descriptions, and complex-reasoning Q&A — without ever seeing the image. A pre-trained VL model is then fine-tuned on this synthetic (image, instruction, response) data.
+
+![Examples of the three types of LLaVA instruction-tuning data generated from MS-COCO captions and bounding boxes: (1) multi-turn conversations, (2) detailed descriptions, and (3) complex reasoning.](/images/vision_language/llava_training_data.png){#fig-llava-training-data width=95% fig-align="center"}
+
+---
+
+## Knowledge Distillation
+
+Transfer learning preserves the original model architecture; **knowledge distillation** instead transfers the *learned representations* of a large, generally pre-trained VL model into a **task-specific architecture**.
+
+**Example — object detection and semantic segmentation**: region-level (Faster R-CNN, DETR) and pixel-level (segmentation) knowledge is distilled from the *image-level* representations of a generic pre-trained VL model (e.g. CLIP), bridging the gap between the VL model's global image-text alignment and the dense, localized predictions required by detection/segmentation.
+
+---
+
+## Datasets
+
+| Dataset | Images | Captions per image |
+|---|---|---|
+| MS-COCO | 122K | 5 |
+| Conceptual Captions | 3.3M | 1 |
+| LAION-COCO | 600M | 1 |
+| LAION-5B | 5.85B | 1 |
+
+---
+
+## Vision Foundation Models: Unifying Vision Tasks
+
+Language models unified many language tasks under a single architecture (decoder LLMs), and conversational LLMs (ChatGPT) enabled human-AI interaction. Vision tasks, by contrast, vary widely in **input**, **output**, and **task granularity** (image-level, region-level, pixel-level), making a single unifying architecture harder to design. Three lines of work address this:
+
+![Vision tasks vary along three axes: (a) input type (static/dynamic, single/multi-modal), (b) task granularity (image-, region-, pixel-level), and (c) output type (spatial vs. semantic).](/images/vision_language/unified_vl_tasks.png){#fig-unified-vl-tasks width=90% fig-align="center"}
+
+1. **Free-text task unification** (GroupViT, MaskCLIP, OpenSeg): replace fixed class label sets with free-text language, allowing a single model to handle arbitrary categories specified at inference time via text.
+
+   ![Replacing fixed class labels with a text encoder over concept names ("language") unifies classification, detection, and segmentation models (CLIP, GLIP, MaskCLIP) with their label-based counterparts (ViT, DETR, Mask2Former) across the granularity axis.](/images/vision_language/unifying_tasks.png){#fig-unifying-tasks width=80% fig-align="center"}
+
+2. **Output unification across granularities** (UniTab, Pix2Seq v2, Unified-IO, UniPerceiver-v2, X-Decoder): represent diverse outputs (bounding boxes, masks, captions, labels) in a common sequence format, allowing one model/decoder to serve detection, segmentation, and captioning.
+
+3. **Human-AI interaction via prompting** (SegGPT 2023, SAM 2023, SEEM 2024): text and visual prompts (points, boxes, scribbles) let a user interactively specify the segmentation/detection target at inference time.
+
+   ![Prompting-based interaction lets a single model move flexibly along both the granularity axis (image/region/pixel) and the label-vs-language axis at inference time, rather than requiring a separately trained model for each combination.](/images/vision_language/human_interaction.png){#fig-human-interaction width=80% fig-align="center"}
+
+---
+
+## Interview Questions
+
+**Q: Why does CLIP require very large batch sizes, and how does SigLIP address this?**
+
+CLIP's InfoNCE loss treats every other image-text pair in the batch as a negative; small batches give few, easy negatives, so the contrastive task is too easy to drive fine-grained representation learning — accuracy scales strongly with batch size (32k+ in the original CLIP). SigLIP replaces the batch-wide softmax with a per-pair sigmoid loss, treating each (image, text) pair as an independent binary classification. This removes the dependence on a large pool of in-batch negatives (so SigLIP is competitive at small batch sizes) and avoids the cross-device communication needed to normalize a softmax over the full batch (so it's more memory-efficient at very large batch sizes).
+
+---
+
+**Q: Compare late, intermediate, and early fusion for vision-language models. When would you choose each?**
+
+Late fusion (CLIP, ALIGN) — two independent encoders combined only via a similarity score — is the only architecture that scales to retrieval over millions of images, since embeddings can be pre-computed offline. Early fusion (BEiT-3) — a single joint encoder over both modalities — gives the richest cross-modal interaction (best for VQA, reasoning) but every input pair requires a full joint forward pass, making it unsuitable for large-scale retrieval. Intermediate fusion (Flamingo, BLIP-2) — separate encoders connected by cross-attention — is a middle ground, commonly used in LMMs where a frozen LLM and frozen vision encoder are connected by a small trainable bridge.
+
+---
+
+**Q: How do the Q-Former (BLIP-2) and Perceiver Resampler (Flamingo) compress visual information, and why is this compression necessary?**
+
+Both use a fixed, small set of learnable query tokens that cross-attend into the (potentially long) sequence of vision-encoder features, producing a fixed-size set of output tokens (e.g. 64 for Flamingo) regardless of input resolution or, for video, frame count. This compression is necessary because feeding raw per-patch (and per-frame) vision features directly into the LLM would make the input sequence prohibitively long — especially for high-resolution images or video, where the token count scales with $H \times W$ (and $\times T$).
+
+---
+
+**Q: Why does BEiT-3's masked-modeling objective allow much smaller batch sizes than CLIP's contrastive objective?**
+
+Contrastive losses derive their training signal from in-batch negatives — the loss is only meaningful with many negatives per positive, requiring large batches. Masked-token prediction derives its signal per-masked-token, from a cross-entropy loss against the ground-truth token/patch — each training example provides a dense, self-contained supervision signal independent of batch composition. BEiT-3 uses batches of ~6K total samples vs. 32k+ for CLIP-style training.
+
+---
+
+**Q: What does it mean for an ability to be "emergent" in large VL models? Give an example.**
+
+An ability is emergent if it is absent (near chance performance) in smaller models but appears once model/data scale crosses some threshold — and was not an explicit training objective. Flamingo exhibits emergent few-shot abilities like implicit counting, arithmetic from images, celebrity recognition, and OCR — none of which were directly supervised, but which arise from the combination of a large frozen LLM's priors and visual grounding.
+
+---
+
+**Q: LLaVA's instruction-tuning data is generated by a text-only GPT-4 that never sees the images. How is this possible, and what's the risk?**
+
+GPT-4 is given the MS-COCO captions (typically 5 per image) as a dense textual proxy for the image content, and asked to generate conversations, detailed descriptions, and complex-reasoning questions consistent with those captions. The risk is that the generated instructions and answers can only be as accurate as the captions — any visual detail not captured in the captions cannot be reflected in the generated data, and caption errors or omissions propagate into the instruction-tuning set.
+
+---
+
+**Q: Why is fine-grained alignment (FILIP) useful beyond global CLIP-style contrastive learning?**
+
+CLIP's loss operates on a single pooled embedding per image and per caption, which can match on coarse, global similarity while missing whether specific objects or attributes mentioned in the caption are actually present and localized in the image. FILIP's token-level max-similarity — matching each image patch to its closest text token, averaged over patches — forces the model to learn correspondences at the level of objects and words, giving denser supervision and a representation more useful for localization-sensitive downstream tasks.

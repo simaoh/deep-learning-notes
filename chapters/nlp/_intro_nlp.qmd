@@ -1,0 +1,18 @@
+# Natural Language Processing {.unnumbered}
+
+## Overview
+
+Natural Language Processing (NLP) studies how to represent, model, and generate text. This part traces the field's progression from sparse statistical representations, through dense word embeddings and recurrent sequence models, to the Transformer architecture and the Large Language Models (LLMs) built on it — including how LLMs are trained, fine-tuned, aligned, compressed, and deployed.
+
+**Chapter Scope**:
+
+- **Text Representation & Word Embeddings** (§17): sparse representations (BoW, TF-IDF, BM25) and dense word embeddings (Word2Vec, GloVe), including their geometric properties and biases.
+- **Sequence Models** (§18): Recurrent Neural Networks (RNN, GRU, LSTM), sequence-to-sequence models with attention, and the Transformer architecture (self-attention, encoder/decoder, language modeling objective).
+- **Large Language Models** (§19): modern decoder architecture improvements (RoPE, GQA, KV-caching, MoE, FlashAttention), the LLM training lifecycle (pre-training, fine-tuning, alignment via RLHF/RLAIF/DPO), memory and compute considerations, model compression (quantization, LoRA/QLoRA, distillation), tool-use frameworks (RAG, PAL, ReAct), and ethical concerns.
+- **Text Embedding Models & Evaluation** (§20): sentence/document embedding models (cross-encoders, bi-encoders, contrastive training), and the metrics and benchmarks used to evaluate language models.
+
+**Interview Relevance**: NLP and LLM questions dominate ML interviews across the industry — from classic information-retrieval scoring (TF-IDF/BM25, still the backbone of hybrid search) to the mechanics of attention, to LLM-specific systems questions (KV-cache memory accounting, why training is memory-bound, LoRA/QLoRA internals, RLHF vs. DPO). Expect both "derive the math" questions and "why does this design choice matter at scale" systems questions.
+
+**Prerequisites**: Foundations (optimization, generalization). Part III (Self-Supervised Learning) is useful background for the contrastive objectives in §20.
+
+---

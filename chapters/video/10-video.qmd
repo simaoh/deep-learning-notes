@@ -1,0 +1,386 @@
+# Video Fundamentals: Motion and Spatiotemporal Architectures
+
+## Video as a Spatiotemporal Signal
+
+**Formal Representation**: A video is a spatiotemporal signal $I: \Omega \times [0, T] \to \mathbb{R}^C$, where:
+
+- $\Omega \subset \mathbb{R}^2$ is the spatial domain (the image plane),
+- $[0, T]$ is the temporal axis,
+- $C$ is the number of channels (e.g. $C=3$ for RGB).
+
+In the discrete setting, a video is represented as a tensor:
+$$\mathbf{V} \in \mathbb{R}^{T \times H \times W \times C}$$
+with $T$ frames, each of spatial resolution $H \times W$ and $C$ color channels.
+
+**Key Challenges** relative to image processing:
+
+1. **Temporal redundancy**: Adjacent frames are highly correlated; naively treating all $T \times H \times W$ positions independently is prohibitively expensive.
+2. **Motion**: Understanding video requires capturing *how* the scene changes, not just *what* it looks like.
+3. **Long-range dependencies**: Actions and events unfold over many frames; local temporal context is often insufficient.
+4. **Computational cost**: A 10-second clip at 30 fps and 224×224 resolution is a $300 \times 224 \times 224 \times 3$ tensor—roughly 45M values per clip.
+
+**Core Tasks**:
+
+| Task | Input | Output |
+|------|-------|--------|
+| Action recognition | Clip $\mathbf{V}$ | Class label $y$ |
+| Temporal action localization | Long video | Start/end times + class |
+| Video object detection/tracking | Clip | Bounding boxes per frame |
+| Video generation | Text prompt / noise | Clip $\hat{\mathbf{V}}$ |
+| Video captioning | Clip | Natural language description |
+
+This chapter focuses on the *encoder* side: representing motion and building spatiotemporal architectures. Vision-language models for captioning, QA, retrieval, and temporal grounding are covered in the next chapter; video generation (the rightmost column above) gets its own chapter.
+
+---
+
+## Optical Flow
+
+Optical flow captures the *motion* in a scene: for each pixel and each time step, it estimates the displacement vector between consecutive frames.
+
+### The Optical Flow Constraint
+
+**Definition**: The optical flow field is a mapping:
+$$\mathbf{v}: \Omega \times \mathbb{R} \to \mathbb{R}^2, \quad (x, y, t) \mapsto (u, v)$$
+where $(u, v)$ denote the horizontal and vertical displacement of the pixel at $(x, y)$ between frames $t$ and $t+1$.
+
+**Brightness Constancy Assumption**: The intensity of a moving pixel is approximately preserved across frames:
+$$I(x + u,\; y + v,\; t + 1) = I(x, y, t)$$
+
+**Linearization** (first-order Taylor expansion for small displacements):
+$$I(x+u, y+v, t+1) \approx I(x,y,t) + I_x u + I_y v + I_t$$
+
+Substituting into the brightness constancy assumption yields the **optical flow constraint equation**:
+$$\boxed{I_x u + I_y v + I_t = 0}$$
+where $I_x = \partial I/\partial x$, $I_y = \partial I/\partial y$, $I_t = \partial I/\partial t$ are spatiotemporal image gradients.
+
+**The Aperture Problem**: At each pixel, the OFC gives **1 equation with 2 unknowns** $(u, v)$. Only the component of motion parallel to the image gradient is recoverable from local measurements—motion along isoluminance contours (perpendicular to the gradient) remains ambiguous. Additional constraints are required to recover the full flow field.
+
+---
+
+### Classical Methods
+
+Both classical methods impose extra constraints to resolve the aperture problem.
+
+#### Lucas–Kanade (1981)
+
+**Assumption**: Flow is **locally constant** within a spatial window $\mathcal{W}$ centered on each pixel.
+
+Lucas-Kanade finds $(u,v)$ that minimizes the sum of squared OFC residuals over the window:
+$$\min_{u,v} \sum_{(x,y) \in \mathcal{W}} \left(I_x u + I_y v + I_t\right)^2$$
+
+Collecting the OFC equation at every pixel $(x_i, y_i) \in \mathcal{W}$:
+$$\mathbf{A} \begin{bmatrix} u \\ v \end{bmatrix} = -\mathbf{b}, \quad \mathbf{A} = \begin{bmatrix} I_x(x_1) & I_y(x_1) \\ \vdots & \vdots \\ I_x(x_n) & I_y(x_n) \end{bmatrix}, \quad \mathbf{b} = \begin{bmatrix} I_t(x_1) \\ \vdots \\ I_t(x_n) \end{bmatrix}$$
+
+This overdetermined system ($n \gg 2$) is solved in the least-squares sense:
+$$\begin{bmatrix} u \\ v \end{bmatrix} = -(\mathbf{A}^\top \mathbf{A})^{-1} \mathbf{A}^\top \mathbf{b}$$
+
+The $2 \times 2$ matrix $\mathbf{A}^\top \mathbf{A}$ is the **structure tensor** (also used in the Harris corner detector). The system is well-conditioned only when both eigenvalues are large—meaning the window contains gradients in multiple directions. This is exactly the condition for a well-defined corner.
+
+**Limitation**: Fails for large displacements (linearization breaks down) and at motion discontinuities (where the constant-flow assumption is violated). Addressed in practice via image pyramids (coarse-to-fine refinement).
+
+---
+
+#### Horn–Schunck (1981)
+
+**Assumption**: The flow field is **globally smooth**—motion should vary slowly across the image.
+
+Minimize the energy functional:
+$$E(u, v) = \iint_\Omega \underbrace{\left(I_x u + I_y v + I_t\right)^2}_{\text{data term}} + \lambda^2 \underbrace{\left(|\nabla u|^2 + |\nabla v|^2\right)}_{\text{smoothness term}} \; dx \, dy$$
+
+The Euler–Lagrange equations for $u$ and $v$ yield a coupled system of PDEs solved iteratively via Gauss-Seidel or Jacobi updates.
+
+**Trade-off**: $\lambda$ controls the smoothness–accuracy balance. Large $\lambda$ → smoother flow; small $\lambda$ → more faithful to the brightness constancy assumption, but noisier at motion discontinuities.
+
+**Limitation**: Global smoothness is physically incorrect at object boundaries, where flow should be discontinuous.
+
+---
+
+### Deep Optical Flow
+
+Modern methods learn optical flow end-to-end from paired data $\{(I_t, I_{t+1}, \mathbf{v}^*)\}$.
+
+**FlowNet (2015)**: First CNN for optical flow. Two variants:
+- **FlowNetS** (Simple): Concatenate both frames, pass through encoder–decoder U-Net.
+- **FlowNetC** (Correlation): Compute feature correlation volume $C(\mathbf{f}_1, \mathbf{f}_2)$ explicitly at bottleneck, then decode.
+
+**RAFT (2020)**: Recurrent All-Pairs Field Transforms. Current state-of-the-art approach:
+
+1. **Feature extraction**: Shared encoder produces feature maps $\mathbf{g}_1, \mathbf{g}_2 \in \mathbb{R}^{H/8 \times W/8 \times D}$.
+2. **All-pairs correlation**: Compute 4D correlation volume $\mathbf{C} \in \mathbb{R}^{H \times W \times H \times W}$:
+   $$\mathbf{C}(\mathbf{g}_1, \mathbf{g}_2)_{ijkl} = \langle \mathbf{g}_1[i,j],\, \mathbf{g}_2[k,l] \rangle$$
+   Pool over multiple scales to handle large displacements.
+3. **Recurrent update**: A ConvGRU iteratively refines the flow estimate $\mathbf{v}^{(r)}$ using correlation lookups:
+   $$\mathbf{v}^{(r+1)} = \mathbf{v}^{(r)} + \Delta\mathbf{v}^{(r)}, \quad \Delta\mathbf{v}^{(r)} = f_\theta(\mathbf{h}^{(r)}, \mathbf{C}(\mathbf{v}^{(r)}))$$
+
+**Training**: Supervised on FlyingChairs, FlyingThings3D synthetic datasets; fine-tuned on real data (Sintel, KITTI).
+
+**Interview Insight**: "Why a correlation volume?" Lucas-Kanade is essentially computing local correlation between templates. RAFT computes *all* pairwise correlations globally, then lets a recurrent module learn which correlations to use given the current flow estimate.
+
+---
+
+### Using Optical Flow in Deep Video Models
+
+Optical flow and raw frames are complementary:
+
+- **Frames** → appearance (texture, color, object identity)
+- **Flow** → dynamics (motion, trajectories, temporal consistency)
+
+**Integration strategies**:
+
+1. **Two-Stream Networks** (Simonyan & Zisserman, 2014): Independent spatial stream (RGB) and temporal stream (stacked optical flow $[u_t, v_t, \ldots, u_{t+L}, v_{t+L}]$). Late fusion via score averaging.
+
+2. **Flow as warping operator**: Given flow $\mathbf{v}(x,y,t) = (u,v)$, warp frame $I_t$ to predict $I_{t+1}$:
+   $$\hat{I}_{t+1}(x, y) = I_t(x + u,\; y + v)$$
+   Used in video prediction, tracking, and temporal consistency constraints.
+
+3. **Self-supervision signal**: Optical flow provides geometric constraints without labels:
+   - **Temporal consistency loss**: $\|F_t(x,y) - F_{t+1}(x+u, y+v)\|$, encouraging features to move consistently with the scene.
+   - **Future frame prediction**: Predict $I_{t+1}$ from $I_t$ via flow; minimize reconstruction error.
+
+**Practical note**: Computing optical flow per-frame is expensive ($\sim$100ms per pair with RAFT on GPU). Modern architectures increasingly learn motion implicitly via 3D convolutions or temporal attention, avoiding explicit flow. Optical flow is most valuable when motion is the primary discriminative cue (e.g., subtle human pose changes) or when labeled data is scarce.
+
+---
+
+## Video Understanding
+
+### Temporal Modeling: A Taxonomy
+
+Four main strategies for incorporating temporal information:
+
+| Approach | Temporal Modeling | Spatial Modeling | Example |
+|----------|------------------|-----------------|---------|
+| **2D CNN + pooling** | Late temporal aggregation | 2D convolution | ResNet + average pooling |
+| **Two-Stream** | Separate flow stream | 2D convolution | Two-Stream CNN |
+| **3D CNN** | Joint spatiotemporal convolution | 3D convolution | C3D, I3D |
+| **Transformer** | Temporal self-attention | Spatial attention | TimeSformer, ViViT |
+
+---
+
+### 3D Convolutional Networks
+
+#### C3D (2015)
+
+**Core idea**: Replace 2D convolutions with 3D convolutions that jointly model space and time.
+
+A **3D convolution** with kernel $\mathbf{K} \in \mathbb{R}^{k_t \times k \times k \times c_\text{in} \times c_\text{out}}$ applied to a volume $\mathbf{X} \in \mathbb{R}^{T' \times H' \times W' \times c_\text{in}}$:
+$$\mathbf{Y}[\tau, i, j, c] = \sum_{c'} \sum_{p=0}^{k_t-1} \sum_{q=0}^{k-1} \sum_{r=0}^{k-1} \mathbf{X}[\tau+p, i+q, j+r, c'] \cdot \mathbf{K}[p,q,r,c',c]$$
+
+**C3D Architecture**: VGG-like network with 3×3×3 kernels throughout. Pre-trained on Sports-1M.
+
+**Limitation**: 3D convolutions are computationally expensive ($\sim$3× the FLOPs of 2D) and cannot leverage 2D ImageNet pretrained weights.
+
+---
+
+#### Two-Stream Networks (2014)
+
+**Motivation**: Decouple appearance and motion modeling.
+
+```
+RGB frames ──► Spatial CNN ──► Spatial scores ──┐
+                                                 ├──► Fusion ──► Action class
+Optical flow ─► Temporal CNN ──► Temporal scores─┘
+```
+
+**Temporal stream input**: Stack of $L$ consecutive flow fields $[u_t, v_t, u_{t+1}, v_{t+1}, \ldots, u_{t+L-1}, v_{t+L-1}] \in \mathbb{R}^{H \times W \times 2L}$, treated as a multi-channel image.
+
+**Fusion strategies**: Late fusion (score-level averaging) outperforms early fusion in practice. The temporal stream alone achieves $\sim$85\%$ of the full model's accuracy on UCF-101.
+
+**Interview Insight**: "Why stack flow fields rather than feed them frame-by-frame?" The stack gives the temporal stream a wider temporal context in a single forward pass—it sees $L$ consecutive motions simultaneously, allowing it to reason about motion trajectories rather than instantaneous displacements.
+
+---
+
+#### I3D: Inflated 3D (2017)
+
+**Core idea**: Bootstrap 3D CNNs from 2D ImageNet pretrained weights by "inflating" 2D convolutions to 3D.
+
+**Inflation procedure**: For a 2D kernel $\mathbf{K}^{2D} \in \mathbb{R}^{k \times k \times c_\text{in} \times c_\text{out}}$, construct a 3D kernel $\mathbf{K}^{3D} \in \mathbb{R}^{k_t \times k \times k \times c_\text{in} \times c_\text{out}}$ by repeating and rescaling:
+$$\mathbf{K}^{3D}[p, :, :, :, :] = \frac{1}{k_t} \mathbf{K}^{2D}, \quad p = 0, \ldots, k_t - 1$$
+
+This ensures that at initialization, the 3D conv collapses to the 2D conv when applied to a video with identical frames — so the pretrained ImageNet performance is preserved.
+
+**Two-Stream I3D**: Apply the inflation independently to the spatial (RGB) and temporal (flow) streams. At the time of publication, Two-Stream I3D achieved state-of-the-art on Kinetics-400.
+
+**Why it works**: ImageNet pretraining provides strong appearance priors. Inflation provides a meaningful initialization for temporal filters rather than random initialization from scratch.
+
+---
+
+#### R(2+1)D: Factorized Spatiotemporal Convolutions (2018)
+
+**Core idea**: Decompose a 3D convolution into a 2D spatial convolution followed by a 1D temporal convolution.
+
+A $t \times d \times d$ 3D convolution is replaced by:
+1. $1 \times d \times d$ spatial convolution: $\mathbf{X} \in \mathbb{R}^{T \times H \times W \times c_\text{in}} \to \mathbb{R}^{T \times H' \times W' \times M}$
+2. $t \times 1 \times 1$ temporal convolution: $\mathbb{R}^{T \times H' \times W' \times M} \to \mathbb{R}^{T' \times H' \times W' \times c_\text{out}}$
+
+where $M$ is an intermediate channel count chosen to match the parameter count of the original 3D convolution.
+
+**Advantages over full 3D convolution**:
+- An additional non-linearity between the two convolutions doubles the number of nonlinearities.
+- Easier optimization (closer to 2D pretrained initialization).
+- Factorized structure aids interpretability.
+
+| Model | Kinetics-400 Top-1 | FLOPs (per clip) |
+|-------|-------------------|-----------------|
+| C3D | 56.1% | 38.5G |
+| I3D (Two-Stream) | 75.7% | 108G |
+| R(2+1)D | 72.0% | 152G |
+| SlowFast R50 | 77.0% | 36.1G |
+
+---
+
+#### SlowFast Networks (2019)
+
+**Core idea**: Use two pathway networks operating at different temporal resolutions to separately capture spatial semantics and temporal dynamics.
+
+- **Slow Pathway**: Low frame rate (e.g., 4 fps), high spatial resolution, large channel capacity → captures spatial semantics.
+- **Fast Pathway**: High frame rate (e.g., 32 fps), low spatial resolution, small channel capacity ($\sim$1/8 of Slow channels) → captures fine-grained motion.
+
+**Lateral connections**: Fuse Fast-to-Slow at multiple stages via time-strided convolution (to match temporal dimensions):
+$$F^{\ell}_\text{fused} = \text{Concat}\left[F^{\ell}_\text{Slow},\; \text{Conv}(F^{\ell}_\text{Fast})\right]$$
+
+**Rationale**: Not all video information requires temporal detail. Object identity and scene context can be determined from a few frames; subtle motions (hand gestures, facial expressions) need high temporal resolution. SlowFast allocates compute accordingly.
+
+**Interview Insight**: "What does the Fast pathway actually learn?" Visualization shows that Fast pathway channels respond primarily to motion rather than appearance—they exhibit low selectivity for object classes but high sensitivity to temporal differences. This supports the design intuition.
+
+---
+
+### Video Transformers
+
+Self-attention over space and time enables global context modeling but requires careful management of the quadratic cost.
+
+For a video with $T$ frames and $N = (H/P)^2$ patches per frame, the sequence length is $TN$. Naive full spatiotemporal attention has complexity:
+$$\mathcal{O}\left((TN)^2 \cdot D\right)$$
+
+For $T=8$, $N=196$, $D=768$: $(8 \times 196)^2 \times 768 \approx 1.5 \times 10^{12}$ operations per layer.
+
+The practical methods below all propose factorized or windowed attention to reduce this cost.
+
+---
+
+#### TimeSformer (2021)
+
+**Approach**: Divide the full spatiotemporal attention into separate spatial and temporal attention operations applied sequentially at each layer — "Divided Space-Time Attention".
+
+Within each Transformer block, for token $(t, i)$ (frame $t$, patch $i$):
+
+1. **Temporal attention**: attend over all frames at the *same spatial position*:
+$$\mathbf{z}'^{(t,i)} = \text{Attn}\!\left(\mathbf{z}^{(t,i)},\; \{\mathbf{z}^{(t',i)}\}_{t'=1}^T\right)$$
+
+2. **Spatial attention**: attend over all patches in the *same frame*:
+$$\mathbf{z}''^{(t,i)} = \text{Attn}\!\left(\mathbf{z}'^{(t,i)},\; \{\mathbf{z}'^{(t,j)}\}_{j=1}^N\right)$$
+
+**Complexity**: $\mathcal{O}(T^2 N D + TN^2 D)$ — linear in $TN$ rather than quadratic.
+
+**Initialization**: Weights from pretrained ViT. Temporal attention weights initialized to zero (so at initialization, the model reduces to a spatial-only ViT — a well-conditioned starting point).
+
+---
+
+#### Video Swin Transformer (2021)
+
+**Approach**: Extend the shifted window mechanism from Swin Transformer to 3D — compute attention within local **3D windows** of size $P_t \times P_h \times P_w$ tokens.
+
+Each attention operation is restricted to a local window of $P_t \times P_h \times P_w$ spatiotemporal tokens:
+$$\mathcal{O}(T H W \cdot P_t P_h P_w \cdot D)$$
+
+which is linear in $THW$ for fixed window sizes.
+
+**Cyclic shifting**: Alternate window partitions between layers (identical to 2D Swin) to enable cross-window communication without added cost.
+
+**Result**: Strong performance on Kinetics and Something-Something with better compute efficiency than TimeSformer.
+
+---
+
+#### ViViT (2021, Google)
+
+Proposes four factorization strategies; the best-performing:
+
+**Model 2 — Factorised Encoder**: First apply spatial Transformer (ViT) to each frame independently → get $T$ frame-level tokens. Then apply temporal Transformer over these $T$ tokens.
+
+$$\text{ViViT: } \mathbf{V} \xrightarrow{\text{Spatial ViT per frame}} \{z_1, \ldots, z_T\} \xrightarrow{\text{Temporal Transformer}} y$$
+
+This decouples spatial and temporal pretraining — the spatial ViT can be initialized from ViT-pretrained weights directly.
+
+**Interview Insight**: "How do you choose between TimeSformer, Video Swin, and ViViT?" At equal scale: Video Swin is most efficient (locality bias reduces compute); TimeSformer is simpler to implement and flexible; ViViT's factorized encoder is cleanest for transfer from image models. For standard benchmarks (Kinetics), Video Swin and ViViT are broadly comparable.
+
+---
+
+## Self-Supervised Learning for Video
+
+The same paradigms from image SSL (§6 in this book) extend naturally to video, with temporal structure providing additional self-supervision signals.
+
+### Masked Video Modeling: VideoMAE (2022)
+
+**Core idea**: Extend Masked Autoencoders (MAE) to video. Given a video clip, mask a large fraction of spatiotemporal patches and train a Transformer encoder-decoder to reconstruct the masked patches.
+
+**High masking ratio**: VideoMAE uses $90\%$ masking (vs. $75\%$ for image MAE). This is motivated by the high redundancy in video—adjacent patches are strongly correlated. Aggressive masking forces the model to reason about long-range spatiotemporal structure rather than copying neighboring patches.
+
+**Tube masking**: Masks are sampled as *spatiotemporal tubes* — the same spatial positions are masked across all frames. This prevents the trivial solution of copying visible patches from adjacent frames at the same location.
+
+$$\text{Mask} \in \{0,1\}^{T \times N}, \quad \text{Mask}[t, i] = \text{Mask}[t', i] \;\forall t, t'$$
+
+**Training objective**: Pixel-level MSE reconstruction on masked patches (same as MAE):
+$$\mathcal{L} = \mathbb{E}\left[\frac{1}{|\mathcal{M}|} \sum_{(t,i) \in \mathcal{M}} \|\hat{\mathbf{x}}_{t,i} - \mathbf{x}_{t,i}\|^2\right]$$
+
+**Efficiency**: Because $90\%$ of tokens are masked, the encoder only processes $10\%$ of tokens → the computational cost of SSL pre-training is comparable to supervised training.
+
+**Result**: VideoMAE pre-trained representations transfer competitively with or surpass fully supervised training on Kinetics-400 when fine-tuned.
+
+---
+
+### Contrastive and Distillation Approaches
+
+**Video contrastive learning**: Extend image contrastive methods (SimCLR, MoCo) by defining temporal augmentations as additional views:
+- Two temporally-distant clips from the same video → positive pair
+- Clips from different videos → negative pairs
+
+**V-JEPA (2024, Meta)**: Extends I-JEPA to video. Predict representations of masked spatiotemporal regions using context regions *in feature space* (not pixel space), avoiding the need to reconstruct high-frequency details. This encourages the model to learn semantic rather than textural features.
+
+**Interview Insight**: "Why does VideoMAE use such a high masking ratio?" The spatial redundancy in video is much higher than in images — nearby pixels and frames are nearly identical. Low masking ratios allow the decoder to reconstruct patches from adjacent visible neighbors without learning meaningful semantics. High masking forces global reasoning.
+
+---
+
+## Practical Considerations
+
+**Clip sampling**: Random temporal sampling of clips (not the full video) at training time is standard. Uniform sampling at test time (e.g. 5–10 clips), then averaging predictions.
+
+**Frame rate vs. resolution trade-off**: At fixed compute, higher temporal resolution (more frames) means lower spatial resolution. SlowFast's dual-pathway design is an explicit solution to this trade-off.
+
+**Optical flow cost**: Precomputing flow with RAFT for the full training set is expensive but reusable. Flow is increasingly replaced by temporal convolutions / attention that learn motion implicitly.
+
+**Temporal augmentation**: Temporal jittering (random clip start), temporal flipping, and playback speed perturbation are standard. Speed perturbation is especially useful for action recognition since the same action can appear at different speeds.
+
+**Pre-training strategy**: Pre-train on large-scale datasets (Kinetics-400/700, Something-Something-v2); fine-tune on smaller domain-specific datasets. VideoMAE-style SSL pre-training is competitive with supervised Kinetics pre-training for many downstream tasks.
+
+**Memory during training**: A single batch of 8 clips × 16 frames × 224×224 × 3 channels in float32 ≈ 1.8 GB. Mixed precision (fp16) and gradient checkpointing are necessary for video Transformers.
+
+---
+
+## Interview Questions
+
+**Q: What is the aperture problem in optical flow, and why does it matter?**
+
+At a single pixel, the OFC gives one equation in two unknowns $(u, v)$. Only the component of motion along the image gradient is observable — motion parallel to an edge is invisible from that point alone. Lucas-Kanade resolves this by assuming constant flow over a window; Horn-Schunck by assuming globally smooth flow. In deep optical flow (RAFT), the correlation volume provides global matching context that implicitly resolves the aperture problem.
+
+---
+
+**Q: Why inflate 2D convolutions to 3D in I3D instead of initializing 3D CNNs from scratch?**
+
+ImageNet pretraining provides strong appearance priors that are directly transferable to video. A randomly-initialized 3D CNN requires much more video data and compute to reach the same performance. The inflation trick ensures that at initialization the model reduces to the pretrained 2D model on static frames, preserving this prior while allowing temporal filters to be learned from video data.
+
+---
+
+**Q: Explain the trade-off between temporal and spatial resolution in video models. How does SlowFast address it?**
+
+High temporal resolution is needed to capture fast motions (e.g., sports actions); high spatial resolution is needed for visual recognition of fine-grained details. Joint high-resolution modeling is computationally prohibitive. SlowFast uses two pathways: a Slow pathway with low temporal resolution and high spatial/channel capacity for semantics, and a Fast pathway with high temporal resolution and low spatial/channel capacity for motion. The asymmetric compute allocation (Fast uses $\sim$20% of total FLOPs) makes this practical.
+
+---
+
+**Q: How do video Transformers avoid the quadratic cost of full spatiotemporal attention?**
+
+Three main strategies: (1) **Factorized attention** (TimeSformer): separate temporal and spatial attention sequentially — $\mathcal{O}(T^2 N + TN^2)$ rather than $\mathcal{O}(T^2 N^2)$. (2) **Local 3D windowed attention** (Video Swin): restrict attention to local spatiotemporal windows — $\mathcal{O}(T H W)$ linear in sequence length. (3) **Factorized encoder** (ViViT): apply spatial ViT per-frame then temporal Transformer over frame tokens — decouples spatial and temporal processing entirely.
+
+---
+
+**Q: Why does VideoMAE use 90% masking instead of the 75% used for image MAE?**
+
+Video has far higher spatial and temporal redundancy than images: adjacent pixels are correlated, and consecutive frames are nearly identical. At 75% masking, the decoder can reconstruct masked video patches by interpolating from nearby unmasked neighbors in adjacent frames without learning useful semantics. The 90% ratio, combined with tube masking (masking the same spatial positions across all frames), prevents this shortcut and forces the model to learn long-range spatiotemporal structure.

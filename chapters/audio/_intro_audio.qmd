@@ -1,0 +1,16 @@
+# Audio {.unnumbered}
+
+## Overview
+
+Speech is one of the richest signals in machine learning: a one-dimensional waveform that simultaneously encodes *what* was said, *who* said it, and *how*. This part covers how deep learning models process raw audio — from transcribing speech to text, to determining who spoke when in a multi-speaker recording.
+
+**Chapter Scope**:
+
+- **Automatic Speech Recognition** (§21): converting speech to text — acoustic features, CTC and attention-based encoder-decoder models, and modern Conformer/Whisper-style architectures.
+- **Speaker Diarization** (§22): answering "who spoke when?" — speaker embeddings (x-vectors, d-vectors), clustering, end-to-end neural diarization (EEND), and evaluation via DER/JER/cpWER.
+
+**Interview Relevance**: Speech is core to products at Google (Assistant, Meet captions), Amazon (Alexa), Apple (Siri), and Zoom/Otter.ai (meeting transcription). Expect questions on log-Mel feature extraction, CTC vs. attention-based decoding, self-supervised speech representations (wav2vec 2.0, HuBERT, WavLM), and how to evaluate speaker-attributed transcripts.
+
+**Prerequisites**: Foundations (optimization). Sequence Models (§18 — RNNs, attention, the Transformer encoder) and Self-Supervised Learning (Part III — contrastive and masked-prediction objectives) are directly applicable to speech encoders.
+
+---

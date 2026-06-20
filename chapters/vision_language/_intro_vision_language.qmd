@@ -1,0 +1,18 @@
+# Vision-Language {.unnumbered}
+
+## Overview
+
+Vision-language (VL) models learn joint representations of images and text, enabling tasks that require reasoning across both modalities: retrieval, captioning, visual question answering, grounding, and text-to-image generation. This chapter covers how VL models are architected (modality fusion strategies), how they are pre-trained (contrastive, masked-token, and generative objectives), the major model families built on each objective, and how pre-trained VL models are adapted to downstream tasks.
+
+**Chapter Scope**:
+
+- **Vision-Language Tasks and Pre-Training** (§16.1–16.2): task taxonomy, modality fusion architectures, and pre-training objectives
+- **Models** (§16.3): CLIP/ALIGN, SigLIP, BEiT-3, and Large Multimodal Models (GIT, BLIP-2, Flamingo, LLaVA)
+- **Transfer Learning and Knowledge Distillation** (§16.4–16.5): adapting pre-trained VL models to downstream tasks
+- **Vision Foundation Models** (§16.7): unifying vision tasks via free-text outputs and visual prompting
+
+**Interview Relevance**: Vision-language modeling is central to roles at OpenAI (GPT-4V, DALL-E), Google DeepMind (Gemini, PaLI), Meta (Flamingo, LLaVA-style assistants), and any team building retrieval, captioning, or multimodal assistant products. Expect questions on CLIP's contrastive objective and its variants (SigLIP, FILIP), the trade-offs between fusion strategies, how Q-Former / Perceiver Resampler connect frozen vision encoders to frozen LLMs, and emergent capabilities of large multimodal models.
+
+**Prerequisites**: Part II (CNNs, Vision Transformers), Part III (Self-Supervised Learning — contrastive learning foundations). Familiarity with the Transformer attention mechanism and autoregressive language modeling.
+
+---

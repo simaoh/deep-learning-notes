@@ -1,0 +1,142 @@
+# 3D Data Understanding
+
+## 3D Scene Representations
+
+A 3D scene can be represented in several fundamentally different ways. The choice of representation determines which operations are efficient, what inductive biases are present, and how the representation interacts with deep learning pipelines.
+
+**Point Cloud**: An unordered set of 3D points $\mathcal{P} = \{(\mathbf{x}_i, \mathbf{f}_i)\}_{i=1}^N$ where $\mathbf{x}_i \in \mathbb{R}^3$ is a spatial coordinate and $\mathbf{f}_i$ is an optional per-point feature (e.g. color, normal). Point clouds are the native output of LiDAR sensors and multi-view stereo. They are memory-efficient and geometrically faithful, but unstructured—standard convolutions do not apply directly.
+
+**Voxel Grid**: A regular 3D grid $\mathbf{V} \in \mathbb{R}^{D \times H \times W \times C}$ with $C$ features per cell. Enables direct application of 3D convolutions. The $O(D^3)$ memory cost makes high-resolution grids prohibitive; sparse voxel representations (SparseConvNet, MinkowskiNet) address this by storing only occupied cells.
+
+**Mesh**: A surface represented by vertices $V \subset \mathbb{R}^3$ and faces $F \subseteq V^3$ (typically triangles). Compact and artist-friendly; standard in rendering pipelines. Difficult to interface with gradient-based learning due to the combinatorial topology.
+
+**Implicit Surface**: A scalar field $f_\theta : \mathbb{R}^3 \to \mathbb{R}$ whose zero-level set defines the surface. Signed Distance Functions (SDFs) and occupancy networks are the most common variants. Resolution-free and differentiable; surfaces are extracted at inference via marching cubes.
+
+**Neural Radiance Field / 3D Gaussian**: Continuous volumetric representations that encode both geometry and appearance; covered in detail in Chapter 12.
+
+| Representation | Memory | Structured? | Continuous | View synthesis | Learn-able |
+|---|---|---|---|---|---|
+| Point cloud | $O(N)$ | No | No | No | Yes (PointNet) |
+| Voxel | $O(D^3)$ | Yes (3D conv) | No | No | Yes |
+| Mesh | $O(V+F)$ | No | Yes (interp) | No | Difficult |
+| Implicit (SDF) | $O(\text{params})$ | No | Yes | No | Yes |
+| NeRF | $O(\text{params})$ | No | Yes | Yes | Yes |
+| 3D Gaussian | $O(K)$ | No | Yes | Yes | Yes |
+
+**Interview Insight**: "Why not just use voxels for everything?" Voxel resolution scales cubically — a $512^3$ grid at float32 requires 512 MB for geometry alone, before any features. Point clouds and implicit representations are the practical answer for high-resolution 3D.
+
+---
+
+## Camera Geometry
+
+### Pinhole Camera Model
+
+The **pinhole camera model** approximates a camera as a single point (the optical center $\mathbf{o}$) projecting the 3D world onto a 2D image plane at distance $f$ (the focal length). A 3D point $\mathbf{X} = (X, Y, Z)^\top$ projects to image coordinates $(u, v)$ by:
+$$u = f_x \frac{X}{Z} + c_x, \qquad v = f_y \frac{Y}{Z} + c_y$$
+
+where $(c_x, c_y)$ is the **principal point** (ideally the image center) and $f_x, f_y$ are the focal lengths measured in pixels.
+
+### Intrinsic Matrix
+
+The projection is compactly written in **homogeneous coordinates**. Define $\tilde{\mathbf{X}} = (X, Y, Z, 1)^\top$ and $\tilde{\mathbf{x}} = (u, v, 1)^\top$. Then:
+$$\lambda\,\tilde{\mathbf{x}} = \mathbf{K}\,\mathbf{X}_c, \quad \mathbf{K} = \begin{bmatrix} f_x & 0 & c_x \\ 0 & f_y & c_y \\ 0 & 0 & 1 \end{bmatrix}$$
+
+where $\lambda = Z$ (the depth), $\mathbf{X}_c$ is the point in **camera coordinates**, and $\mathbf{K} \in \mathbb{R}^{3 \times 3}$ is the **intrinsic matrix** (also called the camera matrix). Real lenses introduce radial and tangential distortion; distortion coefficients are estimated alongside $\mathbf{K}$ during camera calibration (e.g. via a checkerboard pattern and Zhang's method).
+
+### Extrinsic Parameters
+
+**Extrinsics** describe the rigid transform from world coordinates to camera coordinates:
+$$\mathbf{X}_c = [\mathbf{R} \mid \mathbf{t}]\,\tilde{\mathbf{X}}_w = \mathbf{R}\mathbf{X}_w + \mathbf{t}$$
+
+where $\mathbf{R} \in SO(3)$ (rotation, 3 DOF) and $\mathbf{t} \in \mathbb{R}^3$ (translation). Written out entry-wise:
+$$[\mathbf{R} \mid \mathbf{t}] = \begin{bmatrix} r_{1,1} & r_{1,2} & r_{1,3} & | & t_1 \\ r_{2,1} & r_{2,2} & r_{2,3} & | & t_2 \\ r_{3,1} & r_{3,2} & r_{3,3} & | & t_3 \end{bmatrix}$$
+
+As a $4 \times 4$ homogeneous transform:
+$$\mathbf{T}_{cw} = \begin{bmatrix} \mathbf{R} & \mathbf{t} \\ \mathbf{0}^\top & 1 \end{bmatrix}$$
+
+### Perspective Projection Pipeline
+
+The full projection from world point $\mathbf{X}_w$ to image pixel $\mathbf{x}$ is:
+$$\boxed{\lambda\,\tilde{\mathbf{x}} = \mathbf{K}[\mathbf{R} \mid \mathbf{t}]\,\tilde{\mathbf{X}}_w = \mathbf{P}\,\tilde{\mathbf{X}}_w}$$
+
+where $\mathbf{P} = \mathbf{K}[\mathbf{R} \mid \mathbf{t}] \in \mathbb{R}^{3 \times 4}$ is the **camera projection matrix**.
+
+| Quantity | Dims | DOF | Contains |
+|---|---|---|---|
+| $\mathbf{K}$ | $3 \times 3$ | 4 | $f_x, f_y, c_x, c_y$ |
+| $[\mathbf{R} \mid \mathbf{t}]$ | $3 \times 4$ | 6 | camera pose in world |
+| $\mathbf{P}$ | $3 \times 4$ | 11 | full calibrated camera |
+
+**Interview Insight**: Intrinsics are fixed properties of the hardware; extrinsics change every time the camera moves. In SLAM and robotics, tracking the camera means continuously estimating new extrinsics while $\mathbf{K}$ stays constant.
+
+---
+
+## Point Cloud Learning
+
+### Challenges
+
+Point clouds are **permutation-invariant sets**: $\mathcal{P} = \{x_1, \ldots, x_n\} \subset \mathbb{R}^3$ has no canonical ordering. Standard 1D convolutions assume ordered sequences; standard 2D/3D convolutions assume regular grids. A valid architecture for point clouds must produce the same output regardless of how the $n$ points are ordered.
+
+Three design goals for point cloud networks:
+1. **Permutation invariance** (for classification) or **permutation equivariance** (for segmentation)
+2. **Interaction between points** to capture local structure
+3. **Robustness** to varying point density and outliers
+
+### PointNet
+
+**PointNet** (Qi et al., 2017) achieves permutation invariance via a symmetric aggregation function:
+$$\boxed{f(\{x_1,\ldots,x_n\}) = \rho\!\left(\underset{i=1,\ldots,n}{\max}\,h_\theta(x_i)\right)}$$
+
+where $h_\theta : \mathbb{R}^3 \to \mathbb{R}^K$ is a shared MLP (same weights applied independently to each point), $\max$ is element-wise max-pooling over the $n$ points, and $\rho$ is a downstream MLP.
+
+Max-pooling is a **symmetric function** — invariant to permutation — making $f$ permutation-invariant by construction.
+
+**T-Net (Spatial Transformer)**: A mini-PointNet predicts a $3 \times 3$ alignment matrix (and separately a $K \times K$ feature alignment matrix), which is applied to the inputs/features to map them to a canonical pose before processing. This provides robustness to rigid transformations.
+
+**Segmentation**: Concatenate per-point features from $h_\theta$ (local) with the global max-pool descriptor (global context), then apply a per-point MLP to predict per-point labels.
+
+**Universality**: The composition $\rho \circ \max \circ h$ can approximate any continuous symmetric function on compact subsets of $\mathbb{R}^K$ (proved via a Hausdorff-based argument in the original paper).
+
+**Critical point set**: only the subset of points that achieved the max across each dimension contributes to the global descriptor. This set provides a compact summary of the shape and is robust to perturbations of non-critical points.
+
+**Interview Insight**: "Why is max-pooling the right aggregation?" Mean-pooling is sensitive to density (dense regions dominate). Sum-pooling does not normalize for set size. Max-pooling selects the most informative point per feature dimension, making the descriptor compact and outlier-robust.
+
+### PointNet++
+
+**PointNet++** (Qi et al., 2017) addresses PointNet's weakness: the global max-pool discards all local geometric structure, limiting performance on fine-grained tasks.
+
+The key idea is **hierarchical local aggregation**, analogous to how CNNs build increasingly abstract features from local patches.
+
+**Set Abstraction Layer**:
+
+1. **Sampling**: Select $M \ll n$ representative points by **Farthest Point Sampling (FPS)** — greedily pick the point farthest from all previously selected points. FPS gives uniform coverage, unlike random sampling.
+
+2. **Grouping**: For each representative $q_i$, collect all points within radius $r$ (ball query). Ball query is preferred over $k$-NN because its fixed spatial scale is consistent regardless of local density.
+
+3. **PointNet**: Apply a mini-PointNet to each local group → one feature vector per representative. Stack $M$ representative-feature pairs as input to the next level.
+
+Multiple set abstraction layers form an **encoder**. For dense prediction tasks, a **decoder** interpolates features back to the original $n$ points via inverse-distance weighted interpolation:
+$$f(x) = \frac{\sum_{i=1}^k w(d(x, x_i))\,f(x_i)}{\sum_{i=1}^k w(d(x, x_i))}, \qquad w(d) = \frac{1}{d^2}$$
+with skip connections from the encoder (analogous to U-Net).
+
+**Multi-Scale Grouping (MSG)**: Apply ball queries at multiple radii $\{r_1, r_2, r_3\}$ for each representative and concatenate the resulting features. Handles non-uniform point density robustly.
+
+---
+
+## Interview Questions
+
+**Q: How does the pinhole camera model project a 3D point to 2D, and what are the intrinsic and extrinsic parameters?**
+
+The projection is $\lambda\tilde{\mathbf{x}} = \mathbf{K}[\mathbf{R}|\mathbf{t}]\tilde{\mathbf{X}}_w$. Extrinsics $[\mathbf{R}|\mathbf{t}]$ transform from world to camera coordinates (camera pose). Intrinsics $\mathbf{K}$ map camera-frame 3D points to pixel coordinates via focal lengths $(f_x, f_y)$ and principal point $(c_x, c_y)$. Intrinsics are hardware properties; extrinsics change with camera movement.
+
+---
+
+**Q: Why is max-pooling used in PointNet rather than mean or sum pooling?**
+
+Max-pooling selects the most informative value per feature dimension across all points, making the global descriptor independent of point set size and robust to point density variations and outliers. Mean pooling is dominated by dense regions; sum pooling grows with set size. PointNet's universality theorem proves that $\rho \circ \max \circ h$ can approximate any continuous symmetric function, making max-pooling theoretically justified.
+
+---
+
+**Q: What is the advantage of PointNet++ over PointNet?**
+
+PointNet uses a single global max-pool that discards all local geometric context. PointNet++ introduces hierarchical local aggregation via set abstraction: FPS selects representative points, ball queries group neighbors, and a mini-PointNet aggregates each local group. This captures multi-scale local structure — analogous to how CNNs build hierarchical receptive fields — significantly improving performance on tasks requiring fine-grained shape understanding.

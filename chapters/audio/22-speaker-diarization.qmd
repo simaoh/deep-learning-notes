@@ -1,0 +1,356 @@
+# Speaker Diarization {#sec-speaker-diarization}
+
+Speaker diarization answers the question *"who spoke when?"* in a multi-speaker recording. Given a discrete-time waveform $\mathbf{x} = (x_1, \ldots, x_T) \in \mathbb{R}^T$, the task is to produce a set of labeled time intervals $\{(t_s^{(k)}, t_e^{(k)}, s^{(k)})\}_{k=1}^{K}$ — start time, end time, and speaker identity drawn from an a-priori **unknown** speaker set $\mathcal{S}$. Neither $|\mathcal{S}|$ nor speaker identities are known in advance.
+
+A digital waveform is obtained by sampling a continuous pressure signal at a fixed **sample rate** $f_s$ (typically 16 kHz for speech, so a 10 s recording yields $T = 160{,}000$ samples). In practice $\mathbf{x}$ is rarely fed directly to a model; it is first converted to a sequence of lower-dimensional acoustic feature vectors (@sec-features).
+
+---
+
+## Notation and Key Concepts {#sec-notation}
+
+### Audio Representations {#sec-features}
+
+| Concept | Notation | Definition |
+|:--------|:---------|:-----------|
+| **Raw waveform** | $\mathbf{x} \in \mathbb{R}^T$ | Sequence of $T$ amplitude samples at sample rate $f_s$ (e.g., 16 kHz). |
+| **Audio frame** | $\mathbf{x}_t \in \mathbb{R}^F$ | One time-slice (column) of the log-mel spectrogram: $F$ Mel-frequency values at time step $t$. Typical frame length 25 ms, hop 10 ms $\Rightarrow$ $T_{\text{frames}} \approx 100 \times \text{duration (s)}$. |
+| **Mel spectrogram** | $\mathbf{M} \in \mathbb{R}^{F \times T_{\text{frames}}}$ | Time–frequency representation, frequency axis warped to the Mel scale ($F \approx$ 40–128 bands). Computed via STFT + Mel filterbank. |
+| **Log-Mel filterbanks** | $\log \mathbf{M}$ | Element-wise log of $\mathbf{M}$ — the standard input feature, matching the (roughly logarithmic) human loudness perception. |
+
+: Audio representation terminology. {#tbl-audio-repr}
+
+**From waveform to log-Mel features**: (1) slice the waveform into overlapping, windowed frames ($\sim$25 ms, 10 ms hop); (2) compute the magnitude spectrum of each frame via STFT; (3) project through a bank of $F$ triangular filters spaced on the Mel scale, $\text{Mel}(f) = 2595 \log_{10}(1 + f/700)$; (4) take $\log(\cdot)$ to compress dynamic range. The result $\mathbf{X} \in \mathbb{R}^{T_{\text{frames}} \times F}$ is the standard input to most diarization models.
+
+**Self-supervised representations**: modern systems increasingly replace or augment log-Mel features with representations from large self-supervised speech models operating directly on $\mathbf{x}$ — **wav2vec 2.0** [@baevski2020wav2vec2] (contrastive learning over quantized latent speech units), **HuBERT** [@hsu2021hubert] (masked prediction of clustering-derived pseudo-labels), and **WavLM** [@chen2022wavlm] (masked denoising, pre-trained on 94k hours; state-of-the-art as a frozen feature extractor for speaker tasks). These produce contextualized frame-level representations $\mathbf{H} \in \mathbb{R}^{T' \times D'}$ at $\sim$50 frames/s for 16 kHz input ($\times 320$ downsampling). Lower Transformer layers tend to encode acoustic/phonetic content; higher layers are more speaker-discriminative — a common strategy is a learnable weighted sum over all layers.
+
+### Speaker Diarization and Evaluation Terminology
+
+| Concept | Symbol | Definition |
+|:--------|:-------|:-----------|
+| **Speaker set** | $\mathcal{S} = \{s_1, \ldots, s_N\}$ | The (unknown) set of $N$ speakers in the recording. |
+| **Speaker activity** | $y_{t,s} \in \{0, 1\}$ | Binary label: is speaker $s$ active at frame $t$? |
+| **Hypothesis** | $\hat{\mathbf{Y}} \in [0,1]^{T \times S}$ | Predicted speaker-activity matrix ($S$ output slots). |
+| **Reference** | $\mathbf{Y} \in \{0,1\}^{T \times N}$ | Ground-truth speaker-activity matrix. |
+| **Cluster** | $c$ | Set of segments/frames the system assigns to one speaker. |
+| **RTTM** | — | Rich Transcription Time Marked: file format `(file, start, duration, speaker_id)`. |
+| **Forgiveness collar** | — | A symmetric window (typically $\pm0.25$ s) around each reference turn boundary, excluded from scoring (annotation ambiguity). |
+| **Speaker mapping** | — | Optimal one-to-one hypothesis$\leftrightarrow$reference label assignment, found via the **Hungarian algorithm**. |
+| **WER** | — | Word Error Rate: $(S+D+I)/N_{\text{ref}}$ (substitutions, deletions, insertions over reference word count). Standard ASR metric. |
+| **CTC** | — | Connectionist Temporal Classification: a loss marginalizing over all valid input-frame/output-token alignments, enabling ASR training without frame-level labels. |
+
+: Speaker diarization and evaluation terminology. {#tbl-terminology}
+
+---
+
+## Historical Overview {#sec-history}
+
+| Era | Years | Key Ideas | Representative Works |
+|:----|:------|:----------|:---------------------|
+| x-vector / d-vector | 2017–2020 | Neural speaker embeddings, spectral clustering | @snyder2018xvector; @wan2018dvector; @desplanques2020ecapa |
+| End-to-end (EEND) | 2019–present | Joint segmentation & clustering with PIT | @fujita2019eendsa; @horiguchi2020eendeda; @landini2023diaper |
+| Foundation models | 2022–present | Self-supervised representations, joint ASR+diarization | @chen2022wavlm; @park2024sortformer; @cornell2024whisperdiar |
+
+: Timeline of speaker diarization research. {#tbl-timeline}
+
+### Neural Speaker Embeddings {#sec-xvector}
+
+Before neural embeddings, the dominant approach used *i-vectors* [@dehak2011ivector] — fixed-dimensional representations from factor analysis over GMM statistics, scored with PLDA. Two neural embedding families replaced this pipeline:
+
+**d-vectors** [@variani2014dvector; @wan2018dvector] process a sequence of log-mel frames $\mathbf{x}_t \in \mathbb{R}^F$ with an LSTM, producing hidden states $\mathbf{h}_t$ averaged over the utterance into a fixed-size embedding. The **Generalized End-to-End (GE2E)** loss [@wan2018dvector] contrasts embeddings within and across speakers:
+
+$$
+\mathcal{L}_{\text{GE2E}} = -\sum_{j,i} \left[ \mathbf{S}_{ji,j} - \log \sum_{k=1}^{N} \exp(\mathbf{S}_{ji,k}) \right]
+$$ {#eq-ge2e}
+
+where $\mathbf{S}_{ji,k} = w \cdot \cos(\mathbf{e}_{ji}, \mathbf{c}_k) + b$ is the scaled cosine similarity between embedding $\mathbf{e}_{ji}$ (speaker $j$, utterance $i$) and centroid $\mathbf{c}_k$ of speaker $k$.
+
+**x-vectors** [@snyder2018xvector] use a Time-Delay Neural Network (TDNN) with a **statistics pooling** layer summarizing $T_{\text{frames}}$ hidden states $\mathbf{h}_t \in \mathbb{R}^d$ into mean and standard deviation:
+
+$$
+\boldsymbol{\mu} = \frac{1}{T_{\text{frames}}}\sum_{t=1}^{T_{\text{frames}}} \mathbf{h}_t, \qquad
+\boldsymbol{\sigma} = \sqrt{\frac{1}{T_{\text{frames}}}\sum_{t=1}^{T_{\text{frames}}} \mathbf{h}_t^2 - \boldsymbol{\mu}^2}
+$$ {#eq-stats-pool}
+
+The concatenation $[\boldsymbol{\mu};\,\boldsymbol{\sigma}]$ feeds forward layers producing the embedding, trained with **additive angular margin softmax (AAM-Softmax)**:
+
+$$
+\mathcal{L}_{\text{AAM}} = -\log \frac{e^{s\,\cos(\theta_{y} + m)}}{e^{s\,\cos(\theta_{y}+m)} + \sum_{k \neq y} e^{s\,\cos\theta_k}}
+$$ {#eq-aam}
+
+where $\theta_y$ is the angle between the embedding and the weight vector of true class $y$, $m$ is an angular margin, and $s$ a scaling factor. **ECAPA-TDNN** [@desplanques2020ecapa] extended this with Squeeze-and-Excitation blocks, multi-scale (Res2Net) aggregation, and attentive statistics pooling — state-of-the-art for speaker verification and a strong embedding backbone for diarization.
+
+Embeddings are extracted from short overlapping windows (1.5–3 s) and then **clustered** (@sec-embed-cluster). Compared to i-vectors, neural embeddings are far more discriminative, scale to orders of magnitude more training data, and require no GMM/T-matrix estimation.
+
+### VBx: Variational Bayes HMM Clustering {#sec-vbx}
+
+**VBx** [@landini2022vbx] models a sequence of x-vectors with a Bayesian HMM whose emissions are PLDA-based:
+
+$$
+p(\mathbf{e}_{1:T} \mid \boldsymbol{\theta}) = \sum_{\mathbf{q}} \prod_{t=1}^{T} p(\mathbf{e}_t \mid q_t, \boldsymbol{\theta})\, p(q_t \mid q_{t-1})
+$$ {#eq-vbx}
+
+Variational Bayes inference approximates the posterior over speaker assignments $\mathbf{q}$. Unlike plain spectral/agglomerative clustering, VBx models speaker-turn dynamics through transition probabilities and yields calibrated speaker posteriors — frequently used as a strong re-clustering step on top of an initial clustering pass.
+
+---
+
+## Open-Source Landscape {#sec-opensource}
+
+| Toolkit | Language | Key Capabilities | Pretrained Models |
+|:--------|:---------|:-----------------|:------------------|
+| **pyannote.audio** | Python / PyTorch | Full pipeline (VAD, OSD, embedding, clustering); powerset training | Yes (Hugging Face) |
+| **NeMo** | Python / PyTorch | Multi-scale diarization (MSDD), Sortformer, ASR integration | Yes (NGC / HF) |
+| **Kaldi** | C++ / Bash | x-vector + PLDA + AHC/VBx recipes | Recipe-based |
+| **SpeechBrain / Wespeaker** | Python / PyTorch | ECAPA-TDNN / ResNet speaker embedding training | Yes (HF) |
+| **EEND (Hitachi)** | Python / PyTorch | SA-EEND, EEND-EDA | Yes |
+| **VBx** | Python | Bayesian HMM x-vector clustering | N/A |
+| **dscore** | Python | DER / JER scoring | N/A |
+
+: Major open-source speaker diarization toolkits. {#tbl-toolkits}
+
+`pyannote.audio` [@bredin2020pyannote; @bredin2023pyannote3] is the most actively maintained end-to-end toolkit. Its modular pipeline — voice activity detection (VAD), overlapped speech detection (OSD), embedding extraction, clustering, and optional Viterbi resegmentation — is distributed via the Hugging Face Hub:
+
+```python
+from pyannote.audio import Pipeline
+
+pipeline = Pipeline.from_pretrained(
+    "pyannote/speaker-diarization-3.1",
+    use_auth_token="YOUR_HF_TOKEN",
+)
+diarization = pipeline("audio.wav")
+
+for turn, _, speaker in diarization.itertracks(yield_label=True):
+    print(f"{turn.start:.1f} -- {turn.end:.1f}: {speaker}")
+```
+
+Recent versions (3.x) replace separate OSD with a **powerset multi-class segmentation** model [@plaquet2023powerset] that jointly predicts local speaker activities for up to $K$ speakers per frame.
+
+**NVIDIA NeMo** [@park2022nemo] provides both a clustering pipeline and an end-to-end **Sortformer** diarizer (@sec-joint-asr). @fig-nemo-pipeline shows the cascaded clustering architecture: a VAD module (MarbleNet) segments speech, an embedding model (TitaNet-L) extracts speaker vectors, spectral clustering groups them, and an optional neural diarizer (MSDD, @sec-hybrid) refines the result — with an ASR branch running in parallel for speaker-attributed transcription.
+
+![NeMo clustering-based speaker diarization pipeline. Input speech is processed by a VAD module (MarbleNet), segmented, embedded (TitaNet-L), clustered via spectral clustering, and optionally refined by a neural diarizer (MSDD). An ASR branch can run in parallel for speaker-attributed transcription. *Source: NVIDIA NeMo documentation.*](/images/audio/nemo_sd_pipeline.png){#fig-nemo-pipeline width=85% fig-align="center"}
+
+---
+
+## Benchmarks and Evaluation {#sec-benchmarks}
+
+### Standard Datasets
+
+| Dataset | Domain | Hours | Speakers | Overlap |
+|:--------|:-------|------:|---------:|--------:|
+| **AMI** [@carletta2005ami] | Meeting (headset + array) | ~100 h | 4/meeting | ~15% |
+| **CALLHOME** [@nist2008sre] | Telephone conversations | ~20 h | 2–7 | ~13% |
+| **DIHARD III** [@ryant2021dihard3] | Diverse (clinical, web, meeting) | ~40 h | varied | up to 30% |
+| **VoxConverse** [@nagrani2020voxconverse] | YouTube (in the wild) | ~64 h | 1–21 | ~3.4% |
+| **CHiME-5/6** [@watanabe2020chime6] | Dinner parties (distant mic) | ~50 h | 4 | ~20% |
+| **NIST SRE / RT** [@fiscus2006rich] | Broadcast + meeting | varied | varied | varied |
+
+: Commonly used speaker diarization benchmarks. {#tbl-datasets}
+
+### Diarization Error Rate (DER) {#sec-der}
+
+The standard metric is the fraction of scored time incorrectly attributed:
+
+$$
+\text{DER} = \frac{t_{\text{FA}} + t_{\text{Miss}} + t_{\text{SE}}}{T_{\text{scored}}}
+$$ {#eq-der}
+
+where $t_{\text{FA}}$ (false alarm: non-speech labeled as speech), $t_{\text{Miss}}$ (speech labeled as non-speech), and $t_{\text{SE}}$ (speaker error: speech correctly detected but mis-attributed) are summed over the scored region $T_{\text{scored}}$. Evaluation applies a forgiveness collar (typically $\pm0.25$ s) around reference turn boundaries — within it, no errors are counted, since human annotators disagree on exact boundaries — and the hypothesis$\leftrightarrow$reference speaker mapping is found via the Hungarian algorithm. DER is computed by NIST's `md-eval.pl` or its reimplementation in `pyannote.metrics`/`dscore`; the two differ slightly in tie-breaking and overlap handling, so results should state which tool was used.
+
+DER decomposes into three independent components, each pointing to a different failure mode:
+
+$$
+\text{DER} = \underbrace{\frac{t_{\text{FA}}}{T_{\text{scored}}}}_{\text{False Alarm}} + \underbrace{\frac{t_{\text{Miss}}}{T_{\text{scored}}}}_{\text{Miss Rate}} + \underbrace{\frac{t_{\text{SE}}}{T_{\text{scored}}}}_{\text{Speaker Confusion}}
+$$ {#eq-der-decomp}
+
+| Component | Symptom | Typical Cause |
+|:----------|:--------|:--------------|
+| High false alarm | Hallucinated speech in silence/noise | Over-sensitive VAD |
+| High miss | Real speech dropped | Under-sensitive VAD; quiet speakers |
+| High speaker confusion | Correct detection, wrong speaker | Poor embeddings; clustering errors; overlap |
+
+: DER error decomposition and diagnostics. {#tbl-der-decomp}
+
+### Jaccard Error Rate (JER) {#sec-jer}
+
+JER [@ryant2021dihard3] offers a per-speaker complementary view:
+
+$$
+\text{JER} = \frac{1}{|\mathcal{S}|} \sum_{s \in \mathcal{S}} \left(1 - \frac{|R_s \cap H_{\hat{s}}|}{|R_s \cup H_{\hat{s}}|}\right)
+$$ {#eq-jer}
+
+where $R_s$ is the scored-frame set for reference speaker $s$ and $H_{\hat{s}}$ is the hypothesis region mapped to $s$. Unlike DER (duration-weighted), JER treats every speaker equally — making it more sensitive to errors on short-duration speakers.
+
+### Coverage and Purity {#sec-coverage-purity}
+
+Given a true speaker $s$ and predicted cluster $c$ (sets of frames), with $|\cdot|$ the frame count:
+
+$$
+\text{Coverage}(s) = \frac{\max_c |s \cap c|}{|s|}, \qquad
+\text{Purity}(c) = \frac{\max_s |c \cap s|}{|c|}
+$$ {#eq-coverage-purity}
+
+**Coverage** is recall-like: low coverage means a true speaker is *fragmented* across clusters (over-clustering, raising miss rate). **Purity** is precision-like: low purity means a cluster *mixes* speakers (under-clustering, raising speaker confusion). DER and JER are the standard reported metrics; coverage/purity are diagnostic tools during development.
+
+### cpWER: Joint ASR + Diarization Evaluation {#sec-cpwer}
+
+When diarization is evaluated jointly with ASR, the standard metric is **concatenated minimum-permutation WER (cpWER)**: for every speaker permutation, concatenate per-speaker transcripts in chronological order and compute WER, reporting the minimum over permutations.
+
+$$
+\text{cpWER} = \min_{\phi \in \text{Perm}(\mathcal{S})} \text{WER}\!\left(\bigoplus_{s} R_s,\; \bigoplus_{s} H_{\phi(s)}\right)
+$$ {#eq-cpwer}
+
+where $R_s$/$H_{\phi(s)}$ are the reference/hypothesis transcripts for speaker $s$ and $\bigoplus$ denotes concatenation. cpWER jointly penalizes ASR errors *and* diarization errors: a word attributed to the wrong speaker becomes a deletion in one speaker's stream and an insertion (or substitution) in another's, inflating WER relative to oracle diarization.
+
+---
+
+## Modern Architectures and Approaches {#sec-modern}
+
+Modern diarization falls into three paradigms: **embedding + clustering**, **end-to-end neural diarization (EEND)**, and **hybrid** systems combining both.
+
+### Embedding + Clustering Pipelines {#sec-embed-cluster}
+
+```
+Audio → VAD → Segmentation → Embedding → Clustering → Resegmentation
+```
+
+Beyond AAM-Softmax (@eq-aam), embeddings can be trained with a **triplet loss** — given anchor $\mathbf{a}$, positive $\mathbf{p}$ (same speaker), and negative $\mathbf{n}$ (different speaker):
+
+$$
+\mathcal{L}_{\text{triplet}} = \max\!\left(0,\; \|\mathbf{a} - \mathbf{p}\|_2 - \|\mathbf{a} - \mathbf{n}\|_2 + \alpha\right)
+$$ {#eq-triplet}
+
+with margin $\alpha > 0$ (prototypical networks use a similar softmax-over-distances objective with class-mean prototypes).
+
+**Spectral clustering** on an affinity matrix $\mathbf{A}$ (refined cosine similarities, $A_{ij} = \frac{\cos(\mathbf{e}_i, \mathbf{e}_j) - r_{\max}}{1 - r_{\max}}$ with $r_{\max}$ an estimate of max intra-speaker distance [@wang2018spectral]) proceeds by: (1) computing the normalized Laplacian $\mathbf{L}_{\text{sym}} = \mathbf{I} - \mathbf{D}^{-1/2}\mathbf{A}\mathbf{D}^{-1/2}$; (2) taking its $k$ smallest eigenvectors $\mathbf{U} \in \mathbb{R}^{N\times k}$; (3) row-normalizing $\mathbf{U}$ and running k-means. The number of speakers $k$ is chosen via the **Normalized Maximum Eigengap** [@park2020autotuning]:
+
+$$
+k^{*} = \arg\max_{k \in \{1, \ldots, K_{\max}\}} \frac{\lambda_{k+1} - \lambda_k}{\lambda_{k+1}}
+$$ {#eq-nme}
+
+where $\lambda_1 \leq \lambda_2 \leq \ldots$ are eigenvalues of $\mathbf{L}_{\text{sym}}$. An alternative, **agglomerative hierarchical clustering (AHC)** with PLDA scoring, iteratively merges the two clusters with the highest log-likelihood ratio until it drops below a threshold; combined with VBx re-clustering this is competitive on most benchmarks.
+
+### End-to-End Neural Diarization (EEND) {#sec-eend}
+
+EEND models [@fujita2019eend; @fujita2019eendsa] reformulate diarization as multi-label classification: given $T$ frames and up to $S$ speakers, predict $\hat{\mathbf{Y}} \in [0,1]^{T\times S}$ where $\hat{y}_{t,s}$ is the probability speaker $s$ is active at frame $t$. **SA-EEND** applies stacked Transformer encoder layers directly to the feature sequence:
+
+$$
+\mathbf{H}^{(l)} = \text{TransformerBlock}(\mathbf{H}^{(l-1)}), \qquad \hat{\mathbf{Y}} = \sigma(\mathbf{W}\,\mathbf{H}^{(L)} + \mathbf{b})
+$$ {#eq-eend}
+
+with $\mathbf{H}^{(0)}$ the input features (log-mel or self-supervised), $L$ layers, and $\sigma$ elementwise sigmoid. Because speaker labels are arbitrary, training uses **Permutation Invariant Training (PIT)** [@yu2017pit]:
+
+$$
+\mathcal{L}_{\text{PIT}} = \min_{\phi \in \text{Perm}(S)} \frac{1}{T} \sum_{t=1}^{T} \sum_{s=1}^{S} \text{BCE}(\hat{y}_{t,\phi(s)},\, y_{t,s})
+$$ {#eq-pit}
+
+— tractable since $S$ is typically $\leq 4$. @fig-eend-comparison contrasts PIT-based training with **Sort Loss** (@sec-joint-asr), which sorts speakers by arrival time to avoid the permutation search entirely.
+
+![Comparison of end-to-end diarization training strategies. **Left:** classical EEND uses permutation-invariant loss ($\mathcal{L}_{\text{PIL}}$), searching over speaker permutations for the minimum-error assignment. **Right:** Sortformer uses Sort Loss ($\mathcal{L}_{\text{Sort}}$), sorting speaker outputs by arrival time, eliminating the permutation search. *Source: NVIDIA NeMo documentation.*](/images/audio/nemo_intro_comparison.png){#fig-eend-comparison width=85% fig-align="center"}
+
+To handle a *variable* number of speakers, **EEND-EDA** [@horiguchi2020eendeda; @horiguchi2022eendeda2] adds an LSTM encoder-decoder generating speaker **attractors** $\{\mathbf{a}_s\}_{s=1}^S$ from the encoder output:
+
+$$
+\hat{y}_{t,s} = \sigma(\mathbf{h}_t^{\top} \mathbf{a}_s)
+$$ {#eq-eendeda}
+
+The decoder autoregressively emits attractors until a special end-of-speakers token, implicitly predicting $|\mathcal{S}|$. **DiaPer** [@landini2023diaper] replaces the LSTM attractor decoder with a Perceiver-style cross-attention module, scaling better to many-speaker conversations.
+
+### Hybrid Systems {#sec-hybrid}
+
+Several state-of-the-art systems combine EEND-style local processing with clustering-based global reasoning. **Local EEND + global clustering** applies EEND to short chunks (10–30 s) for local labels, then a global clustering pass (on embeddings from the EEND encoder) stitches labels across chunks — used by several top DIHARD III / VoxSRC systems.
+
+**Target-Speaker VAD (TS-VAD)** [@medennikov2020tsvad] takes speaker embeddings $\{\mathbf{e}_s\}$ from an initial clustering pass and predicts per-frame activity for each target speaker independently:
+
+$$
+\hat{y}_{t,s} = f_{\theta}(\mathbf{x}_t, \mathbf{e}_s)
+$$ {#eq-tsvad}
+
+This naturally handles overlap, since each speaker is scored independently — TS-VAD was a core component of the CHiME-6 and DIHARD III winning systems. **Multi-scale diarization (MSDD)** [@park2022nemo] instead fuses embeddings extracted at multiple temporal scales (0.5, 1.5, 3.0 s) through a pairwise neural same-speaker scorer.
+
+---
+
+## Streaming and Real-Time Diarization {#sec-streaming}
+
+Live captioning, meeting assistants, and call centers require low-latency diarization, which imposes: **(1)** causal processing — outputs depend only on past/current audio; **(2)** bounded memory — the full recording cannot be stored; **(3)** an incremental speaker inventory — new speakers can appear at any time with minimal re-processing.
+
+The most common strategy processes audio in fixed-length **chunks** with a look-back buffer for context, then stitches cross-chunk speaker labels by matching embedding similarity against a running inventory of speaker centroids (`pyannote.audio`'s online pipeline works this way). EEND variants similarly maintain a **speaker-tracing buffer** — a fixed-size memory of recent frames per detected speaker — concatenated with each new chunk before re-running the model.
+
+@fig-streaming-sortformer shows NeMo's **Streaming Sortformer**, which processes overlapping chunks via a FIFO buffer and an **Arrival-Order Speaker Cache (AOSC)**: frame-level embeddings in the current chunk are compared against cached speaker representations from previous chunks to maintain consistent speaker identity across the stream.
+
+![Step-wise dataflow of Streaming Sortformer inference. The model processes chunks sequentially, comparing frame-level acoustic embeddings in the current chunk against cached speaker representations (AOSC) from previous chunks, ensuring consistent speaker labeling across the stream. *Source: NVIDIA NeMo documentation.*](/images/audio/nemo_streaming_sortformer.png){#fig-streaming-sortformer width=85% fig-align="center"}
+
+**Latency–accuracy trade-off**: smaller chunks reduce latency but provide fewer speaker turns for clustering/EEND context, degrading accuracy. Typical systems use 5–15 s chunks with 5–10 s buffers, achieving 1–5 s end-to-end latency within 1–3% absolute DER of the offline system.
+
+---
+
+## Joint ASR + Diarization {#sec-joint-asr}
+
+Combining ASR with diarization yields **speaker-attributed transcription** — the goal for meeting minutes, medical transcription, and call analytics. The simplest architecture runs ASR and diarization independently and fuses outputs by mapping each timestamped word to the speaker active at that time; challenges include timestamp-resolution mismatch, words in overlap regions, and ASR endpointing artifacts.
+
+**Serialized Output Training (SOT)** [@kanda2020serialized] instead reformulates multi-speaker ASR as a *single-speaker* problem: concatenate per-speaker transcripts in chronological order, separated by a speaker-change token `<sc>`:
+
+$$
+\mathbf{y}_{\text{SOT}} = [y_1^{(s_1)}, \ldots, y_{N_1}^{(s_1)}, \texttt{<sc>}, y_1^{(s_2)}, \ldots]
+$$ {#eq-sot}
+
+A standard attention-based encoder-decoder (Transformer/Conformer) is trained on this serialized target, recovering speaker identity from `<sc>` at inference. Later work extends this with speaker-dependent output heads or injected speaker embeddings, trained with a weighted combination of ASR, diarization, and speaker-embedding losses.
+
+**Sortformer** [@park2024sortformer] integrates diarization timestamps directly into the ASR pipeline. @fig-sortformer shows the architecture: a Fast-Conformer (NEST) encoder extracts audio features, Transformer encoder blocks produce per-frame, per-speaker activity via sigmoid, and training combines **Sort Loss** ($\mathcal{L}_{\text{Sort}}$, ground-truth sorted by speaker arrival time) with the PIT loss ($\mathcal{L}_{\text{PIL}}$).
+
+![Sortformer architecture with hybrid loss. A Fast-Conformer (NEST Encoder) extracts audio features, followed by Transformer encoder blocks and a sigmoid output. Training combines Sort Loss ($\mathcal{L}_{\text{Sort}}$) with permutation-invariant loss ($\mathcal{L}_{\text{PIL}}$); ground-truth labels are sorted by speaker arrival time for Sort Loss. *Source: NVIDIA NeMo documentation.*](/images/audio/nemo_sortformer.png){#fig-sortformer width=85% fig-align="center"}
+
+@fig-sortformer-asr shows Sortformer integrated with ASR: diarization timestamps are encoded as sinusoidal **speaker kernels** and injected into the ASR encoder states, and a Transformer decoder produces sorted speaker tokens interleaved with text — trained with standard cross-entropy.
+
+![Joint ASR + diarization with Sortformer. The Sortformer diarizer produces speaker timestamps encoded as sinusoidal speaker kernels and injected into the ASR encoder states. A Transformer decoder then produces sorted speaker tokens interleaved with text, yielding speaker-attributed transcription trained with standard cross-entropy. *Source: NVIDIA NeMo documentation.*](/images/audio/nemo_main_dataflow.png){#fig-sortformer-asr width=85% fig-align="center"}
+
+An alternative to segment-level fusion is **word-level diarization**: align frame-level posteriors $\hat{\mathbf{Y}}$ with CTC/attention word boundaries, or train a model that directly emits $(\text{word}, \text{speaker})$ tuples.
+
+---
+
+## Open Problems and Current Directions {#sec-open-problems}
+
+- **Domain mismatch**: systems trained on one domain (telephony) often generalize poorly to others (far-field meetings, clinical interviews).
+- **Overlapping speech**: densely overlapped "cocktail party" audio remains the hardest regime, despite TS-VAD/EEND progress on moderate overlap.
+- **Large speaker counts**: most EEND models cap at $S \leq 4$ local speakers; long recordings with dozens of speakers require hybrid local+global approaches.
+- **Short utterances**: brief backchannels ("uh-huh") are frequently missed or misattributed.
+- **Evaluation methodology**: DER conflates three error types and is sensitive to collar settings, complicating cross-paper comparison; JER helps but is not universal.
+- **Reproducibility**: despite mature toolkits (@sec-opensource), exact reproduction of published numbers remains difficult due to preprocessing, VAD, and collar differences.
+- **Scaling**: large-scale pretraining on weakly-labeled data (e.g., pseudo-labeled YouTube audio) and synthetic dynamic mixing of single-speaker recordings are active directions for both embedding networks and end-to-end models.
+- **Multimodal and LLM integration**: audio-visual diarization (face detection, lip movement) helps in video-conferencing and broadcast settings, while speaker-attributed transcripts are increasingly fed into LLMs for meeting summarization — via speaker tokens (`<spk:1> Hello <spk:2> Hi there`) or speaker embeddings concatenated with text tokens.
+
+---
+
+## Summary
+
+Speaker diarization has evolved from GMM/HMM segmentation to two complementary modern paradigms: **modular pipelines** (embedding + clustering — flexible, interpretable, strong baselines) and **end-to-end models** (EEND, TS-VAD, Sortformer — reduced error propagation, joint optimization with ASR). Mature open-source toolkits (`pyannote.audio`, NeMo, SpeechBrain, Kaldi/VBx) and standardized benchmarks (AMI, DIHARD, VoxConverse) have lowered the barrier to entry. For practitioners: `pyannote.audio` and NeMo offer the most complete out-of-the-box solutions with pretrained models, while Kaldi/VBx recipes provide maximum control for research experimentation.
+
+---
+
+## Interview Questions
+
+**Q: Why can't diarization models be trained with ordinary cross-entropy on fixed speaker labels?**
+
+There is no canonical ordering of speakers — "speaker 1" in the reference could correspond to output slot 2 in the model's prediction, and this assignment is arbitrary and recording-specific. Permutation Invariant Training (@eq-pit) solves this by minimizing the loss under the *best* assignment of output slots to reference speakers (searched over all $S!$ permutations, tractable for small $S$). Sortformer's Sort Loss avoids the search altogether by defining a canonical ordering (arrival time), so the model is trained against a single fixed target permutation.
+
+---
+
+**Q: Why does DER use a forgiveness collar, and what happens if you omit it?**
+
+Human annotators disagree on the exact location of speaker-turn boundaries by tens to hundreds of milliseconds — this is inherent to the annotation task, not a system error. Without a collar, a system with perfect speaker assignment but boundaries shifted by 50 ms would be penalized as if it made real speaker-confusion errors. The collar (typically $\pm0.25$s) excludes these ambiguous regions from scoring, so DER reflects genuine errors in *who* is speaking rather than *exactly when* a turn begins or ends.
+
+---
+
+**Q: When would you choose an embedding + clustering pipeline over an end-to-end (EEND) model in production?**
+
+Embedding + clustering pipelines scale naturally to an unbounded, unknown number of speakers and long recordings (clustering doesn't have a fixed output-slot limit), and each stage (VAD, embedding, clustering) can be debugged and upgraded independently. EEND models handle overlapping speech and short utterances better and avoid error propagation across stages, but classical EEND is limited to a small fixed number of speakers ($S\leq4$) and struggles with hour-long recordings. In practice, hybrid systems (local EEND + global clustering, or TS-VAD on top of an initial clustering pass) combine EEND's local accuracy with clustering's scalability.
+
+---
+
+**Q: A meeting-transcription product reports word-level speaker labels with a low DER but a much higher cpWER than expected. What would you investigate?**
+
+DER is computed on the diarization output alone (speaker activity vs. time), while cpWER additionally depends on ASR correctness and on how words are *aligned* to speaker segments. A low DER with high cpWER suggests the diarization segments themselves are accurate, but either (a) the ASR transcript has high WER independent of diarization, or (b) word-to-speaker alignment is failing — e.g., timestamp resolution mismatch between the ASR and diarization models, or words near speaker-turn boundaries (especially in overlap regions) being assigned to the wrong speaker's stream, which cpWER penalizes as deletions/insertions even when both the words and the turn boundary are individually close to correct.
+
+---
+
+**Q: How does TS-VAD handle overlapping speech better than spectral clustering on embeddings?**
+
+Spectral clustering assigns each segment/frame to exactly *one* cluster — if two speakers talk simultaneously, the segment's embedding is some blend of both speakers' characteristics and the frame can only be attributed to one of them. TS-VAD instead conditions a per-frame predictor independently on each target speaker's embedding $\mathbf{e}_s$ (@eq-tsvad): $\hat{y}_{t,s} = f_\theta(\mathbf{x}_t, \mathbf{e}_s)$ is computed separately for every $s$, so multiple speakers can simultaneously be predicted as "active" at the same frame $t$ — directly modeling overlap rather than forcing a single label per frame.
