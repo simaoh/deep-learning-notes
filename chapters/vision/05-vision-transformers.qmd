@@ -471,7 +471,7 @@ class SwinTransformerBlock(nn.Module):
 
 ---
 
-## DETR: Detection Transformer (2020)
+## DETR: Detection Transformer (2020) {#sec-detr}
 
 **Paradigm**: Treat object detection as **direct set prediction** (no anchors, no NMS).
 
@@ -617,7 +617,7 @@ Deformable DETR: $O(N_q \cdot K \cdot D)$, where $K$ is constant → **linear**
 
 ---
 
-## Segment Anything Model (SAM, 2023)
+## Segment Anything Model (SAM, 2023) {#sec-sam}
 
 **Vision**: Foundation model for segmentation—segment any object from any prompt, zero-shot.  
 **Inspiration from NLP**: GPT-3 for language → SAM for segmentation.

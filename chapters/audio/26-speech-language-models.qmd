@@ -1,0 +1,394 @@
+# Speech and Audio Language Models {#sec-slm}
+
+Two lines of development run through the preceding chapters. One is about
+*understanding*: encoders trained by self-supervision (@sec-ssl) or weak
+supervision (@sec-whisper) that turn audio into representations a downstream head
+can read. The other is about *generation*: codecs (@sec-codecs) that turn audio
+into tokens a language model can predict. This chapter is where they meet.
+
+A **speech language model** — or, when the scope includes music and environmental
+sound, an **audio language model** — is a system in which a large language model
+consumes audio directly rather than a transcript of it, and in the fully general
+case emits audio directly too. The promise is straightforward. A transcript
+discards who is speaking, how they feel, whether they are joking, whether a dog
+is barking, and when they stopped talking. A model that hears the waveform need
+not discard any of it.
+
+The reality is that these models are, at time of writing, noticeably less
+intelligent than the text LLMs they are built from. That gap is the organising
+question of this chapter, and it is more interesting than any individual
+architecture.
+
+::: {.callout-note}
+## Reading order and scope
+
+This chapter assumes @sec-ssl (encoders), @sec-codecs (tokenisers), and
+@sec-codec-lm (codec language modelling for synthesis). It deliberately does not
+re-derive AudioLM, VALL-E, or Moshi's streaming mechanisms, which are treated as
+*synthesis* in @sec-audiolm, @sec-valle, and @sec-tts-streaming. Here they are
+components in a general-purpose model. The survey by Arora et al.
+[@arora2025slmsurvey] is the reference work for this material and is a better
+catalogue than this chapter attempts to be.
+:::
+
+
+## Three Architectures {#sec-slm-arch}
+
+Almost every system in this space is one of three things.
+
+| | **Cascade** | **Adapter (audio-in)** | **Native (audio-in, audio-out)** |
+|:--|:--|:--|:--|
+| Structure | ASR $\to$ text LLM $\to$ TTS | Audio encoder $\to$ projector $\to$ LLM | Audio tokens in the LLM vocabulary, both directions |
+| Sees | Transcript only | Encoder features | Tokens (and often text in parallel) |
+| Latency | Sum of three stages | One stage | One stage, streamable |
+| Text ability | **Fully preserved** | Degrades | Degrades more |
+| Paralinguistics | Lost at the ASR boundary | Available in principle | Available in principle |
+| Debuggability | Excellent — inspect the transcript | Poor | Poor |
+| Examples | Most deployed voice assistants; Unmute | SALMONN, Qwen-Audio, Audio Flamingo | Moshi, GLM-4-Voice, Qwen2.5-Omni |
+
+: Three architectures for speech language models. {#tbl-slm-arch}
+
+The cascade deserves more respect than it usually receives. It preserves the
+text LLM exactly — no forgetting, no degraded reasoning, full tool use and
+instruction following — and every component can be swapped, monitored, and
+tested independently. Its weaknesses are real but specific: latency accumulates,
+ASR errors propagate irreversibly, and everything not in the transcript is gone
+by the time the LLM sees anything. For a large class of assistant tasks that
+last weakness costs nothing, which is why cascades remain the default in
+production.
+
+The interesting claim of the other two rows is that the discarded information
+matters. Testing that claim honestly is harder than it looks, and @sec-slm-eval
+returns to it.
+
+
+## The Adapter Recipe {#sec-adapter}
+
+The dominant architecture for audio understanding is a three-part sandwich, and
+it is worth writing down precisely because almost everything reduces to it.
+
+Let $\mathbf{X}$ be audio, $f_\theta$ a pretrained audio encoder (@sec-whisper-encoder),
+and $\mathcal{P}_\phi$ a learned **projector**. The audio is converted to a
+sequence of vectors in the LLM's *embedding* space and prepended to the text
+embeddings:
+
+$$
+\mathbf{H} = \mathcal{P}_\phi\big(f_\theta(\mathbf{X})\big) \in \mathbb{R}^{M \times d_{\text{LLM}}},
+\qquad
+p(\mathbf{y}) = \prod_{i} p_{\text{LLM}}\big(y_i \mid \mathbf{H}, \mathbf{e}(\mathbf{y}_{<i})\big)
+$$ {#eq-adapter}
+
+The LLM is unmodified. It receives what it takes to be $M$ ordinary token
+embeddings and continues as usual. This is the same trick that made vision-language
+models work, transplanted without alteration.
+
+The projector's real job is **rate reduction**, and the arithmetic explains most
+design choices. Whisper's encoder emits 50 vectors per second; a one-minute clip
+is 3,000 positions, which would dominate any reasonable context. Projectors
+therefore downsample aggressively — by stacking adjacent frames before a linear
+map, by strided convolution, or by cross-attending a fixed number of learned
+queries into each window (a **Q-Former**). Typical operating points land between
+5 and 12 vectors per second, a factor of 4–10 reduction.
+
+Three systems established the design space.
+
+**SALMONN** [@tang2024salmonn] uses *two* encoders in parallel — Whisper for
+speech and BEATs for general audio events — concatenated frame-by-frame and read
+by a window-level Q-Former, with LoRA adaptation of the LLM. The dual encoder is
+the point: a speech encoder trained on transcription is systematically poor at
+non-speech audio, which is exactly the WavLM/HuBERT specialisation of
+@sec-wavlm reappearing one level up. SALMONN also reported **task
+over-fitting** — after instruction tuning, the model collapses toward the tasks
+it was tuned on and loses the emergent cross-modal abilities it briefly had —
+and proposed a lightweight activation-tuning stage to recover them. That failure
+recurs throughout this chapter.
+
+**Qwen-Audio** [@chu2023qwenaudio] attacked the same problem from the data side,
+training one encoder across more than thirty tasks with a hierarchy of tags
+identifying task, language, and annotation granularity, so that supervision from
+heterogeneous datasets could be shared rather than interfering. Qwen2-Audio
+[@chu2024qwen2audio] dropped the tag hierarchy for natural-language prompts, and
+Qwen2.5-Omni [@xu2025qwen25omni] extended the same backbone to vision and to
+speech output.
+
+**LTU** [@gong2024ltu] made the case that the interesting capability is not
+classification but *reasoning about* audio — answering open-ended questions about
+what is happening and why — and built the instruction corpus to train it. Audio
+Flamingo [@kong2024audioflamingo; @ghosh2025audioflamingo2] pursued in-context
+learning and long-audio understanding in the same spirit.
+
+
+## Training and Catastrophic Forgetting {#sec-slm-training}
+
+Training proceeds in stages, and the recipe is stable across systems.
+
+1. **Modality alignment.** Freeze the LLM, train the projector alone on
+   large-scale ASR and audio-captioning data. The objective is simply to make
+   @eq-adapter produce embeddings the LLM can read.
+2. **Instruction tuning.** Unfreeze partially — typically LoRA on the LLM, and
+   often the encoder's upper layers — and train on audio question-answering and
+   multi-task instruction data.
+3. **Speech output**, where applicable: train the generation path
+   (@sec-codec-lm), usually with the understanding path frozen.
+4. **Preference optimisation and duplex adaptation**, increasingly standard.
+
+The central difficulty is stage 2. **Speech-centric training degrades the
+model's text abilities**, and the degradation is severe enough to be the
+principal reported obstacle. Speech-IFEval [@lu2025speechifeval] isolates it by
+separating instruction-following from speech perception, and finds that most
+speech-aware LLMs "struggle with even basic instructions, performing far worse
+than text-based LLMs", and are unstable under paraphrases of the same prompt.
+A model that hears well but can no longer follow a formatting instruction is not
+obviously an improvement on a cascade.
+
+Two mitigations are in current use. The first is architectural conservatism:
+keep the LLM frozen and push all adaptation into the projector, which preserves
+text ability at the cost of how much audio detail can reach the model —
+Freeze-Omni [@wang2024freezeomni] takes this position explicitly. The second is
+to fix the *data*. DeSTA2.5-Audio [@lu2025desta25] observes that forgetting is
+largely caused by training targets written in a style the backbone LLM would
+never produce, and has the backbone **generate its own training targets** from
+audio metadata, so that fine-tuning reinforces rather than overwrites its native
+distribution. Reported gains hold across Dynamic-SUPERB, MMAU, SAKURA,
+Speech-IFEval, and VoiceBench simultaneously, which is the kind of broad result
+that suggests a real mechanism rather than benchmark tuning.
+
+::: {.callout-warning}
+## The synthetic-data trap
+
+Most audio instruction corpora are built by synthesising speech from text with a
+TTS system. Such data has *no genuine paralinguistic variation* — no real
+emotion, no real hesitation, no real room. A model trained on it can only learn
+that audio is a lossy encoding of text, which is precisely the failure the whole
+paradigm exists to avoid. This is a plausible mechanism behind
+@sec-modality-gap, and it is self-inflicted.
+:::
+
+
+## Speaking: Interleaving, Streams, and Duplex {#sec-slm-duplex}
+
+Models that emit audio face a decision about how text participates in
+generation. Nearly all of them use text somehow, and *why* is the interesting
+part.
+
+**Text-scaffolded generation** is the near-universal pattern. Rather than
+modelling audio tokens alone, the model predicts text and audio jointly, with
+text leading:
+
+$$
+p(\mathbf{a}, \mathbf{w}) = \prod_{t} p\big(w_t \mid \mathbf{w}_{<t}, \mathbf{a}_{<t}\big)\,
+p\big(\mathbf{a}_t \mid \mathbf{w}_{\leq t}, \mathbf{a}_{<t}\big)
+$$ {#eq-interleave}
+
+Two families implement @eq-interleave differently. **Interleaving** alternates
+chunks of text and audio tokens in one sequence — the approach of SpeechGPT
+[@zhang2023speechgpt], AudioPaLM [@rubenstein2023audiopalm], and GLM-4-Voice
+[@zeng2024glm4voice]. **Parallel streams** predict text and audio at the same
+position on separate channels, which is Moshi's *inner monologue*
+(@sec-tts-streaming). Mini-Omni [@xie2024miniomni] and LLaMA-Omni
+[@fang2024llamaomni] occupy points in between, generating text and audio
+concurrently to keep latency low.
+
+The empirical finding is consistent and slightly deflating: **the text stream
+carries most of the reasoning**. Moshi's ablations show the inner monologue
+improves linguistic quality substantially. Volhejn's reading of this is that
+most of the intelligence is delegated to text while the audio streams degenerate
+into an integrated ASR and TTS — which, if true, means the architecture is a
+cascade wearing a different coat. I think that is too strong as a general claim,
+but it is the right worry, and no current system clearly refutes it.
+
+**Full duplex** is the other axis. A half-duplex model processes one turn at a
+time; a full-duplex model listens and speaks simultaneously, which is what makes
+interruption, backchannelling ("mm-hm"), and overlap representable at all.
+Modelling both participants' audio as parallel streams (@sec-tts-streaming)
+replaces an explicit turn-taking state machine with next-token prediction, and
+dGSLM [@nguyen2023dgslm] demonstrated the idea before speech LLMs existed by
+modelling two-channel spontaneous dialogue directly. Full-Duplex-Bench
+[@lin2025fullduplexbench] gives the behaviours their own metrics: pause
+handling, backchannelling, turn-taking, and interruption management.
+
+
+## The Modality Gap {#sec-modality-gap}
+
+Here is the phenomenon, in the cleanest available form. Ask a natively
+speech-capable model, in a high-pitched voice, *"Am I speaking in a low voice or
+a high voice?"* It will generally fail — not by refusing, but by answering as
+though it had read a transcript. Volhejn reports this for Gemini, ChatGPT's
+Advanced Voice Mode, Qwen, and Moshi alike.
+
+This is a strange failure. The information is unambiguously present in the input,
+the model was trained on audio, and the question is trivial. Four mechanisms
+plausibly contribute, and they are not mutually exclusive.
+
+**Tokenisation discards it by construction.** Semantic tokens are *defined* by
+invariance to speaker and channel — the demonstration in @sec-semantic-acoustic,
+where fixing semantic tokens and resampling the rest yields the same words in a
+different voice, shows this directly. A model whose loss is dominated by semantic
+tokens is trained to ignore exactly the cues in question. The layer-wise result of
+@sec-layerwise says the same thing about encoders: representations optimised for
+content actively suppress paralinguistic nuisance variables.
+
+**Text scaffolding makes audio vestigial.** If @eq-interleave lets the model
+route all reasoning through text, gradient pressure on the audio path to encode
+anything beyond phonetic content is weak.
+
+**The training data has no variation to learn from.** The synthetic-data trap
+above.
+
+**Scale asymmetry.** Text corpora are trillions of tokens; transcribed and
+instruction-annotated speech is orders of magnitude smaller, and the annotated
+paralinguistic slice smaller still.
+
+The measurements support a sharper diagnosis than "the model cannot hear". SAKURA
+[@yang2025sakura] evaluates multi-hop reasoning over speech and audio and finds
+that models fail to integrate audio information into a reasoning chain **even
+when they extract the relevant information correctly**. Perception is not the
+bottleneck; *integration* is. Consistently, a 2026 layer-wise study
+[@yang2026paralinguistic] finds that paralinguistic and semantic information
+occupy identifiable and distinct layers of these models, and that fine-tuning
+*selected* layers with an auxiliary classification head restores paralinguistic
+awareness more effectively than fine-tuning everything. The information is
+present and localisable; the model is simply not in the habit of using it.
+
+That is a more optimistic reading than the phenomenon first suggests. It says the
+gap is a training and objective-design problem rather than a representational
+impossibility.
+
+
+## The Tasks That Became Prompts {#sec-slm-tasks}
+
+A striking side-effect of this architecture is that a set of previously separate
+research areas collapsed into prompting. Each once had its own models, losses,
+and leaderboards; each is now a question you ask.
+
+| Task | Classical formulation | Standard data | Now |
+|:-----|:----------------------|:--------------|:----|
+| **Spoken language understanding** | Intent classification + slot filling, or a cascade through ASR | SLURP [@bastianelli2020slurp] | "What does the user want?" |
+| **Audio captioning** | Encoder-decoder trained on audio-text pairs | Clotho [@drossos2020clotho], AudioCaps | "Describe what you hear." |
+| **Sound event classification** | Multi-label classification over an ontology | AudioSet [@gemmeke2017audioset] | "What sounds are present?" |
+| **Speech emotion recognition** | Categorical or valence-arousal classification | IEMOCAP, MSP-Podcast | "How does the speaker feel?" |
+| **Speech translation** | Cascade or end-to-end sequence model (@sec-st) | CoVoST 2, FLEURS | "Translate this into German." |
+
+: Audio tasks absorbed into instruction prompting. {#tbl-slm-tasks}
+
+Two caveats keep this from being the whole story. Specialised models still win on
+their own tasks, often by a wide margin, and the unified model's advantage is
+breadth and compositionality rather than peak accuracy; @sec-paralinguistics
+takes these tasks on their own terms, including the measurement problems the
+prompting framing inherits. And **contrastive
+audio-text models** remain a distinct and more efficient paradigm for
+retrieval-style problems: CLAP [@elizalde2023clap] aligns audio and text in a
+shared embedding space, giving zero-shot classification over an open label set
+at a fraction of the cost of generative inference.
+
+
+## Evaluation {#sec-slm-eval}
+
+Evaluating these models is harder than evaluating either parent, because the
+output is open-ended text about an open-ended input.
+
+| Benchmark | Measures |
+|:----------|:---------|
+| **Dynamic-SUPERB** [@huang2024dynamicsuperb] | Instruction-following across many held-out speech tasks; the SUPERB idea (@sec-superb) rebuilt for prompting |
+| **AIR-Bench** [@yang2024airbench] | Generative comprehension over speech, sound, and music; foundation and chat splits |
+| **AudioBench** [@wang2024audiobench] | Broad understanding suite spanning speech, sound, and paralinguistics |
+| **MMAU** [@sakshi2025mmau] | Expert-level reasoning over speech, sound, and music |
+| **SAKURA** [@yang2025sakura] | Multi-hop reasoning that requires integrating audio evidence |
+| **VoiceBench** [@chen2024voicebench] | End-to-end voice-assistant quality under realistic speaker and noise variation |
+| **Speech-IFEval** [@lu2025speechifeval] | Instruction-following and catastrophic forgetting, measured separately from perception |
+| **Full-Duplex-Bench** [@lin2025fullduplexbench] | Turn-taking, backchannelling, pauses, interruptions |
+
+: Benchmarks for speech and audio language models. {#tbl-slm-eval}
+
+Three methodological problems are worth naming, because they affect how the
+numbers in these tables should be read.
+
+**Many questions are answerable from the transcript alone.** If a benchmark item
+can be solved by an ASR-plus-text-LLM cascade, it measures nothing about audio
+understanding. The correct control is to *run that cascade* and report it as a
+baseline — a practice that is becoming standard but is still often omitted. Any
+claim that native audio processing helps should be a claim about the gap to that
+baseline.
+
+**Open-ended answers are usually scored by an LLM judge**, which inherits the
+judge's biases, is sensitive to answer formatting, and has received little
+meta-evaluation in this domain. This is the same problem flagged for synthesis in
+@sec-tts-eval, and it is not better here.
+
+**Perception and instruction-following are routinely conflated.** A model can
+fail an item because it did not hear correctly or because it ignored the output
+format. Speech-IFEval exists precisely to separate the two, and the finding that
+much of the apparent perception failure is really instruction failure should make
+one cautious about single-number leaderboards.
+
+
+## Open Problems {#sec-slm-open}
+
+1. **Closing the modality gap.** The evidence in @sec-modality-gap suggests
+   paralinguistic information is present but unused. Whether the fix is
+   objective design, better data, selective adaptation, or richer tokenisation is
+   the field's central open question.
+2. **Forgetting without a trade-off.** Every current method buys text ability
+   with audio detail or vice versa. A training scheme that adds hearing without
+   subtracting reasoning does not yet exist.
+3. **Beating the cascade convincingly.** On most benchmarks a strong cascade
+   remains competitive. Establishing where native processing genuinely wins —
+   and by how much — is unresolved, and partly an evaluation problem.
+4. **Long-form audio.** Rate reduction in @eq-adapter makes minutes tractable
+   and hours not. Meetings, lectures, and podcasts remain out of reach without
+   chunking that destroys global structure.
+5. **Duplex behaviour is barely modelled.** Knowing when to speak, when to stay
+   silent, and when to yield is a skill with almost no supervision available,
+   and Full-Duplex-Bench shows current systems handle it crudely.
+6. **Speaker attribution in multi-party audio.** These models largely assume one
+   speaker. Integrating diarization (@sec-speaker-diarization) into a speech LLM, rather
+   than bolting it on, is open.
+7. **Safety at the paralinguistic layer.** A model that can hear emotion, health
+   markers, age, and identity can also infer them without consent, and a model
+   that can speak in any voice can impersonate. Neither the inference side nor
+   the generation side has an accepted governance story.
+8. **Scaling laws.** Nobody has mapped how audio-language capability trades off
+   between audio hours, text tokens, parameters, and token rate.
+
+
+## Summary
+
+Speech and audio language models are the convergence point of this part of the
+book: the encoders of @sec-ssl supply perception, the codecs of @sec-codecs
+supply a generation interface, and a pretrained text LLM supplies everything
+else. Three architectures divide the space — the cascade, which preserves text
+ability perfectly and discards everything not in the transcript; the adapter
+sandwich of @eq-adapter, which projects encoder features into the LLM's embedding
+space and is essentially the vision-language recipe unchanged; and native
+token-in-token-out models that read and write audio directly.
+
+The recurring technical difficulty is that teaching a language model to hear
+tends to make it worse at thinking. Instruction tuning on audio degrades text
+ability measurably, task-specific tuning collapses emergent generality, and the
+mitigations — frozen backbones, selective adaptation, self-generated training
+targets — all trade one capability against another.
+
+The recurring *scientific* difficulty is the modality gap. A model that hears a
+high-pitched voice and cannot say so is failing at something its input contains
+and its architecture permits. The most useful recent finding is that this is not
+a perception failure: the information is extractable, and localisable to
+particular layers, but does not make it into the model's reasoning. Tokenisers
+that define away paralinguistics, text scaffolding that renders the audio path
+vestigial, and synthetic training data with no genuine acoustic variation all
+push in the same direction. That the causes are identifiable and largely
+self-inflicted is the best reason to expect the gap to close.
+
+
+## Sources and Further Reading {#sec-slm-sources}
+
+| Section | Primary sources |
+|:--------|:----------------|
+| Whole chapter | Arora et al., [*On the Landscape of Spoken Language Models: A Comprehensive Survey*](https://arxiv.org/abs/2504.08528) [@arora2025slmsurvey], which organises this space more completely than a single chapter can, and the [Hugging Face SpeechLLM Playbook](https://huggingface.co/spaces/Steveeeeeeen/SpeechLLM-Playbook) for the engineering view |
+| @sec-slm-arch, @sec-adapter | SALMONN [@tang2024salmonn] (Figure 1 is the clearest adapter diagram in the literature); Qwen-Audio [@chu2023qwenaudio] and Qwen2-Audio [@chu2024qwen2audio]; LTU [@gong2024ltu]; Audio Flamingo [@kong2024audioflamingo; @ghosh2025audioflamingo2] |
+| @sec-slm-training | Catastrophic forgetting quantified in Speech-IFEval [@lu2025speechifeval]; the self-generated-target remedy and its ablations in DeSTA2.5-Audio [@lu2025desta25]; frozen-backbone position in Freeze-Omni [@wang2024freezeomni] |
+| @sec-slm-duplex | Interleaving: SpeechGPT [@zhang2023speechgpt], AudioPaLM [@rubenstein2023audiopalm], GLM-4-Voice [@zeng2024glm4voice]. Parallel streams and inner monologue: Moshi [@defossez2024moshi], whose Figure 3 shows the stream layout. Low-latency variants: Mini-Omni [@xie2024miniomni], LLaMA-Omni [@fang2024llamaomni]. Two-channel dialogue modelling: dGSLM [@nguyen2023dgslm]. Duplex behaviours: Full-Duplex-Bench [@lin2025fullduplexbench] |
+| @sec-modality-gap | The pitch demonstration and the "delegated to the text stream" reading are from Volhejn, [*Neural audio codecs: how to get audio into LLMs*](https://kyutai.org/codec-explainer/). The integration-not-perception finding is SAKURA [@yang2025sakura]; the layer-wise localisation and selective-tuning remedy are from [@yang2026paralinguistic] |
+| @sec-slm-tasks | SLURP [@bastianelli2020slurp]; Clotho [@drossos2020clotho]; AudioSet [@gemmeke2017audioset]; CLAP [@elizalde2023clap] |
+| @sec-slm-eval | Benchmarks as cited in @tbl-slm-eval. The transcript-baseline control is argued for in several of these papers; VoiceBench [@chen2024voicebench] is the most explicit about realistic input variation |
+
+: Source attribution by section. {#tbl-slm-sources}

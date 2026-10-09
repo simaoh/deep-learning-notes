@@ -7,13 +7,13 @@ book:
   date: "14/10/2025"
   
   chapters:
-    - index.qmd  
+    - index.qmd
 
-    - part: "Part I: Foundations"
-      chapters:
-        - chapters/01-neural-networks-and-optimization.qmd
-        - chapters/02-generalization-and-learning-theory.qmd
-    
+    # FOUNDATIONS INTRODUCTION
+    - chapters/_intro_foundations.qmd
+    - chapters/01-neural-networks-and-optimization.qmd
+    - chapters/02-generalization-and-learning-theory.qmd
+
     # COMPUTER VISION INTRODUCTION
     - chapters/vision/_intro_computer_vision.qmd
     - part: "Part II: Visual Understanding"
@@ -21,6 +21,7 @@ book:
         - chapters/vision/03-cnns.qmd
         - chapters/vision/04-object-detection-and-segmentation.qmd
         - chapters/vision/05-vision-transformers.qmd
+        - chapters/vision/06-foundation-models-for-segmentation.qmd
 
     - part: "Part III: Self-Supervised Learning"
       chapters:
@@ -35,9 +36,51 @@ book:
         - chapters/vision/09-diffusion-models.qmd
         - chapters/_conclusion-generative-models.qmd 
 
+    # VIDEO INTRODUCTION
+    - chapters/video/_intro_video.qmd
+    - chapters/video/10-video.qmd
+    - chapters/video/11-video-understanding.qmd
+    - chapters/video/12-video-temporal-segmentation.qmd
+    - chapters/video/13-video-understanding-benchmarks.qmd
+    - chapters/video/14-video-generation.qmd
 
-    - intro.qmd
-    - summary.qmd
+    # 3D DATA INTRODUCTION
+    - chapters/3d/_intro_3d.qmd
+    - chapters/3d/11-3d-data.qmd
+    - part: "3D Reconstruction"
+      chapters:
+        - chapters/3d/12-3d-reconstruction.qmd
+        - chapters/3d/13-gaussian-splatting.qmd
+    
+    - part: "Human Pose Estimation"
+      chapters:
+        - chapters/3d/human_pose_estimation.qmd
+
+    # NLP INTRODUCTION
+    - chapters/nlp/_intro_nlp.qmd
+    - chapters/nlp/17-text-representation.qmd
+    - chapters/nlp/18-sequence-models.qmd
+    - chapters/nlp/19-large-language-models.qmd
+    - chapters/nlp/20-text-embeddings-evaluation.qmd
+
+    # VISION-LANGUAGE INTRODUCTION
+    - chapters/vision_language/_intro_vision_language.qmd
+    - chapters/vision_language/16-vision-language.qmd
+
+    # TIME SERIES INTRODUCTION
+    - chapters/time_series/_intro_time_series.qmd
+    - chapters/time_series/14-time-series.qmd
+    - chapters/time_series/15-deep-learning-for-time-series.qmd
+
+    # AUDIO INTRODUCTION
+    - chapters/audio/_intro_audio.qmd
+    - chapters/audio/21-speech-representation-learning.qmd
+    - chapters/audio/22-automatic-speech-recognition.qmd
+    - chapters/audio/23-speaker-diarization.qmd
+    - chapters/audio/24-neural-audio-codecs.qmd
+    - chapters/audio/25-speech-synthesis.qmd
+    - chapters/audio/26-speech-language-models.qmd
+    - chapters/audio/27-audio-understanding.qmd
     - references.qmd
 
 

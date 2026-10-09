@@ -1,0 +1,401 @@
+# Audio Understanding Beyond Words {#sec-paralinguistics}
+
+Every chapter so far has treated audio as a carrier of words. Recognition
+extracts them, synthesis produces them, codecs compress the signal that contains
+them, and speech language models reason about them. This chapter is about
+everything else in the signal.
+
+That residue divides into two families. **Paralinguistic** attributes are
+properties of the speaker and the delivery rather than the message: emotion,
+age, accent, health, arousal, whether the utterance is sincere. **Non-speech
+audio** is the rest of the acoustic world: a door closing, a siren, rain, a
+violin. They are conventionally separate research communities with separate
+venues, and this chapter treats them together because they share a difficulty
+that the tasks in earlier chapters do not have.
+
+That difficulty is the label. Word error rate works because a transcript has a
+correct answer, and disagreement between annotators is rare and resolvable. Ask
+two people whether a speaker sounds angry or merely emphatic, or to describe a
+five-second recording in a sentence, and they will disagree — not through
+carelessness, but because the question does not have a single answer. Almost
+everything distinctive about this area follows from that.
+
+::: {.callout-note}
+## Reading order
+
+This chapter assumes @sec-ssl (encoders and layer-wise specialisation) and
+touches @sec-slm-tasks, which noted that these tasks are increasingly posed as
+prompts to an audio language model. That framing is where the field is going;
+this chapter is about what it is absorbing, and about the measurement problems
+it inherits in doing so.
+:::
+
+
+## The Annotation Problem {#sec-label-problem}
+
+Consider what a "ground truth" emotion label is. An annotator listens to an
+utterance and selects a category. A second annotator hears the same utterance and
+selects a different one. Neither is wrong. The label that reaches the dataset is
+usually the majority vote, which discards the disagreement and presents the
+result as though it were fact.
+
+Three consequences follow, and they recur through every section below.
+
+**Reported accuracy is bounded by human agreement**, which for categorical
+emotion is frequently in the range of 0.3–0.6 by chance-corrected measures such
+as Krippendorff's $\alpha$. A model reporting 75% accuracy against majority-vote
+labels on a corpus where annotators agree 60% of the time is reporting something
+other than what the number appears to say.
+
+**The majority vote is a lossy summary of a distribution.** A clip where seven of
+ten annotators say *angry* and three say *frustrated* is genuinely different from
+one where ten of ten say *angry*, and collapsing both to `angry` throws away the
+distinction. **Soft labels** — training against the annotator distribution with a
+cross-entropy or divergence objective rather than a one-hot target — are the
+standard response, and are now common practice in emotion and sound-event work
+alike.
+
+**Evaluation must respect the same fact.** Scoring a prediction against one
+reference when many are valid is the same structural problem as MOS in synthesis
+(@sec-mos) and as the one-to-many problem in generation (@sec-onetomany). It is
+the reason audio captioning needed its own metrics rather than borrowing image
+captioning's, as @sec-aac describes.
+
+
+## Audio Classification Backbones {#sec-audio-backbones}
+
+The non-speech side of the field was organised by one dataset. **AudioSet**
+[@gemmeke2017audioset] is roughly two million ten-second YouTube clips labelled
+against an ontology of 527 sound classes, and it played the role for audio that
+ImageNet played for vision: large enough that pre-training on it transfers, and
+standard enough that everyone reports on it.
+
+| Model | Idea | Why it mattered |
+|:------|:-----|:----------------|
+| **PANNs** [@kong2020panns] | Large CNNs (notably CNN14) trained on AudioSet, released as transferable feature extractors | Established AudioSet pre-training as the default starting point for audio tagging |
+| **AST** [@gong2021ast] | Treat the spectrogram as an image; a pure ViT [@dosovitskiy2021vit] over patches, **initialised from ImageNet weights** | Removed convolutions entirely; the cross-modal weight transfer is the surprising part |
+| **SSAST** [@gong2022ssast] | Self-supervised AST pre-training by masked patch prediction | Removed the dependence on AudioSet labels |
+| **BEATs** [@chen2023beats] | Iterative pre-training that alternates between learning an **acoustic tokeniser** and a masked-prediction model over its discrete labels | Brought HuBERT's iterative refinement (@sec-hubert) to general audio; the standard general-audio encoder, and SALMONN's non-speech branch |
+
+: Backbones for general audio classification. {#tbl-audio-backbones}
+
+Two observations are worth drawing out. AST's initialisation from ImageNet
+weights works despite a spectrogram not being an image in any meaningful sense —
+its axes are time and frequency, not two spatial dimensions, and translation
+invariance along frequency is *wrong* for audio, since shifting a harmonic stack
+upward changes the sound. That it transfers anyway says something about how
+generic early ViT features are.
+
+And BEATs closes a loop this book has traced twice. It is HuBERT's insight —
+that the quality of a masked-prediction target can be improved by re-deriving it
+from the model you just trained — applied to general audio rather than speech
+(@sec-hubert). The same idea reappears in codecs as semantic distillation
+(@sec-semantic-acoustic).
+
+
+## Weak Labels and Temporal Localisation {#sec-weak-labels}
+
+AudioSet labels are **clip-level**: a ten-second clip is marked as containing a
+dog bark, with no indication of when. **Sound event detection** requires the
+onset and offset. This is a mismatch between the supervision available and the
+output required, and it is the technical core of the non-speech side.
+
+The standard formulation is **multiple-instance learning**. The model produces a
+frame-level probability $y_t$ for each class and pools it to a clip-level
+prediction compared against the weak label. Max pooling is degenerate — it
+propagates gradient to one frame — and mean pooling dilutes short events, so the
+usual choice is **attention pooling**, in which the model learns its own
+weighting:
+
+$$
+\hat{y} = \frac{\sum_{t} y_t \, w_t}{\sum_{t} w_t},
+\qquad w_t = \sigma\big(\mathbf{v}^{\top}\mathbf{h}_t\big)
+$$ {#eq-mil-pool}
+
+The frame-level $y_t$ is never directly supervised; it emerges as the byproduct
+of explaining a clip-level label. That is an elegant trick and also a fragile
+one, since nothing forces $y_t$ to be temporally accurate as long as the pooled
+value is right.
+
+The DCASE challenge's long-running Task 4 formalised the harder realistic
+setting: a small strongly-labelled set, a larger weakly-labelled set, and a large
+unlabelled set. The standard method is **mean teacher** [@tarvainen2017meanteacher]
+— an exponential moving average of the student's weights supplies consistency
+targets on unlabelled audio — imported directly from semi-supervised image
+classification, and structurally the same EMA-teacher device that data2vec uses
+for representation learning (@sec-data2vec).
+
+Evaluation has its own subtlety. Event-based F-score with a fixed tolerance
+("collar") around each boundary depends heavily on an arbitrary collar width and
+on a chosen operating threshold. The **polyphonic sound detection score**
+[@bilen2020psds] replaces both with a threshold-independent, collar-free
+formulation that integrates performance across operating points and explicitly
+separates confusion between classes from missed detections. It is now the
+standard DCASE metric, and the reasoning behind it — that a metric which moves
+when you change an arbitrary hyperparameter is measuring the hyperparameter —
+generalises well beyond this task.
+
+
+## Speech Emotion Recognition {#sec-ser}
+
+Emotion is represented in two incompatible ways, and much confusion in this
+literature comes from comparing across them.
+
+**Categorical** representations assign a discrete label from a small set
+(angry, happy, sad, neutral). They are intuitive and align with how people talk
+about emotion, but the categories are culturally specific and the boundaries are
+not sharp. **Dimensional** representations place an utterance in a continuous
+space, conventionally **valence** (pleasant–unpleasant), **arousal**
+(calm–excited), and sometimes **dominance**. They avoid forcing discrete choices
+and are the more defensible target, and they are scored with the **concordance
+correlation coefficient**, which rewards agreement in both correlation and
+absolute scale:
+
+$$
+\rho_c = \frac{2\,\rho\,\sigma_x \sigma_y}{\sigma_x^2 + \sigma_y^2 + (\mu_x - \mu_y)^2}
+$$ {#eq-ccc}
+
+Categorical work reports weighted and **unweighted** accuracy, the latter
+averaging per-class recall; the distinction matters because emotion corpora are
+severely imbalanced toward neutral.
+
+**Arousal is easy and valence is hard.** Arousal correlates strongly with
+straightforward acoustics — energy, pitch range, speaking rate — so it was
+largely solved early. Valence does not: whether an utterance is pleasant or
+unpleasant often depends on *what is being said*. This "valence gap" defined the
+field for a decade.
+
+The most instructive result here is that transformers closed the gap, and *why*.
+Wagner et al. [@wagner2023dawn] fine-tuned wav2vec 2.0 and HuBERT variants on
+MSP-Podcast and obtained state-of-the-art valence prediction (CCC 0.638) without
+any explicit linguistic input. Their analysis of the mechanism is the part worth
+teaching: the models succeed **because the transformer layers learn implicit
+linguistic information during fine-tuning**, which is why they match multimodal
+systems that use transcripts explicitly. The model closed the valence gap by
+covertly learning to read.
+
+That finding is a useful corrective in two directions. It explains an apparent
+capability without crediting the model with acoustic sensitivity it does not
+have, and it connects directly to @sec-modality-gap: a system that appears to
+hear emotion may be routing through language, which is the same substitution
+that makes audio language models insensitive to pitch.
+
+The same study is unusually careful about robustness and fairness, and reports
+a distinction worth carrying: the models were **fair with respect to biological
+sex groups but not with respect to individual speakers**. Aggregate group parity
+and per-speaker reliability are different properties, and a system can have the
+first without the second.
+
+::: {.callout-warning}
+## IEMOCAP results are frequently not comparable
+
+IEMOCAP has been the field's default corpus for fifteen years, and papers using
+it differ on choices that change results by many points: whether to merge
+*excited* into *happy* to reach the conventional four classes, whether to use
+improvised or scripted sessions or both, and whether the split is
+speaker-independent. A great many reported comparisons are therefore between
+different tasks wearing the same name. MSP-Podcast, larger and drawn from
+natural speech, is the better modern default.
+:::
+
+
+## Audio Captioning and Language-Aligned Audio {#sec-aac}
+
+**Automated audio captioning** asks for a free-text description of a clip — "a
+dog barks twice as a car passes" — which is the general-audio analogue of the
+open-ended understanding that audio language models aim at. The standard corpora
+are AudioCaps and Clotho [@drossos2020clotho], the latter deliberately
+multi-reference, with five captions per clip.
+
+Captioning inherited its metrics from image captioning, and they did not
+transfer. Zhou et al. [@zhou2022fense] built human-judgement benchmarks for
+audio captions — using pairwise comparisons rather than absolute ratings,
+precisely because pairwise judgements achieve better annotator agreement — and
+found that SPICE, CIDEr, and SPIDEr [@liu2017spider] correlate *poorly* with
+human assessment. Their replacement, **FENSE**, combines Sentence-BERT
+similarity with a learned error detector that penalises fluent but incorrect
+sentences, and improves agreement with human judgement by 14–25%. The
+methodological lesson is the same one @sec-tts-eval reaches from a different
+direction: a borrowed metric requires validation in its new domain, and this one
+was used for years without it.
+
+### Contrastive Audio-Text Models {#sec-clap}
+
+The other way to connect audio to language is not to generate text but to
+**align** the two in a shared embedding space. CLAP [@elizalde2023clap;
+@wu2023laionclap] applies the CLIP recipe to audio: an audio encoder $f$ and a
+text encoder $g$ trained on paired data with a symmetric contrastive objective
+over a batch,
+
+$$
+\mathcal{L} = -\frac{1}{2B}\sum_{i=1}^{B}
+\left[
+\log \frac{e^{\,s(a_i, t_i)/\tau}}{\sum_{j} e^{\,s(a_i, t_j)/\tau}}
++
+\log \frac{e^{\,s(a_i, t_i)/\tau}}{\sum_{j} e^{\,s(a_j, t_i)/\tau}}
+\right]
+$$ {#eq-clap}
+
+with $s(a,t) = \cos\big(f(a), g(t)\big)$ and temperature $\tau$.
+
+What this buys is **an open label set**. Classification becomes ranking a set of
+text prompts against the audio embedding, so the classes need not be fixed at
+training time and adding a new one costs nothing. It also gives text-to-audio
+retrieval directly, and — as @sec-tts-eval noted for FAD — a general-purpose
+audio embedding space that turns out to correlate with human perceptual
+judgement better than codec latents do.
+
+CLAP and audio language models are complementary rather than competing. CLAP is
+a single forward pass per candidate and is the right tool for retrieval,
+tagging, and filtering at scale; a generative model is the right tool when the
+answer is a sentence rather than a ranking.
+
+
+## Other Paralinguistic Inferences {#sec-para-other}
+
+A short catalogue, since these share the machinery above and differ mainly in
+what is being inferred and at what risk.
+
+**Speaker traits** — age, sex, accent, native language — are standard
+classification over speaker embeddings (@sec-features) or SSL features.
+**Speech pathology and health** covers dysarthria, Parkinsonian speech, and a
+large and methodologically contested literature on inferring depression and
+cognitive decline. **Spoofing and deepfake detection** is the countermeasure
+side of @sec-cloning: the ASVspoof series [@wang2024asvspoof5] is the standard
+evaluation, and its central finding across editions is that detectors generalise
+poorly to attack types they were not trained on — which is why the synthesis
+chapter treats passive detection as substantially unsolved.
+
+Two of these have a property the others do not: **the inference is about a
+person, and can be made without their knowledge**. That is the subject of
+@sec-validity.
+
+
+## Evaluation {#sec-audio-eval}
+
+| Benchmark | Scope |
+|:----------|:------|
+| **DCASE** challenges | The organising annual event for detection and classification of acoustic scenes and events; defines the tasks, data, and metrics most of this chapter uses |
+| **HEAR** [@turian2022hear] | Holistic evaluation of audio representations: one frozen encoder, many downstream tasks spanning speech, music, and environmental sound |
+| **SUPERB** [@yang2021superb] | The speech-side equivalent (@sec-superb), including emotion and speaker tasks |
+| **AudioSet** tagging (mAP) | The default general-audio classification benchmark |
+| **Clotho / AudioCaps** with **FENSE** | Captioning, with a metric validated against human judgement |
+| **MMAU**, **AIR-Bench** (@sec-slm-eval) | The audio-LLM successors, which fold these tasks into open-ended question answering |
+
+: Benchmarks for audio understanding. {#tbl-audio-eval}
+
+HEAR is worth singling out for its design. It freezes the encoder and varies only
+a shallow downstream head across a deliberately heterogeneous task set, which
+tests generality rather than task-specific tuning — the same protocol as SUPERB,
+and it revealed the same thing: no single encoder wins everywhere, and speech
+encoders and general-audio encoders have genuinely different strengths. That
+result is what forces SALMONN's dual-encoder design (@sec-adapter).
+
+
+## Validity, Fairness, and Regulation {#sec-validity}
+
+This is the one area in this book where the most important open problem is not
+technical.
+
+**Construct validity.** Supervised learning assumes the label denotes something
+real and stable. For emotion that assumption is contested within psychology
+itself. Barrett et al. [@barrett2019emotion] reviewed the evidence on inferring
+emotional state from facial movements and concluded that the mapping is far
+weaker and more context-dependent than the "universal expression" model assumes.
+Their review concerns faces rather than voice, so it is not direct evidence about
+speech — but the argument it makes is structural, about whether a fixed set of
+expressions reliably signals a fixed set of internal states, and it applies to
+vocal expression for the same reasons. A model can be an excellent predictor of
+*annotator labels* while those labels are a poor measure of *what the speaker
+felt*, and no amount of accuracy resolves the difference.
+
+**Fairness.** Systems inherit the demographic composition of their training data,
+which for paralinguistics is usually unknown and rarely balanced. The
+distinction from @sec-ser is the operative one: parity across broad groups does
+not imply reliability for individuals, and it is individuals who are affected.
+
+**Regulation.** The EU AI Act prohibits placing on the market or using AI systems
+that infer emotions in the **workplace and in education**, outside narrow medical
+and safety exceptions, and treats emotion recognition as high-risk in other
+contexts. This is one of the few places where a research area in this book has
+been directly restricted by law, and the stated rationale is the validity concern
+above rather than a general objection to the technology. Anyone building in this
+area should read the operative text rather than a summary of it, including this
+one.
+
+The practical position I would take is that these systems are defensible for
+aggregate, consented, low-stakes uses — retrieval, content description,
+accessibility, research on populations — and difficult to defend for individual
+consequential decisions about people who did not consent to being measured.
+
+
+## Open Problems {#sec-para-open}
+
+1. **Labels that reflect uncertainty.** Soft labels are a partial answer.
+   Training and evaluation protocols that treat annotator disagreement as signal
+   rather than noise are still not standard.
+2. **Robustness across corpora.** Cross-corpus emotion recognition degrades
+   sharply, which suggests models learn corpus-specific recording and elicitation
+   artefacts alongside the target attribute.
+3. **Disentangling acoustics from language.** The @sec-ser finding that valence
+   performance rests on implicit lexical learning means we do not currently know
+   how much genuinely *acoustic* affect recognition is achievable.
+4. **Weak supervision without temporal degradation.** @eq-mil-pool produces
+   frame-level outputs that nothing supervises; better inductive biases or cheap
+   forms of temporal supervision remain open.
+5. **Generalisation of spoofing countermeasures** to unseen attacks, which every
+   ASVspoof edition has identified and none has closed.
+6. **Polyphony and overlap.** Real acoustic scenes contain many simultaneous
+   sources; most benchmarks under-represent dense overlap.
+7. **Do audio LLMs subsume this?** They are broad and weak; specialised models
+   are narrow and strong. Whether the general model eventually dominates, as it
+   did in text, is unresolved — and @sec-modality-gap suggests the paralinguistic
+   part is exactly where it currently does not.
+
+
+## Summary
+
+What remains in an audio signal after the words have been removed is the subject
+of two research communities that share one problem: their labels are
+constructions rather than facts. Annotators disagree irreducibly about emotion
+and about how to describe a sound, so majority-vote targets discard real
+information, reported accuracies live under a ceiling set by human agreement, and
+metrics borrowed from domains with unique correct answers mislead.
+
+The non-speech side was organised by AudioSet and by a progression of backbones —
+PANNs, AST, BEATs — whose trajectory recapitulates the rest of the book:
+convolutional to transformer, supervised to self-supervised, and finally to
+iterative masked prediction over learned discrete targets, which is HuBERT's idea
+transplanted to general audio. Its distinctive technical problem is supervision
+that is weaker than the required output, addressed by multiple-instance learning
+with attention pooling and by semi-supervised consistency training, and evaluated
+by a score designed not to move when you change an arbitrary threshold.
+
+The speech side's clearest lesson is a negative one. Transformers closed the
+long-standing valence gap in emotion recognition, but the mechanism was implicit
+lexical learning rather than acoustic sensitivity — the model learned to read.
+That is the same substitution of language for audio diagnosed in
+@sec-modality-gap, appearing here in a task where it was measured precisely, and
+it should make one cautious about any claim that a model has learned to hear
+something when reading would also have sufficed.
+
+Finally, this is the part of the field where the binding constraint is not
+architecture or data but whether the quantity being predicted exists as labelled.
+That question is unresolved in psychology, and it has now been answered
+provisionally in law.
+
+
+## Sources and Further Reading {#sec-para-sources}
+
+| Section | Primary sources |
+|:--------|:----------------|
+| @sec-audio-backbones | PANNs [@kong2020panns]; AST [@gong2021ast] (Figure 1 is the clearest statement of the spectrogram-as-image patching); SSAST [@gong2022ssast]; BEATs [@chen2023beats], whose Figure 1 shows the tokeniser/model alternation. AudioSet [@gemmeke2017audioset] |
+| @sec-weak-labels | Mean teacher [@tarvainen2017meanteacher]; PSDS [@bilen2020psds], which motivates the metric design carefully and is worth reading for the argument rather than the formula. The [DCASE challenge site](https://dcase.community/) hosts task definitions, baselines, and result archives |
+| @sec-ser | Wagner et al. [@wagner2023dawn] for the valence result, the implicit-linguistics mechanism, and the fairness analysis — the single most useful paper in modern SER |
+| @sec-aac | Clotho [@drossos2020clotho]; SPIDEr [@liu2017spider]; FENSE and the AudioCaps-Eval / Clotho-Eval human-judgement benchmarks [@zhou2022fense] |
+| @sec-clap | CLAP [@elizalde2023clap] and the LAION open reimplementation [@wu2023laionclap]; the general-purpose extension in [@elizalde2024clap2] |
+| @sec-para-other | ASVspoof 5 [@wang2024asvspoof5] for spoofing countermeasures and their generalisation failure |
+| @sec-audio-eval | HEAR [@turian2022hear]; SUPERB [@yang2021superb] |
+| @sec-validity | Barrett et al. [@barrett2019emotion], *Emotional Expressions Reconsidered* — a review of the evidence on inferring emotion from facial movements, cited here for its structural argument rather than as direct evidence about speech. For the legal position, consult the [EU AI Act](https://artificialintelligenceact.eu/) text on prohibited practices and on emotion recognition as a high-risk application, not secondary summaries |
+
+: Source attribution by section. {#tbl-para-sources}

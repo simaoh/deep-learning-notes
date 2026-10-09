@@ -1,0 +1,699 @@
+# Neural Audio Codecs {#sec-codecs}
+
+@sec-codec-lm treated the token grid $\mathbf{C} \in \{1..V\}^{T_c \times N_q}$ as
+given. This chapter opens the box.
+
+A **neural audio codec** is a learned compressor: an encoder that maps a
+waveform to a low-rate latent sequence, a quantiser that maps each latent frame
+to one or more discrete indices, and a decoder that reconstructs the waveform
+from those indices. It is trained end-to-end, usually with adversarial
+supervision, and it plays two quite different roles depending on who is using
+it. To a communications engineer it is a codec in the classical sense — a way to
+transmit speech at 1.5 kbps instead of 256 kbps. To someone building a speech
+language model it is a **tokeniser**: the thing that turns a continuous signal
+into a sequence of integers so that the machinery of language modelling applies.
+
+Those two roles pull in different directions, and much of what follows is about
+that tension. A codec optimised purely for reconstruction produces tokens that
+are hard to model; a codec optimised for modelling gives up fidelity. Nearly
+every design decision in this chapter — frame rate, codebook count, semantic
+distillation, quantiser structure — is a position on that trade-off.
+
+::: {.callout-note}
+## Reading order
+
+This chapter assumes @sec-tts (which motivates codecs) and @sec-discrete-units
+(which supplies the semantic-token half of the story). It is a prerequisite for
+the speech language models of @sec-slm. Readers who want the
+image-domain background will find VQ-VAE and VQGAN familiar
+[@vandenoord2017vqvae; @esser2021vqgan]; this chapter re-derives what it needs.
+:::
+
+
+## Why Audio Needs a Tokeniser {#sec-codec-why}
+
+The motivating problem is a rate mismatch, and it is worth quantifying because
+the numbers are what force the design.
+
+One second of English speech is roughly three to four *text* tokens. The same
+second at 24 kHz is 24,000 *samples*. If you tokenise audio at the sample level —
+$\mu$-law companding to 256 levels, as WaveNet did (@sec-wavenet) — a language
+model with a 2,048-token context window sees **128 milliseconds** of audio at
+16 kHz, which is less than one word. No amount of training fixes a context
+window that cannot hold a single word.
+
+This is not a thought experiment. Volhejn's Kyutai explainer runs it directly:
+a 151M-parameter GPT-2-scale Transformer trained on 1,000 hours of Libri-Light
+with sample-level $\mu$-law tokens produces speech-like babbling in which no
+word is intelligible, the voice drifts, and generation of ten seconds takes
+about thirty minutes on an H100. The failure is not acoustic — locally the audio
+sounds like speech — it is a failure of *coherence over time*, exactly as
+predicted by the context-window arithmetic.
+
+So we compress. If the encoder downsamples by a factor of $D$ and emits $N_q$
+tokens per frame, the token rate is
+
+$$
+\text{tokens/s} = \underbrace{\frac{f_s}{D}}_{\text{frame rate } f_r} \times N_q,
+\qquad
+\text{bitrate } R = f_r \cdot N_q \cdot \log_2 V \; \text{bits/s}
+$$ {#eq-bitrate}
+
+where $V$ is the codebook size. @eq-bitrate is the budget every architecture in
+this chapter negotiates with, so it is worth grounding in real numbers:
+
+| Codec | $f_r$ | $N_q$ | $V$ | Bitrate |
+|:------|------:|------:|----:|--------:|
+| EnCodec 24 kHz | 75 Hz | 32 | 1024 | 24 kbps |
+| DAC 44.1 kHz | 86 Hz | 9 | 1024 | 7.75 kbps |
+| Mimi | 12.5 Hz | 8 | 2048 | 1.1 kbps |
+| WavTokenizer | 40–75 Hz | 1 | 4096 | 0.48–0.9 kbps |
+
+: Frame rate, codebook depth, and bitrate for representative codecs. {#tbl-codec-rates}
+
+Two observations follow immediately, and they organise the rest of the chapter.
+**Frame rate is the most valuable axis** for a language model, because it
+reduces sequence length linearly — Mimi's 12.5 Hz is a sixfold advantage over
+EnCodec's 75 Hz before any other consideration. And **$N_q$ is a liability
+rather than an asset** for a language model, because a model emits one token at
+a time and $N_q$ tokens per frame must be serialised somehow (@sec-serialisation).
+Compression research wants high $N_q$; modelling research wants $N_q = 1$.
+
+
+## From Autoencoders to VQ-VAE {#sec-vqvae}
+
+The cleanest way into vector quantisation is to leave audio entirely, which is
+the route the Kyutai explainer takes and which I follow here because the
+intuition transfers exactly.
+
+Train an ordinary autoencoder on images — say Fashion-MNIST — compressing each
+image to a two-dimensional latent. Plotting the latent space shows it clusters
+naturally by class without ever being told the classes. Now quantise: maintain a
+list of cluster centres (a **codebook**) $\mathcal{E} = \{\mathbf{e}_1, \ldots, \mathbf{e}_V\}$,
+assign each latent to its nearest centre,
+
+$$
+k = \arg\min_{v \in \{1..V\}} \big\| \mathbf{z} - \mathbf{e}_v \big\|_2,
+\qquad
+\mathbf{z}_q = \mathbf{e}_k
+$$ {#eq-vq-lookup}
+
+and hand $\mathbf{z}_q$ rather than $\mathbf{z}$ to the decoder. The
+consequence is immediately visible in the reconstructions: two images whose
+latents land in the same cell decode to *exactly* the same output. Quantisation
+is lossy in a very concrete, inspectable way.
+
+### The Straight-Through Estimator {#sec-ste}
+
+@eq-vq-lookup contains an $\arg\min$, which has zero gradient almost everywhere.
+Training would stop at the quantiser.
+
+The fix, in Volhejn's memorable phrasing, is to *pretend the problem does not
+exist*. Treat $\mathbf{z}_q$ as $\mathbf{z}$ displaced by a constant, and copy
+the decoder's gradient past the quantiser unchanged:
+
+$$
+\mathbf{z}_q = \mathbf{z} + \operatorname{sg}\!\big[\mathbf{e}_k - \mathbf{z}\big],
+\qquad
+\frac{\partial \mathbf{z}_q}{\partial \mathbf{z}} := \mathbf{I}
+$$ {#eq-ste}
+
+where $\operatorname{sg}[\cdot]$ is the stop-gradient operator. The forward pass
+is unchanged; the backward pass behaves as though quantisation never happened.
+This is the **straight-through estimator**.
+
+There is a price, and it is worth stating because it explains the next
+ingredient. The encoder is updated as if its output went to the decoder
+unquantised, so the gradient direction is wrong by roughly the quantisation
+error. The approximation is good only when latents sit close to their assigned
+centres — which gives us a reason to *make* them sit close.
+
+### Commitment, Codebook Updates, and Dead Codes {#sec-vq-loss}
+
+The full VQ-VAE objective [@vandenoord2017vqvae] has three terms:
+
+$$
+\mathcal{L}_{\text{VQ}} =
+\underbrace{\mathcal{L}_{\text{rec}}(\mathbf{x}, \hat{\mathbf{x}})}_{\text{reconstruction}}
++ \underbrace{\big\| \operatorname{sg}[\mathbf{z}] - \mathbf{e}_k \big\|_2^2}_{\text{codebook}}
++ \beta \underbrace{\big\| \mathbf{z} - \operatorname{sg}[\mathbf{e}_k] \big\|_2^2}_{\text{commitment}}
+$$ {#eq-vqvae-loss}
+
+The **codebook** term pulls each code toward the mean of the latents assigned to
+it — gradient-descent $k$-means. The **commitment** term pulls the *encoder*
+toward the codes, penalising latents that stray far from their centre; this is
+precisely what keeps the straight-through approximation honest. The two terms
+are mirror images distinguished only by where the stop-gradient sits.
+
+The codebook term is often replaced by an **exponential moving average** update
+[@razavi2019vqvae2], which is more stable and is what DAC, Mimi, and most modern
+codecs use. With $n_v$ the count of latents assigned to code $v$ in a batch and
+$\mathbf{m}_v$ their sum,
+
+$$
+N_v \leftarrow \mu N_v + (1-\mu) n_v,
+\qquad
+\mathbf{M}_v \leftarrow \mu \mathbf{M}_v + (1-\mu)\mathbf{m}_v,
+\qquad
+\mathbf{e}_v \leftarrow \frac{\mathbf{M}_v}{N_v}
+$$ {#eq-ema}
+
+with $\mu \approx 0.99$–$0.999$. Under an EMA update the codebook is no longer
+trained by the loss at all, so only the commitment term in @eq-vqvae-loss
+contributes to the generator gradient.
+
+**Dead codes** are the characteristic pathology. A code that is never selected
+receives no update — under gradient descent or EMA alike — and therefore can
+never move to where the data is. It is stranded permanently. The standard remedy
+is blunt and effective: if a code goes unused for some number of steps,
+**reinitialise it** to a randomly chosen latent from the current batch. Volhejn
+describes this as *teleporting* the centre, which is exactly right. Dead-code
+reinitialisation appears in almost every production codec, usually with a
+threshold of a few hundred to a few thousand steps of disuse.
+
+
+## Residual Vector Quantisation {#sec-rvq}
+
+A single codebook of size $V$ contributes $\log_2 V$ bits per frame. To get
+20 bits you would need $2^{20} \approx 10^6$ entries, which is prohibitive in
+memory and in nearest-neighbour search cost, and hopeless statistically since
+most entries would rarely be selected.
+
+**Residual vector quantisation** obtains the same expressiveness from a cascade
+of small codebooks by quantising what the previous stage got wrong. Recall from
+@sec-ste that the quantisation error $\mathbf{z} - \mathbf{e}_k$ is already
+sitting there in the straight-through computation. Quantise *it*, with a second
+codebook, and repeat:
+
+$$
+\mathbf{r}_0 = \mathbf{z}, \qquad
+\mathbf{q}_n = Q_n(\mathbf{r}_{n-1}), \qquad
+\mathbf{r}_n = \mathbf{r}_{n-1} - \mathbf{q}_n, \qquad
+\hat{\mathbf{z}} = \sum_{n=1}^{N_q} \mathbf{q}_n
+$$ {#eq-rvq}
+
+where $Q_n$ is nearest-neighbour lookup in the $n$-th codebook. Two codebooks of
+1,024 entries give $2^{20}$ effective combinations from 2,048 stored vectors.
+
+```python
+def rvq_quantize(z, codebooks):
+    residual, codes = z, []
+    for cb in codebooks:
+        quantized, index = nearest_code(cb, residual)
+        residual = residual - quantized
+        codes.append(index)
+    return codes            # one integer per level
+```
+
+Three properties matter downstream.
+
+**The levels are ordered by importance.** Codebook 1 quantises the signal itself
+and therefore carries the coarse structure; each subsequent codebook encodes a
+progressively smaller correction. This is not a designed hierarchy but a
+consequence of @eq-rvq, and it is what makes the semantic/acoustic split of
+@sec-semantic-acoustic possible.
+
+**Bitrate is truncatable at inference.** Decoding with the first $n < N_q$
+codebooks yields a valid, lower-quality reconstruction at a lower bitrate, with
+no retraining. This only works well if training prepared for it, which is what
+**RVQ dropout** does: randomly truncate the number of levels used during
+training so the decoder never learns to depend on all of them. SoundStream
+introduced this as "quantizer dropout" and Mimi uses it; a codec trained without
+it must be retrained for each operating point.
+
+**The output is a two-dimensional grid**, $T_c \times N_q$, which is the problem
+of @sec-serialisation.
+
+RVQ predates neural codecs by decades — it is standard in classical vector
+quantisation — and reached audio through SoundStream [@zeghidour2022soundstream].
+The same idea reached image generation independently [@lee2022rqvae].
+
+
+## Codebook Collapse and How to Avoid It {#sec-collapse}
+
+Codebook collapse is the recurring failure of this chapter, and the reader has
+met it twice already: @eq-diversity was wav2vec 2.0's answer to it, and
+CosyVoice 2's move to scalar quantisation (@sec-cosyvoice) was another. It
+deserves a proper treatment here because codecs are where it bites hardest.
+
+The failure is that a small fraction of codes absorb most of the probability
+mass while the rest go unused. Effective bitrate then falls below the nominal
+$\log_2 V$ bits per level: you are paying for a 1,024-entry codebook and using
+200 of them. Four families of fix are in current use.
+
+**EMA plus dead-code reinitialisation** (@sec-vq-loss) is the baseline and is
+nearly universal.
+
+**Factorised and $L_2$-normalised codes**, introduced by DAC [@kumar2023dac],
+are the most cited fix. The idea is to perform the codebook lookup in a
+*low-dimensional* projected space (DAC uses 8 or 32 dimensions against a
+1,024-dimensional latent) and to $L_2$-normalise both latents and codes so that
+lookup becomes cosine similarity on a hypersphere. Both changes make the
+nearest-neighbour geometry better conditioned and dramatically improve
+utilisation. This is the single most transferable trick in codec engineering.
+
+**Finite scalar quantisation** [@mentzer2024fsq] eliminates the problem
+structurally rather than treating it. Project the latent to a low dimension $d$
+(typically 3–8), then round each dimension independently to one of $L$ levels
+after a bounding nonlinearity:
+
+$$
+\hat{z}_i = \operatorname{round}\!\big( \lfloor L/2 \rfloor \tanh(z_i) \big),
+\qquad
+\text{index} = \sum_{i=1}^{d} \hat{z}_i' \, L^{\,i-1},
+\qquad V = L^d
+$$ {#eq-fsq}
+
+There is **no codebook** — the "codes" are the vertices of a fixed integer
+lattice, every one of which is reachable by construction. No commitment loss, no
+EMA, no dead-code reinitialisation, no auxiliary entropy term. Gradients use a
+straight-through round. FSQ matches learned VQ at comparable vocabulary sizes
+while removing an entire category of failure, which is why it has spread quickly
+into speech systems.
+
+**Single large codebook with careful engineering** is the fourth route.
+BigCodec [@xin2024bigcodec] and WavTokenizer [@ji2025wavtokenizer] abandon RVQ
+for one high-cardinality codebook, betting that the modelling simplification is
+worth the engineering difficulty. X-Codec2, the tokeniser behind Llasa
+[@ye2025llasa], reports roughly 99% utilisation of a 65,536-entry codebook at
+50 Hz — evidence that the collapse problem is tractable even at extreme
+vocabulary sizes given the right lookup geometry.
+
+### Per-Layer Entropy as a Diagnostic {#sec-entropy}
+
+Collapse is usually reported as a single utilisation percentage, which hides
+where it happens. A more informative diagnostic is the **entropy of the code
+distribution at each RVQ level**, $H_n = -\sum_v p_{n,v}\log_2 p_{n,v}$, compared
+against the ceiling $\log_2 V$.
+
+A recent study of tonal content in codecs [@mondal2026tonal] reports such
+profiles and finds the deficit concentrated in the **upper** layers: DAC at
+32 kbps falls below 7.0 bits (of a possible 10) for codebook indices above 24,
+and EnCodec at 24 kbps is worse. The proposed explanation is a data argument
+rather than an optimisation one — upper layers encode fine residual detail, and
+the signals that generate rich fine residuals (sustained harmonic material:
+bells, glockenspiel, piano) are under-represented in ordinary training corpora,
+so the upper codebooks are starved of the very data that would populate them.
+Rebalancing training toward such content raised reported active-entry usage from
+about 74% to about 95%.
+
+The same work gives a usefully crisp definition of a *content-dependent* codec
+failure — one that aggregate metrics hide. **Tonal weakness** decomposes into
+harmonic artefacts (spurious components near harmonics), decay truncation
+(premature clipping of long amplitude envelopes, giving an unnatural staccato),
+and pitch instability (wobble on nominally steady tones). The DAC and EnCodec
+papers both acknowledge degradation on this material without offering a remedy.
+
+::: {.callout-warning}
+## How much weight to put on this
+
+The tonal study is a limited-scale result and says so: 720 hours of training
+audio on four GPUs, compared against public DAC checkpoints the authors estimate
+used 10–50$\times$ more data, with a 22-listener panel and large-scale
+replication left as future work. Take the *diagnostic* — per-layer entropy, and
+the observation that content under-represented in training starves the upper
+codebooks — rather than the specific model or its benchmark numbers.
+:::
+
+
+## Training Objectives {#sec-codec-losses}
+
+A codec is trained with a composite objective that inherits almost entirely from
+the GAN vocoders of @sec-hifigan. Nothing here is conceptually new; what is new
+is the quantiser sitting in the middle.
+
+**Multi-scale spectral reconstruction.** An $L_1$ distance between log-mel
+spectrograms of reference and reconstruction, summed over several STFT window
+sizes:
+
+$$
+\mathcal{L}_{\text{spec}} = \sum_{i \in S}
+\big\| \log \operatorname{Mel}_i(\mathbf{x}) - \log \operatorname{Mel}_i(\hat{\mathbf{x}}) \big\|_1,
+\qquad S = \{32, 64, \ldots, 2048\}
+$$ {#eq-mel-loss}
+
+Multiple resolutions are used because a single STFT window fixes one point on
+the time-frequency resolution trade-off, and a model optimised against it can
+exploit the blind spot. Short windows see transients; long windows see harmonic
+structure and long decays.
+
+**Adversarial and feature-matching terms.** A bank of sub-discriminators
+$\{D_k\}$ — multi-period on the raw waveform (@sec-hifigan) plus multi-scale or
+multi-band STFT discriminators — trained with a hinge objective, alongside an
+$L_1$ match between the discriminators' intermediate activations on real and
+reconstructed audio:
+
+$$
+\mathcal{L}_{\text{adv}} = \sum_{k} \mathbb{E}\big[\max(0,\, 1 - D_k(\hat{\mathbf{x}}))\big],
+\qquad
+\mathcal{L}_{\text{fm}} = \sum_{k}\sum_{l} \frac{1}{N_{k,l}}
+\big\| D_k^{(l)}(\mathbf{x}) - D_k^{(l)}(\hat{\mathbf{x}}) \big\|_1
+$$ {#eq-codec-adv}
+
+**Quantisation terms.** The commitment loss of @eq-vqvae-loss, summed over RVQ
+levels.
+
+The total is a weighted sum, and the weights are lopsided in a way worth
+noticing:
+
+$$
+\mathcal{L} = \lambda_{\text{spec}} \mathcal{L}_{\text{spec}}
++ \lambda_{\text{fm}} \mathcal{L}_{\text{fm}}
++ \lambda_{\text{adv}} \mathcal{L}_{\text{adv}}
++ \lambda_{\text{commit}} \mathcal{L}_{\text{commit}}
+$$ {#eq-codec-total}
+
+with typical values $\lambda_{\text{spec}} = 15$, $\lambda_{\text{fm}} = 2$,
+$\lambda_{\text{adv}} = 1$, $\lambda_{\text{commit}} = 0.25$. A common practical
+detail is a warm-up of tens of thousands of steps on reconstruction losses alone
+before the discriminators are switched on.
+
+::: {.callout-note}
+## A consequence worth remembering
+
+Because @eq-codec-total optimises perceptual and adversarial criteria rather
+than waveform distance, adversarially-trained codecs can post **negative
+SI-SDR** while sounding excellent — DAC reports around $-1$ to $-2$ dB. This is
+not a defect; it means the model reproduces perceptual structure without
+aligning sample-by-sample. It also means SI-SDR is invalid for comparing codecs
+with different optimisation objectives, and that mel distance and perceptual
+scores such as ViSQOL should carry the comparison instead.
+:::
+
+
+## The Codec Landscape {#sec-codec-zoo}
+
+| Codec | Year | Rate | $N_q$ | Distinguishing idea |
+|:------|:-----|:-----|------:|:--------------------|
+| **SoundStream** [@zeghidour2022soundstream] | 2021 | 24 kHz, 75 Hz | ≤24 | First RVQ audio codec; quantiser dropout for scalable bitrate |
+| **EnCodec** [@defossez2023encodec] | 2022 | 24/48 kHz, 75 Hz | ≤32 | Open, widely adopted; multi-scale STFT discriminator; optional entropy coding |
+| **DAC** [@kumar2023dac] | 2023 | 44.1 kHz, 86 Hz | 9 | Factorised + $L_2$-normalised codes fix utilisation; Snake activation; the quality baseline |
+| **SpeechTokenizer** [@zhang2024speechtokenizer] | 2023 | 16 kHz, 50 Hz | 8 | Distils HuBERT into RVQ level 1: semantic first, acoustic after |
+| **Mimi** [@defossez2024moshi] | 2024 | 24 kHz, **12.5 Hz** | 8 | Split RVQ, WavLM distillation, causal/streaming, Transformer in encoder and decoder |
+| **SNAC** [@siuzdak2024snac] | 2024 | 24–44 kHz, multi | 3–4 | Quantisers at *different temporal resolutions* rather than all at one rate |
+| **BigCodec** [@xin2024bigcodec] | 2024 | 16 kHz, 80 Hz | **1** | Single high-cardinality VQ at Mimi-comparable bitrate |
+| **WavTokenizer** [@ji2025wavtokenizer] | 2024 | 24 kHz, 40–75 Hz | **1** | Extreme compression, 40–75 tokens/s, one codebook |
+
+: Representative neural audio codecs. {#tbl-codec-zoo}
+
+Reading the table chronologically shows two trends running in opposite
+directions. Fidelity-oriented work (SoundStream → EnCodec → DAC) pushes sample
+rate and $N_q$ *up*. Modelling-oriented work (SpeechTokenizer → Mimi →
+BigCodec/WavTokenizer) pushes frame rate and $N_q$ *down*, accepting fidelity
+loss in exchange for shorter sequences and a simpler prediction target. These
+are different objectives, not competing answers to one objective, and papers
+that benchmark across the two groups on reconstruction metrics alone are
+comparing things that were not trying to do the same job.
+
+SNAC deserves a note because it breaks an assumption everything else shares.
+Standard RVQ applies every codebook at the same frame rate; SNAC applies
+quantisers at *different* temporal resolutions, so coarse structure is coded
+sparsely in time and fine structure densely. This is a hierarchy along time as
+well as depth, and it is the codec behind Orpheus among others.
+
+
+## Semantic and Acoustic Tokens {#sec-semantic-acoustic}
+
+@sec-audiolm introduced the semantic/acoustic split as a modelling decision made
+*outside* the codec, using two separate tokenisers. The dominant modern approach
+folds it *inside*.
+
+**Semantic distillation** adds a loss encouraging the first RVQ level's output
+to predict the representations of a frozen self-supervised model (@sec-ssl) —
+HuBERT for SpeechTokenizer, WavLM for Mimi. The effect is to make codebook 1
+carry phonetic content while leaving speaker identity, prosody, and channel to
+levels 2 and up. Mimi refines this with **split RVQ**: rather than distilling
+into the first level of a single residual chain, it runs a separate
+single-codebook semantic quantiser *in parallel* with an acoustic RVQ, so that
+the semantic objective cannot degrade the acoustic reconstruction path.
+
+The clearest demonstration of what semantic tokens contain is an experiment in
+the Kyutai explainer, and it is worth reproducing conceptually because it makes
+an abstract claim concrete. Take a language model trained over full Mimi tokens.
+Now generate with the **semantic tokens held fixed** from a reference recording
+(teacher-forced) while letting the model freely sample all acoustic tokens.
+Sampling twice yields two outputs that **say the same words in completely
+different voices**. The semantic stream determines *what* is said; the acoustic
+stream determines *how*.
+
+That separation is what makes the split useful, for three reasons developed
+earlier: linguistic coherence over long spans (@sec-audiolm), decoupled data
+requirements (@sec-audiolm, via SPEAR-TTS), and a natural place to inject
+speaker identity. A fourth is practical — because the semantic token is
+$1/N_q$ of the token budget, its share of the loss falls as $N_q$ grows, so
+systems weight it heavily. Moshi uses a semantic loss factor of 100.
+
+::: {.callout-tip}
+## The trade-off in one sentence
+
+Lowering $N_q$ raises the semantic token's share of the loss and makes the model
+*more linguistic*, at the cost of acoustic fidelity — which is why 8-level and
+12.5 Hz codecs became the norm for speech LLMs even though 32-level codecs
+reconstruct better.
+:::
+
+
+## Serialising the Token Grid {#sec-serialisation}
+
+Here is the problem this chapter has been deferring. RVQ emits $N_q$ tokens per
+frame. A language model emits one token per step. Something has to flatten a
+two-dimensional grid into a one-dimensional sequence, and the choice is
+consequential.
+
+| Pattern | Mechanism | Cost |
+|:--------|:----------|:-----|
+| **Flattening** | Emit all $N_q$ levels of frame $t$, then move to $t+1$. One sequence, $T_c \cdot N_q$ long | Multiplies sequence length by $N_q$, undoing much of the compression |
+| **Parallel** | Predict all $N_q$ levels of a frame simultaneously from one hidden state | Sequence length $T_c$, but assumes conditional independence across levels within a frame |
+| **Delay / interleaving** | Emit level $n$ offset by $n-1$ frames, so each step predicts a diagonal of the grid | Sequence length $T_c + N_q$; level $n$ can condition on level $n-1$ of the same frame |
+| **Depth transformer** | Large temporal backbone per frame, small autoregressive transformer over the $N_q$ levels within it | Exact factorisation, no independence assumption; extra module and per-frame serial cost |
+| **Multi-token prediction** | Separate output heads emit all levels at once, trained jointly | Fast; recovers some cross-level dependency through shared representation |
+
+: Patterns for serialising an $N_q$-level token grid. {#tbl-serialisation}
+
+The tension is a factorisation question. The exact joint is
+$p(\mathbf{c}_t) = \prod_{n} p(c_{t,n} \mid c_{t,<n}, \mathbf{c}_{<t})$.
+Flattening represents it exactly at maximum sequence-length cost; the parallel
+pattern drops the within-frame dependency entirely, which is cheap but wrong
+(the levels of an RVQ frame are strongly dependent by construction, since each
+codes the residual of the previous); delay patterns and depth transformers are
+the compromises.
+
+The **delay pattern** was popularised by MusicGen [@copet2024musicgen], whose
+figure comparing flattening, parallel, and delayed interleaving is the standard
+reference diagram for this material. The **depth transformer** comes from the
+RQ-Transformer [@lee2022rqvae] and reached speech through Moshi
+[@defossez2024moshi], where a 7B temporal backbone predicts one frame's context
+and a small depth transformer autoregresses over that frame's eight levels.
+Sesame's CSM uses the same split with per-codebook linear heads, and VALL-E's
+AR/NAR pair (@eq-valle) is yet another point in this space — autoregressive over
+time for level 1, parallel over depth for the rest.
+
+::: {.callout-note}
+## No convention has emerged
+
+As of 2026 there is no standard. Every major system picks differently, and the
+schemes have grown more elaborate rather than converging. This is a reliable
+signal that the community has not found the right abstraction — and it is a
+strong argument for single-codebook codecs, which dissolve the problem instead
+of solving it.
+:::
+
+
+## What Is Actually Inside the Tokens? {#sec-codec-inside}
+
+The account above is tidy: level 1 is semantic, higher levels are acoustic,
+identity and prosody live somewhere in the middle. How much of that survives
+measurement?
+
+A 2025 interpretability study [@sadok2025interpretability] tests it directly
+across four codecs with contrasting designs — DAC (pure reconstruction),
+SpeechTokenizer (HuBERT-distilled RVQ), Mimi (split RVQ), and BigCodec (single
+large VQ) — by tokenising LibriSpeech `test-clean` and measuring co-occurrence
+between codec tokens and HuBERT's 100 discrete units, plus $t$-SNE structure and
+mutual information estimated by a contrastive log-ratio bound.
+
+| Finding | Detail |
+|:--------|:-------|
+| No deterministic token mapping | Codec tokens do not map one-to-one onto phonetic units; the best single-token association for BigCodec is about 8%. Codes take meaning from context, like words in translation |
+| Distillation works, as designed | SpeechTokenizer's level 1 aligns strongly with HuBERT units and shows clean $t$-SNE clusters by phonetic class; DAC's level 1 aligns best among its levels, degrading with depth |
+| **Leakage persists** | SpeechTokenizer's *residual* levels also carry linguistic content; Mimi's split RVQ, designed to prevent exactly this, still shows substantial content in higher levels — plausibly because 12.5 Hz frames each span several phonetic units |
+| Identity lives in the middle | Speaker identity is barely present in SpeechTokenizer level 1, strongly present at level 4, still present at level 8 |
+| **Pitch is the hardest** | Pitch shows essentially no interpretable structure in the embedding space, and the lowest mutual information of the three attributes |
+
+: Empirical findings on the content of codec tokens. {#tbl-codec-inside}
+
+The conclusion is that content, identity, and pitch are **entangled in the
+quantised latent space even in codecs explicitly designed for disentanglement**.
+The semantic/acoustic story is a real and useful tendency, not a clean
+factorisation.
+
+This matters practically in both directions. It explains why speaker identity
+leaks into "semantic" tokens and why voice conversion by naive token surgery
+does not work cleanly. And it motivates the factorised codecs behind the fourth
+generation of voice cloning in @sec-cloning — NaturalSpeech 3's FACodec
+[@ju2024naturalspeech3] and Spark-TTS's BiCodec [@wang2025sparktts] — which
+impose disentanglement through explicit supervision, gradient reversal, and
+information bottlenecks rather than hoping it emerges from residual structure.
+Source-disentangled codecs [@bie2024sdcodec] pursue the same goal with
+domain-specific codebooks. The same paper offers a
+post-hoc route: train a masked encoder-decoder that maps bidirectionally between
+codec tokens and interpretable attributes (content, pitch, loudness, speaker),
+which both explains the tokens and enables controlled editing — swapping the
+speaker attribute performs voice conversion.
+
+The pitch result is the one I would flag for a reader. Pitch is perceptually
+salient, prosodically essential, and is the attribute a reconstruction objective
+has least reason to represent explicitly, since it can be reproduced
+implicitly. If you want prosodic control, do not expect the codec to hand it to
+you.
+
+
+## Evaluation {#sec-codec-eval}
+
+Codecs suffer a version of the evaluation problem already seen in @sec-tts-eval,
+with a specific twist: **reconstruction quality and downstream modelling utility
+are different objectives, and they can be anti-correlated.**
+
+**Reconstruction metrics** are the mature half. Mel distance ($L_1$ on log-mel),
+ViSQOL [@chinen2020visqol] and PESQ for perceptual quality, STOI for
+intelligibility, SI-SDR for waveform alignment (with the caveat above that it is
+meaningless across differing objectives), and MUSHRA or P.808 listening tests.
+Codebook entropy and utilisation measure how much of the nominal bitrate is
+actually used.
+
+**Downstream utility** is what a speech LLM builder needs and is far less
+settled. Two benchmarks address it. **Codec-SUPERB** [@wu2024codecsuperb]
+evaluates codecs by how well downstream models perform on resynthesised audio
+across recognition, speaker, and content tasks. **DASB**
+[@mousavi2024dasb] ranks discrete audio tokens across discriminative and
+generative tasks, and reports the result this section is built around:
+**semantic tokens generally outperform compression-optimised acoustic tokens on
+downstream tasks, while continuous representations still outperform both.**
+
+Two consequences worth stating plainly. A codec that wins on ViSQOL may lose as
+a tokeniser, so reconstruction leaderboards do not rank tokenisers. And the
+finding from the tonal study [@mondal2026tonal] that higher-fidelity codecs
+yield embeddings correlating somewhat better with human judgement — while both
+remain below purpose-built contrastive audio encoders — is a useful reminder
+that "the codec's latent space" and "a good audio representation" are related
+but not the same object.
+
+Toolkits: **ESPnet-Codec** [@shi2024espnetcodec] provides training and
+evaluation across codecs with a unified metric suite, and **FunCodec**
+[@du2023funcodec] offers reproducible multi-rate models.
+
+
+## Do We Need Discrete Tokens at All? {#sec-continuous-alt}
+
+The entire chapter rests on a premise worth interrogating, especially since
+@sec-continuous-ar already showed it is contestable in synthesis.
+
+The case *for* discreteness is architectural rather than representational.
+Discrete tokens let you reuse the language-modelling stack unchanged: categorical
+cross-entropy, sampling with temperature and nucleus filtering, KV caching,
+pretrained text-LLM weights, and preference optimisation. That is a large amount
+of borrowed infrastructure, and it is the entire reason the paradigm exists.
+
+The case *against* is that quantisation destroys information for no modelling
+reason. DASB's finding that continuous representations beat discrete tokens on
+downstream tasks is direct evidence. MELLE (@sec-continuous-ar) generates
+continuous mel frames autoregressively and is *more* robust than its
+discrete-token counterpart. And a growing line of work generates continuous
+audio latents with a small diffusion or flow-matching head per step, keeping
+autoregression over time while discarding quantisation.
+
+The honest position is that discreteness is an engineering convenience whose
+representational cost is real and whose necessity is unproven. It is the same
+open question raised at the end of @sec-ssl-open, arriving from the generative
+side.
+
+
+## Open Problems {#sec-codec-open}
+
+1. **The fidelity/modellability trade-off is unquantified.** Everyone knows
+   lower frame rates make sequences easier to model and reconstructions worse.
+   Nobody can predict where the optimum sits for a given downstream model and
+   compute budget, and there is no theory relating the two.
+2. **Disentanglement remains aspirational.** As @sec-codec-inside shows, even
+   codecs built for it leak. Whether clean factorisation into content, speaker,
+   prosody, and channel is achievable without heavy explicit supervision is open.
+3. **Serialisation has no principled answer.** @tbl-serialisation is a list of
+   engineering compromises, not a solution. Single-codebook codecs sidestep it,
+   which may be the real lesson.
+4. **Pitch and prosody are under-represented.** A reconstruction objective has
+   no reason to encode them explicitly, and measurement confirms it does not.
+5. **Content-dependent failure is under-studied.** Tonal material is one
+   documented case [@mondal2026tonal]; the general question of which signal
+   classes a codec systematically mishandles, and whether that is a data problem
+   or a capacity problem, is largely unexplored. Aggregate metrics hide it by
+   construction.
+6. **Evaluation for tokenisers, not compressors.** Codec-SUPERB and DASB are
+   starts, but there is no accepted way to predict how a codec will behave inside
+   a speech LLM without training one.
+7. **Streaming and latency constraints.** Causality, low algorithmic delay, and
+   cheap decoding are required for duplex dialogue and constrain everything else;
+   Mimi's sub-10 ms CPU decode is the target to beat.
+8. **Non-speech audio and general audio.** Most speech codecs degrade on music
+   and environmental sound. Whether one tokeniser should serve all audio, or
+   whether domain-specific codecs are the right answer, is unsettled.
+
+
+## Summary
+
+A neural audio codec is an encoder, a quantiser, and a decoder, trained
+end-to-end with spectral, adversarial, feature-matching, and commitment losses.
+It exists because language models need discrete tokens at a manageable rate:
+sample-level modelling puts less than one word inside a typical context window,
+which is a failure of coherence no amount of training repairs.
+
+The technical core is vector quantisation made trainable. The $\arg\min$ lookup
+has no gradient, so the straight-through estimator copies the gradient past it;
+the commitment loss keeps that approximation honest by pulling latents toward
+their codes; EMA updates and dead-code reinitialisation keep the codebook alive.
+Residual quantisation then buys exponential vocabulary from linear storage by
+quantising each stage's error, which incidentally orders the levels by
+importance and makes bitrate truncatable — and which produces the
+two-dimensional token grid that every downstream language model must serialise,
+with no consensus on how.
+
+Codebook collapse is the recurring adversary, and the progression of fixes —
+diversity losses, EMA and dead-code reinitialisation, factorised and normalised
+lookup, and finally finite scalar quantisation, which removes the codebook
+entirely — is the same movement toward structural rather than corrective
+solutions seen in @sec-ssl-compare.
+
+Two ideas deserve to be carried forward. The **semantic/acoustic split**, now
+usually folded inside the codec by distilling a self-supervised model into the
+first level, is what makes speech language modelling a linguistic rather than an
+acoustic act; holding semantic tokens fixed while resampling the rest yields the
+same words in a different voice, which is the cleanest demonstration available
+of what these representations contain. And the **empirical caveat** to that
+story: measurement shows content, identity, and pitch remain entangled even in
+codecs designed to separate them, with pitch the least represented of all.
+
+@sec-slm takes the token grid as an interface and asks what happens when a
+language model is trained to read and write it — and why, so far, doing so makes
+the language model worse at thinking.
+
+
+## Sources and Further Reading {#sec-codec-sources}
+
+Where this chapter's exposition, figures, and equations come from, section by
+section. Diagrams and audio examples are best consulted in the originals.
+
+| Section | Primary sources |
+|:--------|:----------------|
+| @sec-codec-why | The sample-level failure experiment, token-rate arithmetic, and audio examples are from Volhejn's Kyutai explainer, [*Neural audio codecs: how to get audio into LLMs*](https://kyutai.org/codec-explainer/) (2025). WaveNet's sample-rate animation is in the [DeepMind WaveNet post](https://deepmind.google/discover/blog/wavenet-a-generative-model-for-raw-audio/) |
+| @sec-vqvae, @sec-ste, @sec-vq-loss | Original formulation: VQ-VAE [@vandenoord2017vqvae]; EMA updates [@razavi2019vqvae2]. The Fashion-MNIST intuition, the animated latent-space visualisations, the straight-through code snippets, and the "teleporting" dead-code metaphor are all from the Kyutai explainer, which is the best pedagogical treatment I know of |
+| @sec-rvq | RVQ for audio: SoundStream [@zeghidour2022soundstream]. The residual-quantisation animation and pseudocode are from the Kyutai explainer. Image-domain parallel: RQ-VAE [@lee2022rqvae] |
+| @sec-collapse | DAC's factorised and $L_2$-normalised lookup [@kumar2023dac]; FSQ [@mentzer2024fsq]; single-codebook designs [@xin2024bigcodec; @ji2025wavtokenizer]. A compact mathematical survey of quantiser variants is [EmergentMind's *Neural Audio Codecs* overview](https://www.emergentmind.com/topics/neural-audio-codecs-nacs) |
+| @sec-entropy | Per-layer entropy profiles, the tonal-weakness taxonomy, and the utilisation figures are from [@mondal2026tonal] (*Scientific Reports*, 2026), read with the scale caveat noted in the text |
+| @sec-codec-losses | Loss composition and weights follow DAC [@kumar2023dac] and EnCodec [@defossez2023encodec], inheriting discriminator design from HiFi-GAN [@kong2020hifigan] and MelGAN [@kumar2019melgan]. On audio loss functions generally, the Kyutai explainer recommends Evan Radkoff's [blog post on audio ML losses](https://radkoff.github.io/) |
+| @sec-codec-zoo | Individual papers as cited. The EmergentMind overview gives a broader survey including psychoacoustic-loss and source-disentangled codecs [@bie2024sdcodec] not covered here |
+| @sec-semantic-acoustic | Semantic distillation: SpeechTokenizer [@zhang2024speechtokenizer], Mimi [@defossez2024moshi]. The teacher-forced semantic-token experiment ("same words, different voice"), with listenable audio, is from the Kyutai explainer. Discrete units for language modelling originate in GSLM [@lakhotia2021gslm] |
+| @sec-serialisation | The canonical comparison figure of flattening, parallel, and delay patterns is Figure 1 of MusicGen [@copet2024musicgen]. Depth transformers: RQ-Transformer [@lee2022rqvae] and Moshi [@defossez2024moshi]. The Kyutai explainer reproduces the MusicGen figure and shows a more elaborate 2025 scheme |
+| @sec-codec-inside | Entirely from [@sadok2025interpretability], [*Bringing Interpretability to Neural Audio Codecs*](https://arxiv.org/abs/2506.04492). Its Figures 2–6 ($t$-SNE by phonetic class, speaker, and pitch; mutual-information histogram) are worth consulting directly — they are the visual argument for the entanglement claim |
+| @sec-codec-eval | Codec-SUPERB [@wu2024codecsuperb]; DASB [@mousavi2024dasb]; ViSQOL [@chinen2020visqol]; toolkits [@shi2024espnetcodec; @du2023funcodec] |
+| @sec-continuous-alt | DASB's continuous-versus-discrete finding [@mousavi2024dasb]; MELLE [@meng2024melle]. Sander Dieleman's [*Generative modelling in latent space*](https://sander.ai/2025/04/15/latents.html) is the best high-level treatment of when to quantise |
+
+: Source attribution by section. {#tbl-codec-sources}

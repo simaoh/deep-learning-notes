@@ -1,4 +1,4 @@
-# Detection and Segmentation
+# Detection and Segmentation {#sec-detection-and-segmentation}
 
 ## Object Detection
 
@@ -367,7 +367,7 @@ where $\gamma=2$ down-weights easy examples (high $\hat{y}$), focuses on hard pi
 
 ---
 
-### 2.3.3 Mask R-CNN (2017)
+### 2.3.3 Mask R-CNN (2017) {#sec-maskrcnn}
 
 **Extension**: Faster R-CNN + instance segmentation head.
 

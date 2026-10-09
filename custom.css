@@ -17,6 +17,16 @@
   color: #1f2937 !important;
 } */
 
+.sidebar-navigation a[href*="_intro_foundations"] {
+  background-color: #f8fafc !important;
+  padding: 8px 16px 8px 10px !important;
+  margin-left: -10px !important;
+  margin-right: -20px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  display: block !important;
+}
+
 .sidebar-navigation a[href*="computer_vision"] {
   /* font-weight: 550 !important;
   font-size: 1.0em !important; */
@@ -29,6 +39,70 @@
   display: block !important;
 }
 
+.sidebar-navigation a[href*="_intro_video"] {
+  /* font-weight: 550 !important;
+  font-size: 1.0em !important; */
+  background-color: #ecfeff !important;
+  padding: 8px 16px 8px 10px !important;
+  margin-left: -10px !important;
+  margin-right: -20px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  display: block !important;
+}
+
+.sidebar-navigation a[href*="_intro_3d"] {
+  /* font-weight: 550 !important;
+  font-size: 1.0em !important; */
+  background-color: #f5f3ff !important;
+  padding: 8px 16px 8px 10px !important;
+  margin-left: -10px !important;
+  margin-right: -20px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  display: block !important;
+}
+
+.sidebar-navigation a[href*="_intro_time_series"] {
+  background-color: #ecfdf5 !important;
+  padding: 8px 16px 8px 10px !important;
+  margin-left: -10px !important;
+  margin-right: -20px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  display: block !important;
+}
+
+.sidebar-navigation a[href*="_intro_vision_language"] {
+  background-color: #fffbeb !important;
+  padding: 8px 16px 8px 10px !important;
+  margin-left: -10px !important;
+  margin-right: -20px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  display: block !important;
+}
+
+
+.sidebar-navigation a[href*="_intro_nlp"] {
+  background-color: #fff1f2 !important;
+  padding: 8px 16px 8px 10px !important;
+  margin-left: -10px !important;
+  margin-right: -20px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  display: block !important;
+}
+
+.sidebar-navigation a[href*="_intro_audio"] {
+  background-color: #f7fee7 !important;
+  padding: 8px 16px 8px 10px !important;
+  margin-left: -10px !important;
+  margin-right: -20px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  display: block !important;
+}
 /* 
 
 .sidebar-navigation a[href*="computer_vision"] {

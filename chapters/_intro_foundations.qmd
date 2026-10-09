@@ -1,0 +1,14 @@
+# Foundations {.unnumbered}
+
+## Overview
+
+This part lays the mathematical and algorithmic groundwork for the rest of the book: how neural networks are built and trained, and why they generalize. The concepts introduced here — architectures, loss functions, backpropagation, optimization, and regularization — are assumed throughout every later chapter, from convolutional networks to large language models.
+
+**Chapter Scope**:
+
+- **Neural Networks and Optimization** (§1): The supervised learning framework, core architectural building blocks (linear layers, activations, normalization), loss functions, backpropagation, and optimization algorithms (SGD, momentum, Adam).
+- **Generalization and Learning Theory** (§2): The bias-variance tradeoff, regularization techniques (L2, dropout, data augmentation, label smoothing), and modern generalization puzzles (double descent, the lottery ticket hypothesis).
+
+**Interview Relevance**: These topics form the baseline vocabulary for almost every ML interview — expect questions on why a particular optimizer or normalization scheme is used, how to diagnose underfitting vs. overfitting from train/validation curves, and why over-parameterized networks generalize despite classical theory predicting otherwise.
+
+---

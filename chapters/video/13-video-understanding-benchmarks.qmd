@@ -1,0 +1,567 @@
+# Video Understanding Benchmarks {#sec-video-benchmarks}
+
+This is a companion chapter to @sec-video-understanding. The benchmark
+survey lives here so that the main chapter can move quickly through
+architectures while still pointing to a definitive index of every
+evaluation set worth knowing about. The structure mirrors the task
+taxonomy of @sec-video-tasks: one subsection per family of tasks, each
+with a few headline benchmarks expanded into fact blocks and the rest
+listed compactly.
+
+Every benchmark below is written as a compact fact block with the same
+six fields so the section can be scanned at speed:
+
+- **Domain** — what the videos are *of* (third-person YouTube,
+  egocentric cooking, movies, surveillance, …).
+- **Size & length** — number of videos, total hours, typical per-clip
+  duration.
+- **Task** — which downstream task from @sec-video-tasks it scores.
+- **Modalities** — video only / video + subtitles / video + audio /
+  video + audio + dense annotations.
+- **Probes** — what aspect of video understanding it uniquely tests;
+  the reason this benchmark exists alongside its neighbours.
+- **Importance** — *critical* (every paper reports), *standard* (most
+  papers in this sub-area report), *niche* (specialised but useful),
+  *saturated* (SOTA too close to the ceiling to differentiate models),
+  *deprecated* (still cited but superseded). Plus a note on the metric
+  the field reports.
+
+::: {.callout-note}
+Numbers in this section are taken from the original benchmark papers
+and verified against the leaderboards as of mid-2026 where possible.
+When a count or duration is given as approximate (∼) it is the figure
+reported by the paper rather than a recount.
+:::
+
+
+## Action Recognition Benchmarks {#sec-bench-action}
+
+The oldest video task and still the default reported number for every
+*encoder* paper. The action-recognition benchmarks split into three
+flavours: large-scale clip classification (Kinetics family),
+motion- and interaction-heavy classification (SSv2, Diving48), and
+multi-label / spatio-temporal (Charades, AVA).
+
+- **Kinetics-400 / -600 / -700** [@kay2017kinetics; @carreira2018k600; @carreira2019k700] (2017–2019)
+    - **Domain:** YouTube clips, third-person, single dominant human action.
+    - **Size & length:** K400 ≈ 306K clips × 10 s ≈ 850 h, 400 classes; K600 ≈ 480K × 10 s, 600 classes; K700 ≈ 650K × 10 s, 700 classes.
+    - **Task:** action recognition (clip classification).
+    - **Modalities:** video (audio usually stripped).
+    - **Probes:** generic action recognition at scale; the de facto pretraining benchmark for video encoders.
+    - **Importance:** *saturated* on K400 (best encoders > 90 % top-1; VideoMAEv2 [@wang2023videomaev2], InternVideo2 [@wang2024internvideo2]) but **still the default reported number** in every encoder paper. K700 is the harder, less-saturated current target. Metric: top-1 / top-5 accuracy.
+
+- **Something-Something v2 (SSv2)** [@goyal2017ssv2] (2017)
+    - **Domain:** crowdsourced clips of someone manipulating an object on a tabletop, filmed against a plain background.
+    - **Size & length:** ∼220K clips × 4 s, 174 fine-grained action classes (e.g. *"pushing X from right to left"*, *"pretending to put X on Y"*).
+    - **Task:** action recognition, **motion-heavy**.
+    - **Modalities:** video only.
+    - **Probes:** *temporal* understanding — the same scene can yield different labels depending solely on the direction of motion, so a model that looks at one frame cannot win.
+    - **Importance:** *critical* for any paper that wants to argue its model has temporal understanding (separates frame-bag classifiers from real video models). Metric: top-1 accuracy.
+
+- **UCF-101** [@soomro2012ucf101] (2012)
+    - **Domain:** sports + everyday action clips from YouTube.
+    - **Size & length:** 13K clips × 7 s, 101 action classes.
+    - **Task:** action recognition.
+    - **Modalities:** video only.
+    - **Probes:** historic ImageNet-of-video; 3-split protocol still used for tiny-data ablations and zero-shot transfer.
+    - **Importance:** *saturated* (top-1 > 98 %); also widely used as an **FVD** reference for video generation. Metric: top-1 accuracy.
+
+- **HMDB-51** [@kuehne2011hmdb] (2011)
+    - **Domain:** movie clips + YouTube; 51 action classes.
+    - **Size & length:** 7K clips × ∼4 s; 3 official train/test splits.
+    - **Task:** action recognition.
+    - **Modalities:** video only.
+    - **Probes:** small-scale transfer; harder than UCF-101 due to cluttered scenes and inter-class similarity.
+    - **Importance:** *saturated*; legacy benchmark; usually quoted as a triplet with UCF-101 and K400. Metric: top-1 accuracy across the three splits.
+
+- **Moments in Time (MiT)** [@monfort2019mit] (2019)
+    - **Domain:** very short web clips spanning humans, animals, objects, weather, abstractions.
+    - **Size & length:** ∼1M clips × **3 s**, 339 classes; a *multi-label* extension (Multi-Moments) has ∼1M clips with 313 classes.
+    - **Task:** action recognition (extremely short clips).
+    - **Modalities:** video + audio.
+    - **Probes:** generalisation across *agents* (not just humans) and very short events; large training scale.
+    - **Importance:** *standard* as an auxiliary pretraining corpus, less common as a final eval. Metric: top-1 / top-5 accuracy.
+
+- **Charades** [@sigurdsson2016charades] (2016)
+    - **Domain:** crowdsourced *Hollywood-in-Homes* — people perform scripted indoor activities.
+    - **Size & length:** ∼10K untrimmed videos × ∼30 s, 157 daily-activity classes.
+    - **Task:** **multi-label** action classification and temporal localization (multiple actions can overlap).
+    - **Modalities:** video + audio.
+    - **Probes:** dense multi-label classification under heavy overlap; activity *recognition* in unscripted-looking settings.
+    - **Importance:** *standard* for multi-label classification and as the source of the Charades-STA grounding split. Metric: mAP (multi-label), mAP@IoU (localization).
+
+- **AVA** [@gu2018ava] (2018)
+    - **Domain:** 15-min movie segments densely annotated.
+    - **Size & length:** ∼430 movies, ∼1.6M actor-action labels at 1 Hz, 80 atomic action classes (e.g. *stand*, *sit*, *hand-wave*).
+    - **Task:** **spatio-temporal** action detection — per-actor bounding box + action labels.
+    - **Modalities:** video only.
+    - **Probes:** combines detection (where) with action recognition (what) on long-form video.
+    - **Importance:** *critical* and **non-saturated** for any model that claims spatial-temporal localisation; SlowFast [@feichtenhofer2019slowfast] and MViTv2 [@li2022mvitv2] benchmark here. Metric: frame-level mAP @ spatial IoU 0.5.
+
+- **Diving48** [@li2018diving48] (2018)
+    - **Domain:** competitive diving videos.
+    - **Size & length:** ∼18K clips × ∼5 s, 48 fine-grained dive classes.
+    - **Task:** action recognition, **motion-only** (background and equipment are uninformative).
+    - **Modalities:** video only.
+    - **Probes:** isolation of motion cues from scene/object bias — designed as a counter-example to Kinetics-style "context cheating".
+    - **Importance:** *niche* but the cleanest test that a model uses motion; pairs well with SSv2. Metric: top-1 accuracy.
+
+
+## Long-Video Understanding Benchmarks {#sec-bench-long}
+
+The 2023–2026 wave of benchmarks built specifically for video VLMs with
+*minute- to hour-long* inputs. All are MCQ-style by construction (so
+they can be auto-scored at the LLM-judge-free level of reliability) and
+all emphasise *aggregation* and *narrative reasoning* over per-frame
+perception.
+
+- **LongVideoBench (LVB)** [@wu2024longvideobench] (2024)
+    - **Domain:** 3 763 web videos across multiple genres, paired with their original subtitles.
+    - **Size & length:** 8 s – 1 h per video; 6 678 human-written MCQ questions over 17 fine-grained categories.
+    - **Task:** long-video MCQ VQA with **referring-query** structure — every question explicitly cites a sub-window the answer is grounded in.
+    - **Modalities:** video + subtitles.
+    - **Probes:** memory and *segment retrieval* under interleaved video+text input; the referring clause forces the model to pick from many candidate windows.
+    - **Importance:** *critical* — together with Video-MME the de facto pair every long-video VLM reports (Qwen2.5-VL, InternVL3, LLaVA-Video). Metric: MCQ accuracy, with separate splits by duration (8–15 s / 15–60 s / 3–10 min / 15–60 min).
+
+- **Video-MME** [@fu2024videomme] (2024)
+    - **Domain:** 900 hand-picked YouTube videos spanning 6 high-level genres (knowledge, film/TV, sports, life, multilingual, artistic).
+    - **Size & length:** ∼254 h total, durations from 11 s to ∼1 h split into *short / medium / long* sub-splits; 2 700 expert-written MCQs (3 per video × 4-way).
+    - **Task:** general video MCQ VQA — the eval is also commonly reported in *with-subtitles* mode.
+    - **Modalities:** video + subtitles + audio (some questions are answerable only from subtitles).
+    - **Probes:** general video understanding across the full duration spectrum in one suite; the long sub-split (30 min – 1 h) is the de facto long-video number.
+    - **Importance:** **the most-reported video VLM benchmark of 2024–2026.** Gemini 1.5 / 2.x, GPT-4o, Qwen2.5/3-VL, InternVL2.5/3, LLaVA-OneVision, Apollo, LongVU all report on it. Metric: MCQ accuracy, separately *no-subs* and *w/ subs*.
+
+- **MLVU (Multi-task Long Video Understanding)** [@zhou2024mlvu] (2024)
+    - **Domain:** very diverse — movies, surveillance, cartoons, games, egocentric, life vlogs, etc.
+    - **Size & length:** ∼1 700 videos, 3 min – 2 h long; ∼3K questions across **9 sub-tasks** (plot QA, action order, needle-in-haystack, sub-scene captioning, summarisation, …).
+    - **Task:** MCQ VQA + open-ended captioning/summarisation — the only major long-video benchmark with non-MCQ sub-tasks.
+    - **Modalities:** video only (no subtitles).
+    - **Probes:** *multi-task* long-video understanding — exposes models that are tuned only for MCQ.
+    - **Importance:** *standard* in 2025–2026 long-video papers; complementary to Video-MME because it has open-ended generation sub-tasks. Metric: MCQ acc for MCQ tasks; generation metrics (CIDEr / LLM-judge) for the open ones.
+
+- **LVBench** [@wang2024lvbench] (2024) — _distinct from LongVideoBench above_
+    - **Domain:** publicly sourced long videos (TV episodes, sports, surveillance, …).
+    - **Size & length:** ∼500 videos, mean ∼68 min, max several hours; ∼1.5K MCQs.
+    - **Task:** long-video MCQ VQA, with a focus on **hour-scale reasoning**.
+    - **Modalities:** video + subtitles.
+    - **Probes:** the very long tail (> 30 min) where Video-MME has only ∼100 videos.
+    - **Importance:** *important* for hour-scale specialists (LongVU, Video-XL-2, LongVA, LongVILA all report). Metric: MCQ accuracy.
+
+- **EgoSchema** [@mangalam2023egoschema] (2023)
+    - **Domain:** egocentric (head-mounted camera) clips drawn from Ego4D.
+    - **Size & length:** ∼5K MCQs over **3-minute** clips, ∼250 h total.
+    - **Task:** long-form egocentric MCQ VQA, 5-way.
+    - **Modalities:** video only.
+    - **Probes:** *intrinsic temporal certificate* — by design every question requires reasoning over the full 3 min (the certificate length is ∼10× prior egocentric benchmarks).
+    - **Importance:** *critical* for any long-video or egocentric model (Gemini, Qwen2.5-VL, Apollo all report). Metric: 5-way MCQ accuracy; the *subset* split has 500 fully validated questions, the *fullset* has all 5K.
+
+- **HourVideo** [@chandrasegaran2024hourvideo] (2024)
+    - **Domain:** 1-hour egocentric videos from Ego4D.
+    - **Size & length:** 500 videos, mean ∼45 min, range 20–120 min; ∼13K MCQs.
+    - **Task:** very-long-form MCQ VQA with task categories *summarisation / perception / visual reasoning / navigation*.
+    - **Modalities:** video only (audio available).
+    - **Probes:** *hour-scale* reasoning specifically, with a curated task taxonomy.
+    - **Importance:** *emerging* — released late 2024, gaining traction in 2025–2026 long-video work. Metric: MCQ accuracy.
+
+- **MomentSeeker** [@hu2025momentseeker] (2025)
+    - **Domain:** long videos (mean 20 min) for **video corpus moment retrieval** (VCMR).
+    - **Size & length:** 268 long videos, 1 800 multi-modal queries.
+    - **Task:** locate a relevant temporal segment within a corpus of long videos (not a single video).
+    - **Modalities:** video + audio + subtitles; multi-modal queries.
+    - **Probes:** the *corpus* version of moment retrieval at long-video scale; needs efficient retrieval *and* fine grounding.
+    - **Importance:** *emerging* — the de facto VCMR-at-scale benchmark for 2025–2026 retrieval research. Metric: R@1/R@5 at IoU.
+
+
+## General Video VQA and Reasoning Benchmarks {#sec-bench-vqa}
+
+The workhorses for short / medium-clip evaluation. MVBench and the
+Video-MME *short* split are now the must-haves; the older
+ActivityNet-QA / MSRVTT-QA / MSVD-QA generation benchmarks are still
+reported but generally regarded as saturated and replaced by MCQ ones
+above.
+
+- **MVBench** [@li2024mvbench] (2024, introduced with VideoChat2)
+    - **Domain:** clips reused from Charades, EPIC-Kitchens, SSv2, NTU RGB+D, Perception Test, FunQA, etc.
+    - **Size & length:** ∼4K MCQ examples spanning **20 temporal-reasoning task types** (action order, object existence, action prediction, scene transition, counterfactual, …); short clips (mostly < 30 s).
+    - **Task:** MCQ VQA, **temporal-reasoning-specific**.
+    - **Modalities:** video only.
+    - **Probes:** designed so the answer cannot be inferred from a single frame nor from world knowledge alone — the 20 task categories are constructed to force inter-frame reasoning.
+    - **Importance:** **the canonical short-clip video VLM benchmark of 2024–2026.** Every video VLM paper reports it. Metric: 4-way MCQ accuracy, with optional per-task breakdown.
+
+- **TVBench** [@cores2024tvbench] (2024)
+    - **Domain:** filtered subset of MVBench's source clips with newly written questions.
+    - **Size & length:** ∼2.5K MCQs over 10 temporal-skill categories.
+    - **Task:** MCQ VQA, **temporal-only**.
+    - **Modalities:** video only.
+    - **Probes:** addresses a known weakness of MVBench — its questions are partly *solvable from a single frame* or from text alone. TVBench filters those out: most published 2024 video LMs score *near chance* at release.
+    - **Importance:** *standard*, used alongside MVBench as a "true temporal" sanity check. Metric: MCQ accuracy.
+
+- **TempCompass** [@liu2024tempcompass] (2024)
+    - **Domain:** ∼500 carefully edited videos (paired clips that differ only in their *temporal* dimension — direction, speed, order).
+    - **Size & length:** ∼7K MCQs spanning *action*, *direction*, *speed*, *event order*, *attribute change*.
+    - **Task:** MCQ VQA, **temporal-only**.
+    - **Modalities:** video only.
+    - **Probes:** controlled-pair tests for temporal sensitivity, with paired-video accuracy as an *additional* metric (model must answer both clips in a contrastive pair correctly to score 1).
+    - **Importance:** *standard* for any paper making a temporal-reasoning claim (Qwen2.5-VL, Apollo, VideoLLaMA3 report). Metric: MCQ accuracy + paired accuracy.
+
+- **Vinoground** [@zhang2024vinoground] (2024)
+    - **Domain:** 1 000 short-clip pairs that differ only in their temporal counterfactual content (e.g. *cause vs effect*).
+    - **Size & length:** ∼1K pairs × ∼5 s each.
+    - **Task:** binary MCQ + dense temporal-counterfactual judgement.
+    - **Modalities:** video only.
+    - **Probes:** the temporal analogue of the *Winoground* image benchmark — counterfactual reasoning that requires distinguishing two near-identical clips.
+    - **Importance:** *emerging*; the strongest published 2024 video LMs score below random on the paired metric. Metric: pair accuracy + group accuracy.
+
+- **Perception Test** [@patraucean2023perceptiontest] (2023)
+    - **Domain:** scripted real-world "perception probes" filmed in lab settings — people manipulating objects, performing physical demos, illusions.
+    - **Size & length:** 11 600 videos, ∼23 s each; densely annotated with 190K object tracks, 73.5K action segments, 137K sound segments, 38K MCQ-VQA + 6K grounded VQA.
+    - **Task:** *combined* — VQA + temporal action localisation + object tracking + sound localisation + grounded VQA.
+    - **Modalities:** video + audio + dense annotations.
+    - **Probes:** a *capability matrix* — 4 reasoning skills (memory, abstraction, physics, semantics) × 4 reasoning types (descriptive, explanatory, predictive, counterfactual). Designed as a diagnostic, not a single number.
+    - **Importance:** *important* multi-task diagnostic; widely reported in 2024–2026 video VLM papers (Qwen2.5-VL, Apollo, VideoLLaMA3). Metric: top-1 MCQ accuracy by default; per-skill breakdown.
+
+- **MMBench-Video** [@fang2024mmbenchvideo] (2024)
+    - **Domain:** ∼600 YouTube videos × 10 s – 6 min.
+    - **Size & length:** ∼2K open-ended QAs across 26 fine-grained capability dimensions (counting, reasoning, OCR, captioning, …).
+    - **Task:** open-ended VQA scored by **LLM-as-judge** (GPT-4 by default).
+    - **Modalities:** video only.
+    - **Probes:** capability-axis breakdown for VLMs, generation-style (vs MCQ).
+    - **Importance:** *standard* for VLM papers that want a generation-style number alongside MCQ. Metric: LLM-judge score (0–3) averaged per dimension.
+
+- **NeXT-QA** [@xiao2021nextqa] (2021) and **NeXT-GQA** [@xiao2024nextgqa] (2024)
+    - **Domain:** ∼5.4K trimmed YouTube clips of daily-life activity.
+    - **Size & length:** ∼44s avg; ∼52K MCQs in NeXT-QA covering *causal*, *temporal*, *descriptive*; NeXT-GQA adds **temporal grounding** annotations for 5.6K causal/temporal QAs.
+    - **Task:** MCQ VQA (NeXT-QA) and **grounded** MCQ VQA (NeXT-GQA).
+    - **Modalities:** video only.
+    - **Probes:** causal and temporal reasoning specifically (NeXT-QA); whether MCQ accuracy is *grounded* in the actual evidence window (NeXT-GQA).
+    - **Importance:** NeXT-QA *standard*; NeXT-GQA *important* and unique — it measures the *grounding gap*, the fraction of correct MCQs that are also temporally well-grounded. Metric: MCQ accuracy + IoU@0.5 grounding accuracy for NeXT-GQA.
+
+- **STAR** [@wu2024star] (2021)
+    - **Domain:** filtered Charades clips.
+    - **Size & length:** ∼22K MCQs across *interaction / sequence / prediction / feasibility* situations.
+    - **Task:** **situated reasoning** MCQ VQA, with object-relation graphs in the supervision.
+    - **Modalities:** video only.
+    - **Probes:** compositional and counterfactual reasoning, especially the *feasibility* and *prediction* questions which require physical-world common sense.
+    - **Importance:** *standard* — frequently reported by VLM papers as an OOD reasoning test. Metric: MCQ accuracy per situation type.
+
+- **AGQA / AGQA-Decomp** [@grunde2021agqa] (2021)
+    - **Domain:** Charades clips with auto-generated compositional questions.
+    - **Size & length:** ∼9.6M compositional MCQs (filtered subsets of 192K and 3M widely used).
+    - **Task:** compositional, multi-step VQA.
+    - **Modalities:** video only.
+    - **Probes:** compositional reasoning chains over object relations.
+    - **Importance:** *niche* — auto-generated questions are sometimes noisy; cited mainly for compositional ablations. Metric: MCQ accuracy.
+
+- **TVQA / TVQA+** [@lei2018tvqa; @lei2020tvqaplus] (2018 / 2020)
+    - **Domain:** clips from 6 popular TV shows (sitcom + medical + crime drama).
+    - **Size & length:** ∼22K clips × 60–90 s; 152K MCQs; TVQA+ adds bounding boxes + frame indices for 29K of those.
+    - **Task:** MCQ VQA (TVQA), grounded MCQ VQA (TVQA+).
+    - **Modalities:** video + **subtitles** (subtitle text is often essential to answer).
+    - **Probes:** dialogue-heavy reasoning where subtitles dominate.
+    - **Importance:** *standard* for subtitle-aware VLMs; metric: MCQ accuracy.
+
+- **ActivityNet-QA** [@yu2019activitynetqa] (2019)
+    - **Domain:** ActivityNet web videos.
+    - **Size & length:** 5.8K videos × ∼2 min, 58K open-ended QAs.
+    - **Task:** **open-ended** VQA (short answers, often single words).
+    - **Modalities:** video only.
+    - **Probes:** generic action-and-object questions over short web videos; the historical open-ended VQA baseline.
+    - **Importance:** *standard but declining* — increasingly replaced by MCQ benchmarks. Metric: accuracy (exact match by GPT-judge), sometimes WUPS.
+
+- **MSRVTT-QA / MSVD-QA** [@xu2017videoqa] (2017)
+    - **Domain:** MSR-VTT and MSVD web clips.
+    - **Size & length:** MSRVTT-QA — 10K clips, 244K QAs; MSVD-QA — 1 970 clips, 50K QAs.
+    - **Task:** open-ended VQA, short clips.
+    - **Modalities:** video only.
+    - **Probes:** very short web-video VQA; historical baseline.
+    - **Importance:** *deprecated for SOTA papers* (saturated, single-frame solvable for most questions) but still reported as a sanity number. Metric: accuracy (GPT-judge or exact match).
+
+- **VideoChatGPT-bench (VCG-Bench)** [@maaz2023videochatgpt] (2023)
+    - **Domain:** subset of ActivityNet videos.
+    - **Size & length:** ∼3K open-ended QAs.
+    - **Task:** generation-style VQA scored on **5 axes** — *correctness of information, detail orientation, contextual understanding, temporal understanding, consistency*.
+    - **Modalities:** video only.
+    - **Probes:** dialogue quality of an end-to-end video chatbot.
+    - **Importance:** *standard* in video-chat papers (VideoChat2, Video-LLaVA, LLaVA-Video). Metric: GPT-judge 1–5 scores per axis.
+
+
+## Temporal Grounding and Moment Retrieval Benchmarks {#sec-bench-moment}
+
+Given a natural-language query, find when the described event occurs.
+The metric of choice is Recall@N at IoU $\tau$ (see @eq-moment-r).
+
+- **Charades-STA** [@gao2017charadessta] (2017)
+    - **Domain:** indoor daily-activity videos from Charades.
+    - **Size & length:** 9 848 videos × ∼30 s, ∼16K query–moment pairs.
+    - **Task:** sentence-conditioned moment retrieval (Video Moment Retrieval / Temporal Moment Localization).
+    - **Modalities:** video only.
+    - **Probes:** mid-length indoor moment retrieval; the canonical introductory grounding benchmark.
+    - **Importance:** *standard* — every temporal grounding paper reports it, though now considered too short and too easy to differentiate modern systems. Metric: R@1 and R@5 at IoU ∈ {0.3, 0.5, 0.7}; mIoU.
+
+- **ActivityNet Captions** [@krishna2017densecaptioning] (2017)
+    - **Domain:** ActivityNet web videos.
+    - **Size & length:** 20K videos × ∼2 min, ∼100K densely annotated event captions (∼3.6 captions per video).
+    - **Task:** **dense video captioning** and (separately) sentence-conditioned **moment retrieval**.
+    - **Modalities:** video only.
+    - **Probes:** longer multi-event narratives; dense captioning evaluates *event detection* + captioning jointly.
+    - **Importance:** *critical* for dense captioning, *standard* for grounding. Metric: dense — CIDEr / METEOR @ tIoU + SODA_c [@fujita2020soda]; grounding — R@N IoU.
+
+- **DiDeMo** [@hendricks2017didemo] (2017)
+    - **Domain:** Flickr web clips, descriptive of everyday scenes.
+    - **Size & length:** ∼10K untrimmed videos × ∼30 s, ∼41K query–moment pairs; moments are **quantised to 5-s bins** (a defining feature).
+    - **Task:** sentence-conditioned moment retrieval.
+    - **Modalities:** video only.
+    - **Probes:** short-clip retrieval with discretised time — simpler metric than continuous IoU.
+    - **Importance:** *standard*; metric: Recall@N over bins, plus mIoU.
+
+- **QVHighlights** [@lei2021qvhighlights] (2021)
+    - **Domain:** ∼10K YouTube vlogs (lifestyle, news, travel) × ∼150 s.
+    - **Size & length:** ∼10K queries with both *moment* annotations (1+ relevant segments per query) and *saliency scores* per 2-s clip.
+    - **Task:** **joint** moment retrieval and highlight detection.
+    - **Modalities:** video only.
+    - **Probes:** the only widely used benchmark that scores moment retrieval *and* highlight ranking in the same dataset.
+    - **Importance:** *critical* for temporal grounding papers since 2022 (Moment-DETR, QD-DETR, TimeChat). Metric: R@1 IoU={0.5, 0.7} + mAP for moments; mAP @ HIT@1 for highlights.
+
+- **TACoS** [@regneri2013tacos] (2013)
+    - **Domain:** cooking videos.
+    - **Size & length:** 127 videos × ∼5 min, ∼17K query–moment pairs.
+    - **Task:** moment retrieval, **long-clip cooking** domain.
+    - **Modalities:** video only.
+    - **Probes:** dense fine-grained step-level grounding within long cooking videos.
+    - **Importance:** *standard*; metric: R@N IoU.
+
+- **HiREST** [@zala2023hirest] (2023)
+    - **Domain:** instructional YouTube videos.
+    - **Size & length:** ∼3.4K videos × 0.5–8 min, multi-step retrieval annotations.
+    - **Task:** **hierarchical** retrieval — moment retrieval *and* step segmentation *and* clip-level retrieval, evaluated jointly.
+    - **Modalities:** video only.
+    - **Probes:** hierarchical-task generalisation; multi-task evaluation.
+    - **Importance:** *emerging* — used by long-video / instructional-video specialists. Metric: R@N for retrieval; step-level F1.
+
+
+## Video Corpus Moment Retrieval (VCMR) {#sec-bench-vcmr}
+
+Strictly a generalisation of moment retrieval: the query is matched
+against *all* moments in *all* videos in a corpus rather than against
+moments in a single given video. The metric is the same (R@N IoU) but
+the corpus size makes retrieval indexing essential.
+
+- **TVR** [@lei2020tvr] (2020) — built from the TVQA TV-show corpus; ∼22K videos × 60–90 s, ∼109K query–moment annotations across visual + subtitle + audio modalities. *Modalities:* video + subtitles + audio. *Probes:* multi-modal moment retrieval; the standard VCMR benchmark since 2020.
+
+- **MAD** (Moment Anything Dataset) [@soldan2022mad] (2022) — ∼650 long movies × ∼110 min from the LSMDC source, ∼384K natural-language queries from movie audio descriptions. *Probes:* moment retrieval over a corpus of *full-length movies*, where most clips are far from any given query. *Importance:* the canonical *long-video* VCMR benchmark.
+
+- **TVR-Ranking** [@lei2020tvr] — a re-scored split of TVR that converts the original retrieval task into a *ranking* problem with relevance judgments, used for evaluating rerankers.
+
+- **MomentSeeker** [@hu2025momentseeker] (2025) — see @sec-bench-long; the modern VCMR-at-scale benchmark.
+
+
+## Captioning and Retrieval Benchmarks {#sec-bench-cap}
+
+The classical text↔video alignment benchmarks. Almost all of them sit
+between *training corpus* and *test set* — the same MSR-VTT collection
+appears as MSRVTT-QA above, as a retrieval test here, and as a generation
+test for video generators.
+
+- **MSR-VTT** [@xu2016msrvtt] (2016)
+    - **Domain:** YouTube clips from 20 categories (music, sports, news, …).
+    - **Size & length:** 10K clips × 10–30 s, 20 captions per clip (200K captions).
+    - **Task:** clip captioning + text↔video retrieval (canonical 1K-A / 1K-B test splits).
+    - **Modalities:** video + audio.
+    - **Probes:** general short-clip caption / retrieval; long-running leaderboard.
+    - **Importance:** *critical* historical benchmark, still reported by every contrastive paper (CLIP4Clip [@luo2022clip4clip], ViCLIP [@wang2024internvid], LanguageBind-Video [@zhu2024languagebind]). Metric: captioning — BLEU-4/METEOR/CIDEr; retrieval — R@1/5/10, median rank, mean rank.
+
+- **VATEX** [@wang2019vatex] (2019)
+    - **Domain:** Kinetics-600 clips re-captioned by humans.
+    - **Size & length:** ∼41K clips × 10 s, ∼826K captions (10 EN + 10 ZH each).
+    - **Task:** clip captioning + retrieval; explicitly **multilingual**.
+    - **Modalities:** video only.
+    - **Probes:** parallel EN/ZH evaluation; the standard multilingual video benchmark.
+    - **Importance:** *standard* for multilingual evaluation; metric: same as MSR-VTT.
+
+- **YouCook2** [@zhou2018youcook2] (2018)
+    - **Domain:** instructional cooking videos from YouTube.
+    - **Size & length:** 2K videos × ∼5.3 min, ∼14K step segments with captions.
+    - **Task:** dense video captioning + step localisation + retrieval.
+    - **Modalities:** video only.
+    - **Probes:** instructional procedural understanding; pre-training signal for cooking-oriented models.
+    - **Importance:** *standard* for instructional-video work (TimeChat [@ren2024timechat], HiREST [@zala2023hirest]). Metric: CIDEr / METEOR @ tIoU.
+
+- **LSMDC** [@rohrbach2017lsmdc] (2017)
+    - **Domain:** movie clips with audio-description tracks (subtitles for the blind).
+    - **Size & length:** ∼118K clips × ∼5 s from 200 movies, 1 caption each.
+    - **Task:** clip captioning, retrieval, and fill-in-the-blank.
+    - **Modalities:** video + audio.
+    - **Probes:** narrative-style descriptions; movie-domain bias.
+    - **Importance:** *standard* but declining; metric: same as MSR-VTT.
+
+- **MSVD** [@chen2011msvd] (2011)
+    - **Domain:** very short YouTube clips of single events.
+    - **Size & length:** 1 970 clips × ∼10 s, ∼80K captions.
+    - **Task:** clip captioning + retrieval.
+    - **Modalities:** video only.
+    - **Probes:** simplest possible single-event captioning.
+    - **Importance:** *deprecated* (saturated); metric: same as MSR-VTT.
+
+- **DiDeMo** (see @sec-bench-moment) — also a standard *retrieval* benchmark in addition to its grounding role; 10K videos, 41K text–video pairs.
+
+
+## Tracking, Detection and Segmentation Benchmarks {#sec-bench-tracking}
+
+Closer to classic computer vision than to video VLMs, but worth listing
+because (i) representation models often pretrain on them and (ii) some
+VLM extensions (e.g. SAM-2, Mol-2Track) compete on them.
+
+- **LaSOT** [@fan2019lasot] (2019) — single-object tracking; 1.4K sequences, mean 84 s; metric: AUC of success plot.
+- **GOT-10k** [@huang2019got10k] (2019) — SOT with class-disjoint train/test (zero-shot tracking); 10K videos; metric: average overlap (AO).
+- **TrackingNet** [@muller2018trackingnet] (2018) — SOT in the wild; 30K training + 511 test sequences; metric: AUC + precision.
+- **MOT17 / MOT20** [@dendorfer2020mot20] (2017 / 2020) — multi-object tracking; pedestrians; metric: **HOTA** [@luiten2021hota] + MOTA.
+- **DanceTrack** [@sun2022dancetrack] (2022) — MOT for dancers (uniform appearance, complex motion); metric: HOTA + AssA — a particularly hard *association* benchmark.
+- **DAVIS-2017** [@ponttuset2017davis] (2017) — semi-supervised VOS, ∼150 sequences × 4 s; metric: $\mathcal{J} \& \mathcal{F}$.
+- **YouTube-VOS** [@xu2018ytbvos] (2018) — semi-supervised VOS at scale; 4K videos; metric: $\mathcal{J} \& \mathcal{F}$ split into *seen* and *unseen* classes.
+- **MeViS** [@ding2023mevis] (2023) — **motion-guided** referring VOS; 2K videos, ∼28K motion-expression queries. *Probes* phrase-level grounding that requires temporal cues (e.g. *"the bird that flies up"*); a strong test for VLM-grounded segmenters. Metric: $\mathcal{J} \& \mathcal{F}$.
+- **V-HICO** [@chao2020vhico] (2020) — *human-object interaction* detection in video; 6K video segments, 244 verb categories. Probes spatio-temporal HOI specifically. Metric: mAP for interaction detection + temporal IoU.
+- **DALY** [@weinzaepfel2016daly] (2016) — **D**aily **A**ction **L**ocalisation in **Y**outube; 510 untrimmed videos × ∼3 min, weakly supervised action localisation. Niche but instructive: weakly supervised setup mirrors what we have at web scale. Metric: video-mAP + frame-mAP.
+
+
+## Egocentric Benchmarks {#sec-bench-ego}
+
+Distinct enough from the third-person setting that it warrants its own
+section. The dominant data source is Ego4D, and most egocentric papers
+report on its native task suite *plus* EgoSchema for long-form
+reasoning (see @sec-bench-long).
+
+- **Ego4D** [@grauman2022ego4d] (2022)
+    - **Domain:** egocentric video from 9 countries, daily activities (cooking, crafts, sport, driving, …).
+    - **Size & length:** **∼3 670 h** across 931 unique camera-wearers, clips up to 10 h.
+    - **Task:** a **5-benchmark suite** — *Episodic Memory*, *Hands-and-Objects*, *Audio-Visual Diarisation*, *Social*, *Forecasting* (each with its own splits and metrics).
+    - **Modalities:** video + audio + IMU + gaze + 3D scans (varies by clip).
+    - **Probes:** generic egocentric understanding at unprecedented scale; the data source for most modern egocentric pretraining.
+    - **Importance:** *critical*; metric: task-dependent (e.g. *Natural Language Queries* — R@1 IoU; *Object State Change Classification* — accuracy).
+
+- **EPIC-Kitchens-100** [@damen2020epickitchens100] (2020)
+    - **Domain:** egocentric kitchen activity (cooking sessions, single-person).
+    - **Size & length:** 100 h, 90K narrated action segments, 97 verbs × 300 nouns.
+    - **Task:** action recognition (verb / noun / verb+noun), action detection, action anticipation, retrieval.
+    - **Modalities:** video + audio + narration.
+    - **Probes:** fine-grained activity recognition in a constrained domain; strong **hand-object interaction** signal.
+    - **Importance:** *critical* for any egocentric encoder (VideoMAE, V-JEPA2, InternVideo2 all report). Metric: top-1 / top-5 accuracy per axis.
+
+- **Charades-Ego** [@sigurdsson2018charadesego] (2018)
+    - **Domain:** the same activities as Charades but filmed simultaneously from third-person and egocentric.
+    - **Size & length:** ∼8K paired video pairs × ∼30 s.
+    - **Task:** action recognition; the canonical dataset for studying **third-person ↔ first-person transfer**.
+    - **Modalities:** video + audio.
+    - **Probes:** view-invariance of learned representations.
+    - **Importance:** *niche but important*; metric: mAP (multi-label) and view-invariance gap.
+
+
+## Pretraining Corpora {#sec-bench-pretrain}
+
+Not test benchmarks — they have no canonical held-out split — but worth
+listing because almost every model in @sec-video-vlms cites at least
+one of them as training data. Quality and scale here dominate
+downstream benchmark scores.
+
+- **HowTo100M** [@miech2019howto100m] (2019) — 136M YouTube-clip / ASR-caption pairs from ∼1.2M instructional videos (∼23 years of video). Noisy by construction; the original "scale beats quality" pretraining corpus.
+- **WebVid-10M** [@bain2021frozen] (2021) — 10M video-caption pairs scraped from a stock-footage site. **Taken down in late 2024 after a copyright dispute**; pre-2024 papers that cite it are increasingly unreproducible. The standard mid-scale captioned-video corpus 2021–2024.
+- **VideoCC3M / VideoCC** [@nagrani2022videocc] (2022) — ∼10M auto-matched (CC3M-derived) caption / video clip pairs; cleaner alternative to HowTo100M.
+- **InternVid / InternVid-10M-FLT** [@wang2024internvid] (2024) — ∼7M videos × ∼234M re-captioned sentences (re-captioned with multimodal-LLM judges). The standard "modern" video-caption corpus, used by ViCLIP, InternVideo2, and many 2024–2026 VLMs.
+- **Panda-70M** [@chen2024panda70m] (2024) — 70M video clips × ∼ 1 caption each; auto-captioned by an ensemble of VLMs and filtered. The largest open captioned-video corpus as of 2026.
+- **HD-VG-130M / HD-VILA-100M** [@xue2022hdvila] (2022) — 100M+ clips at HD resolution for video-language pretraining; useful for higher-resolution work.
+- **VAST-27M** [@chen2023vast] (2023) — 27M video clips with **omni-modality** captions (separate captions describing video, audio, subtitles) — designed for video-audio-language pretraining.
+- **LLaVA-Video-178K** [@li2024llavavideo] (2024) — 178K videos with synthetic dense captions + 1.3M QA pairs; the de facto SFT recipe for late-2024 / 2025 video VLMs (LLaVA-Video-7B, Apollo, VideoLLaMA3 all use it).
+- **ShareGPT4Video** [@chen2024sharegpt4video] (2024) — 40K human + 4.8M GPT-4V detailed video captions; used widely as a *quality* signal on top of larger noisy corpora.
+
+
+## Headline Summary Table {#sec-bench-headline}
+
+The 20-or-so most-used benchmarks across all categories, kept terse so
+the table fits on a screen. The *Use* column says which model family
+typically reports on it.
+
+| Benchmark | Year | Task | Domain | # Videos | Avg length | Use |
+|:----------|:----:|:-----|:-------|---------:|:----------:|:----|
+| Kinetics-400 | 2017 | Action recognition | YouTube actions | 306 K | 10 s | Encoder (saturated) |
+| Kinetics-700 | 2019 | Action recognition | YouTube actions | 650 K | 10 s | Encoder |
+| SSv2 | 2017 | Action recognition (motion) | Tabletop, crowdsourced | 220 K | 4 s | Encoder |
+| AVA | 2018 | Spatio-temporal action det. | Movies | 430 mv. | 15 min | Encoder, detection |
+| Charades | 2016 | Multi-label action | Indoor home | 10 K | 30 s | Encoder |
+| Charades-STA | 2017 | Moment retrieval | Indoor home | 10 K | 30 s | Grounding |
+| QVHighlights | 2021 | Moment retrieval + highlight | YouTube vlogs | 10 K | 2.5 min | Grounding |
+| TVR | 2020 | VCMR (multi-modal) | TV shows | 22 K | 60–90 s | VCMR |
+| MAD | 2022 | VCMR (long-movie) | Movies | 650 | 110 min | Long-video VCMR |
+| ActivityNet Captions | 2017 | Dense captioning + grounding | Web | 20 K | 2 min | Captioning, grounding |
+| MSR-VTT | 2016 | Captioning + retrieval | YouTube | 10 K | 15 s | Contrastive, retrieval |
+| MVBench | 2024 | MCQ VQA (temporal) | Multi-source short clips | ∼4 K | < 30 s | **Decoder VLM (critical)** |
+| TVBench | 2024 | MCQ VQA (true temporal) | MVBench-filtered | ∼2.5 K | < 30 s | Decoder VLM |
+| TempCompass | 2024 | MCQ VQA (temporal pairs) | Hand-edited | ∼500 | < 30 s | Decoder VLM |
+| Perception Test | 2023 | Multi-task diagnostic | Scripted lab | 11.6 K | 23 s | Decoder VLM |
+| NeXT-QA | 2021 | MCQ VQA (causal/temporal) | Daily-life | 5.4 K | 44 s | Decoder VLM |
+| NeXT-GQA | 2024 | Grounded MCQ VQA | Daily-life | ∼1 K | 44 s | Decoder VLM, grounding |
+| Video-MME | 2024 | MCQ VQA (short→long) | 6-genre YouTube | 900 | 11 s – 1 h | **Decoder VLM (critical)** |
+| MMBench-Video | 2024 | Open-ended VQA (LLM-judge) | YouTube | ∼600 | 10 s – 6 min | Decoder VLM |
+| LongVideoBench | 2024 | Long MCQ VQA + subs | Web | 3.8 K | 8 s – 1 h | **Long-video VLM (critical)** |
+| MLVU | 2024 | Multi-task long VQA | Multi-genre | 1.7 K | 3 min – 2 h | Long-video VLM |
+| EgoSchema | 2023 | Long MCQ VQA (egocentric) | Egocentric (Ego4D) | 5 K Q | 3 min | Long-video + ego VLM |
+| Ego4D suite | 2022 | 5-task egocentric suite | Egocentric | ∼3.7 K h | 30 s – 10 h | Egocentric encoder |
+| EPIC-Kitchens-100 | 2020 | Action / detection / anticip. | Egocentric (kitchen) | 100 h | hours | Egocentric encoder |
+| MeViS | 2023 | Referring VOS (motion) | Web | 2 K | ∼12 s | VOS-VLM |
+
+: Headline benchmark summary across all video understanding tasks. {#tbl-video-bench-headline}
+
+
+## Choosing a Benchmark: Practical Recommendations {#sec-choosing-benchmark}
+
+The benchmark choice is forced by *two* things — what task we want to
+prove and what budget we have. The recommendations below reflect a
+specific model trajectory: an autoregressive image-LM in the
+Molmo / Qwen2.5-VL line, first extended to video frames, later turned
+into a contrastive representation model via token-average +
+contrastive head.
+
+### Stage 1 — autoregressive image-LM extended to video {.unnumbered}
+
+Five-benchmark suite, ordered by *priority*:
+
+1. **MVBench [@li2024mvbench].** Short-clip MCQ over 20 temporal-reasoning task types. The fastest, cheapest test that proves the model has *any* temporal understanding above a frame-bag baseline. Run this first.
+2. **Video-MME [@fu2024videomme]** (full + short split). The de facto industry-standard video VLM benchmark; lets us position against Qwen2.5-VL / InternVL3 / LLaVA-OneVision on a single axis. Report both with-subtitles and no-subtitles.
+3. **TempCompass [@liu2024tempcompass]** (or TVBench [@cores2024tvbench]). A *paired-clip* test that catches the "looks at one frame and guesses" failure mode. Pick TempCompass for clarity, TVBench if we want to share an axis with VideoChat2 and Qwen2.5-VL.
+4. **Perception Test [@patraucean2023perceptiontest]** (validation split, MCQ only). Diagnostic-style breakdown into Memory / Abstraction / Physics / Semantics × Descriptive / Explanatory / Predictive / Counterfactual; tells us *where* the model is weak.
+5. **LongVideoBench [@wu2024longvideobench]** (validation, MCQ only). Only if we have decided to invest in long-context training; otherwise expect near-chance on the > 15 min split. Defers to Video-MME-long if budget is tight.
+
+What we are explicitly **not** running first:
+
+- No K400 / SSv2 — these are encoder benchmarks. We will get a number from K400 zero-shot if we ever turn the model into a representation model in Stage 2; otherwise it tells us very little about the autoregressive head.
+- No MSRVTT-QA / MSVD-QA — generation-style, saturated, and replaced by MCQ benchmarks above.
+- No ActivityNet-QA — same, with one exception: cite it once for continuity with the older video-chat lineage.
+
+### Stage 2 — representation model (token-average + contrastive head) {.unnumbered}
+
+Five-benchmark suite for the contrastive variant:
+
+1. **Kinetics-400 zero-shot [@kay2017kinetics].** The canonical zero-shot action-classification number. Compare to ViCLIP and InternVideo2.
+2. **MSR-VTT 1K-A retrieval [@xu2016msrvtt].** Both directions (text → video and video → text), R@1/5/10. The default retrieval leaderboard.
+3. **DiDeMo retrieval [@hendricks2017didemo].** Shorter clips, simpler IoU bins; pair with MSR-VTT.
+4. **Charades-STA moment retrieval [@gao2017charadessta]** (if the representation supports temporal grounding via similarity-over-time). R@1 IoU={0.5, 0.7}.
+5. **SSv2 zero-shot or linear-probe [@goyal2017ssv2].** The motion-heavy counterpoint to K400 — if a representation has *not* learned motion, this is where it shows. Skip if the model is purely frame-pooled (it will score at chance by design).
+
+If we add a long-video retrieval/grounding axis later, the canonical
+pair is **EgoSchema** (long-form egocentric MCQ) and
+**ActivityNet-Captions retrieval** (medium-length narrated web).
+For *corpus-scale* moment retrieval, the canonical pair is **TVR**
+(short-form, multi-modal) and **MAD** (long-form movie).
+
+
+## 2026 Trends in Video Benchmarks {#sec-bench-trends}
+
+A compressed read of the field as the chapter is being written:
+
+- **Saturated, still reported anyway:** K400 (encoders > 90 % top-1), UCF-101, HMDB-51, MSVD-QA. These remain on every results table for continuity, but moving the needle on them no longer signifies a real capability gain.
+- **The 2024–2026 short-clip de facto trio:** **MVBench + Video-MME + Perception Test.** Almost every video VLM paper from 2025 onwards reports all three; if a benchmark is missing from a paper it is usually because the authors didn't like the result.
+- **Long-video has consolidated:** **LongVideoBench + Video-MME-long + MLVU** form the de facto long-video trio. LVBench and HourVideo are the dataset-papers' newer hour-scale tests, used mainly by long-video specialists.
+- **The "true temporal" wave:** TVBench, TempCompass, and Vinoground exist specifically because most 2023–2024 video VLMs can answer MVBench-style questions from a single frame or from world knowledge. Expect any 2026 paper that claims temporal understanding to report at least one of these.
+- **Egocentric has its own axis:** EgoSchema (long-form) + EPIC-Kitchens-100 (fine-grained) + Ego4D NLQ are the canonical trio; if a paper claims egocentric understanding it has to hit all three.
+- **The grounded-MCQ frontier:** NeXT-GQA's *grounding gap* — the fraction of correct MCQs that are also temporally well-grounded — is the most informative single number for "does the model actually know *when* the answer is?". The field is collectively bad at this and that is where the next gains will come from.
+- **VCMR at scale:** TVR remains the standard, but MAD and MomentSeeker have moved the frontier to long-form / multi-modal queries. Combined with the rise of LLM-based rerankers (UniME-V2 [@gu2025unimev2]), 2025–2026 sees retrieval pipelines become two-stage (coarse first-stage embedding retrieval → LLM cross-encoder reranker) rather than single-stage.
+- **Pretraining-corpus shake-up:** the take-down of WebVid-10M in 2024 forced a switch to InternVid / Panda-70M / LLaVA-Video-178K. Quality + re-captioning has displaced raw scale as the dominant axis; expect 2026 papers to spend pages on data composition rather than architecture.
+- **What is *not* reported and probably should be:** open-ended captioning under SODA_c (only ActivityNet-Captions and YouCook2 do this routinely); spatio-temporal grounding for VLMs (no good benchmark in 2026); fairness/cultural-coverage of egocentric data outside North America and Europe (Ego-Exo4D partially addresses this, an emerging story).

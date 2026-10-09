@@ -1,5 +1,936 @@
+# Diffusion Models
+
+## Introduction and Intuition
+
+**Diffusion models** generate data by learning to reverse a gradual noising process.
+Instead of directly mapping noise to data—as in GANs—or compressing and decoding data as in VAEs, 
+diffusion models treat generation as a sequence of small denoising steps. 
+Each step is simple, which makes the overall learning problem stable and well-behaved.
+
+**Core idea**: 
+
+1. **Forward process**: Add Gaussian noise to data over $T$ steps until it becomes nearly pure noise. 
+This process is analytically tractable.
+2. **Reverse process**: Train a model to remove small amounts of noise at each step, 
+gradually reconstructing samples from the data distribution.
 
 
-## Diffusion Models
 
 
+## Forward Diffusion Process
+
+### Noise Schedule
+
+Forward diffusion is a discretized stochastic Markov process 
+with transition probability at time $t$ given by:
+
+$$q(x_t | x_{t-1}) = \mathcal{N}(x_t; \sqrt{1-\beta_t} x_{t-1}, \beta_t I)$$
+
+where $\beta_t \in (0, 1)$ is the **noise schedule**, 
+controlling how much Gaussian noise is added at each step.
+
+Equivalently, using a reparameterization:
+$$ \boxed{x_t = \sqrt{1-\beta_t} x_{t-1} + \sqrt{\beta_t} \epsilon_{t-1}, 
+\quad \, \mathbf{\epsilon_{t-1} \sim \mathcal{N}(0, I)}}$$
+
+Because each state depends only on the previous, the full forward process factorizes as a Markov chain:
+ $$q(x_{1:T} | x_0) = \prod_{t=1}^T q(x_t | x_{t-1})$$
+
+---
+
+### Closed-Form Forward Process
+
+
+The forward diffusion process allows **direct sampling of $\mathbf{x_t}$ from $\mathbf{x_0}$** in a single step — no need to iterate through all intermediate steps. Define: $$\alpha_t = 1 - \beta_t \text{ and } \bar{\alpha}_t = \prod_{s=1}^t \alpha_s$$
+
+**Closed form**:
+$$q(x_t | x_0) = \mathcal{N}(x_t; \sqrt{\bar{\alpha}_t} x_0, (1 - \bar{\alpha}_t) I)$$
+
+**Reparameterization (sampling in one step)**:
+$$\boxed{x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t} \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)}$$
+
+**Intuition**: 
+
+* As $t \to T$, $\bar{\alpha}_t \to 0$, so $x_T \approx \mathcal{N}(0, I)$ — i.e., pure noise.
+* The forward process smoothly interpolates between the data $x_0$ and standard Gaussian noise.
+
+**Noise schedule design**: 
+
+* **Linear**: $\beta_t = \beta_{\min} + (t/T)(\beta_{\max} - \beta_{\min})$, &nbsp; e.g., 
+$\beta_1 = 10^{-4}, \beta_T = 0.02$
+* **Cosine**: Slower increase at endpoints, improved for high-resolution images
+
+---
+
+## Reverse Diffusion Process
+
+### Theory
+
+The reverse diffusion process aims to invert the forward noising process.
+
+For sufficiently small $\beta_t$, the reverse transition is approximately Gaussian:
+$$p_\theta(x_{t-1} | x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t), \Sigma_\theta(x_t, t))$$
+
+The full reverse process is a Markov chain starting from pure noise:
+$$p_\theta(x_{0:T}) = p(x_T) \prod_{t=1}^T p_\theta(x_{t-1} | x_t), \quad \text{where } p(x_T) = \mathcal{N}(0, I)$$
+
+
+---
+
+### Training 
+### DDPM (Denoising Diffusion Probabilistic Model, 2020) {.unnumbered .unlisted}
+
+The goal of training is to **learn a network that can denoise** $x_t$ and approximate the reverse process.
+
+**Intuition**:
+
+* At each timestep $t$, we generate $x_t$ from $x_0$ by adding known Gaussian noise.
+* The network $\epsilon_\theta(x_t, t)$ is trained to **predict that exact noise.**
+* Once we have this noise estimate, we can plug it into the analytic reverse-mean formula
+$\mu_\theta(x_t, t)$ to obtain a slightly denoised estimate of $x_{t-1}$ during sampling.
+
+
+
+**Reverse mean used in sampling:**:
+
+$$
+\mu_\theta(x_t, t) = \frac{1}{\sqrt{\alpha_t}}\Big(x_t - \frac{\beta_t}{\sqrt{1-\bar{\alpha}_t}} \epsilon_\theta(x_t, t)\Big)
+$$
+
+**Training objective**:
+
+* Full ELBO objective (like in VAEs): 
+$$\mathcal{L}_{\text{VLB}} = \mathbb{E}_q\left[D_{\text{KL}}(q(x_T|x_0) \| p(x_T)) + \sum_{t=2}^T D_{\text{KL}}(q(x_{t-1}|x_t, x_0) \| p_\theta(x_{t-1}|x_t)) - \log p_\theta(x_0|x_1)\right]$$
+
+
+* Simplified, practical objective (predict noise directly):
+
+$$\boxed{\mathcal{L}_{\text{simple}} = \mathbb{E}_{t \sim \text{Uniform}(1,T), x_0, \epsilon}\left[\|\epsilon - \epsilon_\theta(x_t, t)\|^2\right]}$$
+
+where $x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1-\bar{\alpha}_t} \epsilon$.
+
+---
+
+### Sampling
+
+Once trained, the reverse process can generate samples by starting from pure Gaussian noise 
+$x_T \sim \mathcal{N}(0, I)$ and iteratively applying the learned transitions:
+$$
+x_{t-1} = \mu_\theta(x_t, t) + \sigma_t z, \quad z \sim \mathcal{N}(0, I)
+$$
+
+ - Repeat this from $t=T$ down to $t=1$ to obtain $x_0$, a sample from the learned data distribution.
+
+ - Different noise schedules or accelerated samplers (e.g., DDIM) can be used to reduce the number of steps or improve sample quality.
+
+
+---
+
+### Algorithms
+
+**Training Algorithm**:
+```python
+# Training
+for x_0 in dataloader:
+    # Sample timestep and noise
+    t ~ Uniform(1, T)
+    ε ~ N(0, I)
+    
+    # Forward process (closed form)
+    x_t = sqrt(α̅_t) * x_0 + sqrt(1 - α̅_t) * ε
+    
+    # Predict noise
+    ε_pred = ε_θ(x_t, t)
+    
+    # Loss: MSE between true and predicted noise
+    loss = ||ε - ε_pred||²
+    
+    # Update network
+    θ ← θ - η ∇_θ loss
+```
+
+**Network architecture**: Typically a time-conditional U-Net with:
+
+- Timestep embeddings (sinusoidal or learned)
+- Self-attention at lower resolutions (16×16, 8×8)
+- Residual blocks with group normalization
+- Skip connections between encoder and decoder
+
+---
+
+**Sampling Algorithm**:
+
+$$x_{t-1} = \mu_\theta(x_t, t) + \sigma_t z, \quad z \sim \mathcal{N}(0, I)$$
+
+```python
+# Sampling
+x_T ~ N(0, I)
+
+for t = T, T-1, ..., 1:
+    if t > 1:
+        z ~ N(0, I)
+    else:
+        z = 0  # No noise at final step
+    
+    # Predict noise
+    ε_pred = ε_θ(x_t, t)
+    
+    # Compute mean
+    μ = (1/sqrt(α_t)) * (x_t - (β_t/sqrt(1-α̅_t)) * ε_pred)
+    
+    # Compute variance (can be learned or fixed)
+    σ_t = sqrt(β_t)  # or sqrt(β̃_t) = sqrt((1-α̅_{t-1})/(1-α̅_t) * β_t)
+    
+    # Sample x_{t-1}
+    x_{t-1} = μ + σ_t * z
+
+return x_0
+```
+
+**Cost**: Requires $T$ forward passes (typically $T = 1000$) → slow compared to GANs (1 pass).
+
+
+---
+
+
+## Improvements and Variants
+
+### DDIM (Denoising Diffusion Implicit Models, 2021)
+
+**Problem**: DDPM requires many sampling steps ($T \sim 1000$), making image generation quite slow. 
+
+
+**Key idea**: DDIM reformulates the reverse diffusion process to allow deterministic sampling 
+and arbitrary timestep skipping, while preserving the same marginal distributions $q(x_t \mid x_0)$.
+
+
+**Deterministic reverse sampling** (setting $\sigma_t = 0$):
+$$x_{t-1} = \sqrt{\bar{\alpha}_{t-1}} \underbrace{\left(\frac{x_t 
+- \sqrt{1-\bar{\alpha}_t}\epsilon_\theta(x_t, t)}{\sqrt{\bar{\alpha}_t}}\right)}_{\text{predicted } x_0} 
++ \sqrt{1-\bar{\alpha}_{t-1}} \epsilon_\theta(x_t, t)$$
+
+* Here, $x_{t-1}$ is expressed in terms of $x_t$ and the predicted $\hat{x}_0$.
+* This formulation makes it **mathematically consistent** to skip multiple timesteps (e.g., from $t$ to $t-S$) without iterating through all intermediate steps.
+
+
+**Benefits**:
+
+- **Faster sampling**: Can reduce the number of steps from $T$ to $S \ll T$ (e.g. 50 instead of 1000 steps)
+- **Deterministic**: Same initial noise $x_T$ always produces the same final image
+- **Inversion**: Can encode images back into latent codes
+
+**Trade-offs**:
+
+* **Potential quality degradation**: Skipping many steps may slightly reduce image fidelity compared to full-step DDPM.
+* **Reduced stochastic diversity**: Deterministic sampling eliminates randomness, so multiple runs produce the same image.
+
+**Optional tip**: For partial stochasticity, a multiplicative factor $\eta \in [0,1]$ can scale the variance,
+ allowing a **continuum between fully deterministic (DDIM, $\eta=0$) and stochastic DDPM ($\eta=1$)**.
+
+---
+
+## Conditional Image Generation
+
+### Score-Based View
+
+Diffusion models can be interpreted as learning the **score function** $\nabla_x \log p(x)$ 
+rather than the density itself. This connection enables principled conditioning approaches.
+
+**Score formulation**: From the forward process, the unconditional score at timestep $t$ is:
+$$\nabla_{x_t} \log p(x_t) = -\frac{1}{\sqrt{1-\bar{\alpha}_t}} \epsilon_\theta(x_t, t)$$
+
+**Conditional generation**: To sample from $p(x|y)$ where $y$ is conditioning (class, text), we need the conditional score $\nabla_x \log p(x|y)$.
+By **Bayes' theorem**:
+$$\nabla_x \log p(x|y) = \nabla_x \log p(x) + \nabla_x \log p(y|x)$$
+
+This suggests two different approaches for conditional generation: use a classifier to model $p(y|x)$ **(classifier guidance)**, or learn both terms jointly **(classifier-free guidance)**.
+
+---
+
+### Classifier Guidance 
+
+**Method** [@dhariwal2021diffusion]: Train a separate classifier $p_\phi(y|x_t)$
+ on noisy images at all noise levels $t$.
+
+**Guided score**:
+$$\nabla_{x_t} \log p(x_t|y) = \nabla_{x_t} \log p(x_t) + w \cdot \nabla_{x_t} \log p_\phi(y|x_t)$$
+
+where $w$ is the **guidance scale** controlling conditioning strength.
+
+
+
+**Training**:
+
+1. Train unconditional diffusion model $\epsilon_\theta(x_t, t)$
+2. Separately train classifier $p_\phi(y|x_t)$ on noisy images
+3. **At sampling**, combine both using guidance scale $w$. For noise prediction, the guided update is:
+$$\boxed{\tilde{\epsilon}_\theta(x_t, t, y) = \epsilon_\theta(x_t, t) - w\sqrt{1-\bar{\alpha}_t} \nabla_{x_t} \log p_\phi(y|x_t)}$$
+
+**Limitations**:
+
+- Requires training a separate classifier robust to noisy inputs.
+- Classifier must be trained for each noise level $t$.
+- Computationally expensive (extra gradient computation per step).
+
+---
+
+### Classifier-Free Guidance
+
+
+**Key insight** [@ho2022classifier]: Learn both conditional and unconditional models **jointly** in a single network, eliminating the need for a separate classifier.
+
+**Derivation**: Rewrite the conditional term from Bayes' theorem:
+$$\nabla_x \log p(y|x) = \nabla_x \log p(x|y) - \nabla_x \log p(x)$$
+
+Substituting into the conditional score:
+$$\nabla_x \log p(x|y) = \nabla_x \log p(x) + w[\nabla_x \log p(x|y) - \nabla_x \log p(x)]$$
+
+Rearranging:
+$$\nabla_x \log p(x|y) = (1-w)\nabla_x \log p(x) + w \nabla_x \log p(x|y)$$
+
+**In terms of noise prediction**:
+$$\boxed{\tilde{\epsilon}_\theta(x_t, t, y) = \epsilon_\theta(x_t, t, \emptyset) + w \cdot [\epsilon_\theta(x_t, t, y) - \epsilon_\theta(x_t, t, \emptyset)]}$$
+
+where $\emptyset$ denotes the unconditional (null) condition.
+
+**Training**: Single model learns both conditional and unconditional generation by randomly dropping conditioning $y$ during training (typically 10-20% dropout rate):
+$$\epsilon_\theta(x_t, t, c) \text{ where } c = \begin{cases} y & \text{with prob. } 0.9 \\ \emptyset & \text{with prob. } 0.1 \end{cases}$$
+
+**Guidance scale interpretation**:
+
+- $w = 0$: Unconditional generation
+- $w = 1$: Standard conditional generation  
+- $w > 1$: **Amplified conditioning** (sharper, more aligned with $y$, less diverse)
+
+**Advantages over classifier guidance**:
+
+- No separate classifier needed (simpler training pipeline)
+- Better empirical results
+- Single model handles both conditional and unconditional generation
+
+Classifier-free Guidance is the standard conditional generation approach in most modern 
+text-to-image models (Stable Diffusion, DALL-E 2)
+
+---
+
+### Classifier-Free Guidance (2022)
+
+**Goal**: Generate samples conditioned on class labels or text without training a separate classifier.
+
+**Method**: Train a single model unconditionally and conditionally by randomly dropping conditioning $c$ during training:
+
+$$\epsilon_\theta(x_t, t, c) = \begin{cases}
+\epsilon_\theta(x_t, t, c) & \text{with prob. } p \\
+\epsilon_\theta(x_t, t, \emptyset) & \text{with prob. } 1-p
+\end{cases}$$
+
+**Guided sampling**: Interpolate between conditional and unconditional predictions:
+$$\tilde{\epsilon}_\theta(x_t, t, c) = \epsilon_\theta(x_t, t, \emptyset) + w \cdot (\epsilon_\theta(x_t, t, c) - \epsilon_\theta(x_t, t, \emptyset))$$
+
+where $w$ is the **guidance scale** (typically $w = 7$-$10$).
+
+**Effect**:
+- $w = 0$: Unconditional generation
+- $w = 1$: Standard conditional generation
+- $w > 1$: Stronger conditioning (sharper, more aligned with condition, less diverse)
+
+**Why it works**: Moves away from unconditional distribution toward conditional, amplifying the effect of conditioning.
+
+**Impact**: Enables high-quality text-to-image generation (Stable Diffusion, DALL-E 2) without classifier networks.
+
+---
+
+### Latent Diffusion Models (Stable Diffusion, 2022)
+
+**Problem**: Running diffusion on high-resolution images ($512 \times 512 \times 3$) is computationally expensive.
+
+**Solution**: Run diffusion in **latent space** of a pretrained autoencoder (VAE).
+
+**Architecture**:
+
+1. **Encoder** $\mathcal{E}$: Compress image to latent: $z = \mathcal{E}(x)$ (e.g., $512^2 \times 3 \to 64^2 \times 4$)
+2. **Diffusion model**: Operate on $z$ (much smaller)
+3. **Decoder** $\mathcal{D}$: Reconstruct image: $\hat{x} = \mathcal{D}(z)$
+
+**Training**:
+```python
+# Encode to latent space
+z_0 = Encoder(x)
+
+# Diffusion in latent space
+t ~ Uniform(1, T)
+ε ~ N(0, I)
+z_t = sqrt(α̅_t) * z_0 + sqrt(1 - α̅_t) * ε
+
+# Predict noise in latent space
+ε_pred = UNet(z_t, t, text_embedding)
+
+# Loss
+loss = ||ε - ε_pred||²
+```
+
+**Benefits**:
+
+- **8× memory reduction** (64² vs 512² spatial dimensions)
+- **Faster training and sampling**
+- **Better quality** (learned latent space is more structured)
+
+**Applications**: Stable Diffusion, ImageGen, DALL-E 2 decoder.
+
+---
+
+### Score-Based Models Connection
+
+**Alternative view**: Diffusion models learn the **score function** $\nabla_{x_t} \log q(x_t)$.
+
+**Score matching**: Train model $s_\theta(x_t, t) \approx \nabla_{x_t} \log q(x_t)$.
+
+**Relation to noise prediction**:
+$$\nabla_{x_t} \log q(x_t | x_0) = -\frac{\epsilon}{\sqrt{1-\bar{\alpha}_t}}$$
+
+So predicting noise $\epsilon_\theta$ is equivalent to predicting score (up to scaling).
+
+**Continuous-time formulation**: Stochastic differential equations (SDEs):
+
+- **Forward SDE**: $dx = f(x, t)dt + g(t)dw$
+- **Reverse SDE**: $dx = [f(x, t) - g(t)^2 \nabla_x \log p_t(x)]dt + g(t)d\bar{w}$
+
+**Benefits**: Unified framework, flexible sampling (ODE/SDE), better theoretical understanding.
+
+**Key papers**: Song et al. (2020) Score-Based Generative Modeling, Song et al. (2021) Score-Based SDEs.
+
+---
+
+## Conditioning and Control
+
+### Text-to-Image
+
+**Method**: Cross-attention between image features and text embeddings.
+
+**Architecture** (Stable Diffusion):
+```
+Text → CLIP/T5 → text_embeddings
+
+UNet layers:
+  self_attention(image_features)
+  cross_attention(image_features, text_embeddings)  # Condition here
+  conv/resnet blocks
+```
+
+**Training**: Condition diffusion model on text captions from large datasets (LAION-5B).
+
+---
+
+### ControlNet (2023)
+
+**Goal**: Add spatial control (edges, pose, depth) to pretrained diffusion models **without retraining from scratch**.
+
+**Method**: 
+1. Copy UNet encoder weights to create "control network"
+2. Add conditioning image (edge map, pose, etc.) as input
+3. Inject control features into main UNet via zero-initialized convolutions
+
+**Zero convolution trick**: Initialize final layer with zeros, so initially ControlNet contributes nothing (preserves pretrained model).
+
+**Result**: Precise spatial control while maintaining quality of pretrained model.
+
+**Applications**: Sketch-to-image, pose-to-image, depth-to-image.
+
+---
+
+### IP-Adapter (2023)
+
+**Goal**: Image conditioning via cross-attention (like text, but with images).
+
+**Method**: Add image cross-attention layers parallel to text cross-attention.
+
+**Applications**: Image variations, style transfer, composition.
+
+---
+
+## Comparison with GANs and VAEs
+
+| Aspect | Diffusion | GAN | VAE |
+|--------|-----------|-----|-----|
+| **Sample quality** | ★★★★★ Excellent | ★★★★★ Excellent | ★★★☆☆ Blurry |
+| **Training stability** | ★★★★☆ Stable | ★★☆☆☆ Difficult | ★★★★★ Very stable |
+| **Mode coverage** | ★★★★★ Excellent | ★★☆☆☆ Mode collapse | ★★★★★ Excellent |
+| **Sampling speed** | ★☆☆☆☆ Very slow | ★★★★★ Fast (1 pass) | ★★★★★ Fast (1 pass) |
+| **Likelihood** | ✓ Tractable | ✗ Not computable | ✓ Lower bound |
+| **Controllability** | ★★★★★ Excellent | ★★★☆☆ Good | ★★★★☆ Good |
+| **Latent space** | ✗ No explicit latent | ✓ Direct | ✓ Structured |
+
+**Current state (2024)**: Diffusion models dominate image generation due to quality + diversity + controllability, despite slow sampling.
+
+---
+
+## Practical Training Tips
+
+### Hyperparameters
+
+**Noise schedule**:
+- Linear: $\beta_1 = 10^{-4}$, $\beta_T = 0.02$, $T = 1000$
+- Cosine: Better for high resolution, smoother at endpoints
+
+**Network**:
+- U-Net with self-attention at 16×16, 8×8 resolutions
+- Timestep embedding: sinusoidal + 2-layer MLP
+- Channel multipliers: [1, 2, 4, 8] typical
+
+**Optimizer**:
+```python
+optimizer = Adam(lr=1e-4)  # Or AdamW with weight decay
+ema_model = EMA(model, decay=0.9999)  # Use EMA for sampling
+```
+
+**EMA (Exponential Moving Average)**: Critical for good results. Use EMA weights for sampling, not training weights.
+
+---
+
+### Sampling Strategies
+
+**Trade-offs**:
+- **DDPM** (1000 steps): High quality, diverse, slow
+- **DDIM** (50-100 steps): Faster, deterministic, slightly lower quality
+- **DPM-Solver** / **UniPC**: Fast ODE solvers (10-20 steps)
+
+**Guidance scale tuning**: 
+- Higher ($w = 10$-$15$): More aligned with prompt, less diverse
+- Lower ($w = 5$-$7$): More diverse, may drift from prompt
+
+---
+
+### Monitoring Training
+
+**What to track**:
+1. **Loss curve**: Should decrease steadily (easier than GANs)
+2. **Generated samples**: Visual inspection at regular intervals
+3. **FID score**: Quantitative quality metric
+
+**Validation**: Generate samples at fixed noise seeds to track progress.
+
+**Training time**: ~1 week on 8× A100 for high-quality models (ImageNet 256×256).
+
+---
+
+## Recent Advances (2023-2024)
+
+### DiT (Diffusion Transformer, 2023)
+
+**Key idea**: Replace U-Net with Vision Transformer architecture.
+
+**Architecture**: 
+- Patch embeddings + positional encodings
+- Standard transformer blocks
+- AdaLN (adaptive layer norm) for conditioning
+
+**Results**: Scales better than U-Net, achieves state-of-the-art FID on ImageNet.
+
+---
+
+### Consistency Models (2023)
+
+**Problem**: Diffusion requires many steps even with DDIM.
+
+**Solution**: Train model to map any $x_t$ directly to $x_0$ (one-step generation).
+
+**Method**: Enforce **self-consistency**: $f_\theta(x_t, t) = f_\theta(x_{t'}, t')$ for all $t, t'$ along same trajectory.
+
+**Result**: Single-step generation with competitive quality.
+
+---
+
+### Flow Matching (2023)
+
+**Idea**: Learn vector fields that transport noise to data via **optimal transport**.
+
+**Advantage**: Simpler training (no noise schedule), faster sampling, better likelihood.
+
+**Relation**: Generalizes diffusion models, connects to continuous normalizing flows.
+
+---
+
+### Rectified Flow (2023)
+
+**Improvement**: Use straight-line paths in probability space (not curved SDEs).
+
+**Benefit**: Fewer sampling steps needed, better for distillation.
+
+---
+
+## Applications
+
+### Image Generation
+- **Stable Diffusion**: Text-to-image (latent diffusion + CLIP)
+- **DALL-E 2/3**: Text-to-image (cascaded diffusion)
+- **Midjourney**: Commercial text-to-image
+- **Imagen**: Text-to-image with T5 text encoder
+
+### Image Editing
+- **Instruct-Pix2Pix**: Edit images via text instructions
+- **ControlNet**: Spatial control (edges, pose, depth)
+- **Inpainting**: Fill masked regions
+- **Outpainting**: Extend images beyond boundaries
+
+### Video Generation
+- **Make-A-Video**: Text-to-video
+- **Imagen Video**: High-quality video synthesis
+- **Runway Gen-2**: Video editing
+
+### 3D Generation
+- **DreamFusion**: Text-to-3D via Score Distillation Sampling (SDS)
+- **Point-E**: 3D point cloud generation
+
+### Audio
+- **AudioLDM**: Text-to-audio
+- **DiffWave**: Speech synthesis
+
+---
+
+## Interview Preparation
+
+### Core Concepts Checklist
+
+**Mathematical Foundation**:
+- [ ] Derive forward process closed form: $x_t = \sqrt{\bar{\alpha}_t}x_0 + \sqrt{1-\bar{\alpha}_t}\epsilon$
+- [ ] Explain why we predict noise instead of mean
+- [ ] Understand score matching connection
+- [ ] Derive reverse process from forward
+
+**Training and Sampling**:
+- [ ] DDPM training algorithm
+- [ ] DDIM vs DDPM sampling differences
+- [ ] Classifier-free guidance mechanism
+- [ ] Latent diffusion advantages
+
+**Advanced Topics**:
+- [ ] ControlNet architecture
+- [ ] Score-based SDE formulation
+- [ ] Flow matching basics
+
+---
+
+### Key Interview Questions
+
+**Q1: "Explain the forward and reverse diffusion process. Why is the forward process useful?"**
+
+**Answer**:
+
+**Forward process**: Gradually add Gaussian noise over $T$ steps:
+$$q(x_t | x_{t-1}) = \mathcal{N}(x_t; \sqrt{1-\beta_t}x_{t-1}, \beta_t I)$$
+
+**Key property**: Has closed form—can sample $x_t$ directly from $x_0$:
+$$x_t = \sqrt{\bar{\alpha}_t}x_0 + \sqrt{1-\bar{\alpha}_t}\epsilon, \quad \epsilon \sim \mathcal{N}(0,I)$$
+
+**Reverse process**: Learn to denoise step-by-step:
+$$p_\theta(x_{t-1}|x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t,t), \Sigma_\theta(x_t,t))$$
+
+**Why forward process is useful**:
+1. Closed form enables efficient training (sample any $t$ directly)
+2. Provides training targets (known true noise $\epsilon$)
+3. Ensures $x_T \approx \mathcal{N}(0,I)$ (tractable starting point for sampling)
+
+---
+
+**Q2: "Why do we predict noise $\epsilon$ instead of directly predicting $x_0$ or the mean $\mu$?"**
+
+**Answer**:
+
+**Theoretical reason**: Equivalent formulations have different gradient properties. Predicting noise $\epsilon$ gives the best loss weighting across timesteps.
+
+**From forward process**: $x_t = \sqrt{\bar{\alpha}_t}x_0 + \sqrt{1-\bar{\alpha}_t}\epsilon$
+
+Can rearrange to get mean:
+$$\mu(x_t, t) = \frac{1}{\sqrt{\alpha_t}}\left(x_t - \frac{\beta_t}{\sqrt{1-\bar{\alpha}_t}}\epsilon\right)$$
+
+**Predicting noise advantages**:
+1. Single network output works for all timesteps (noise is same distribution)
+2. Empirically more stable training
+3. Naturally weighted—loss is uniform in $\epsilon$, but implied loss on $x_0$ varies by $t$
+
+**Equivalence**: Predicting $\epsilon$, $x_0$, or $\mu$ are mathematically equivalent (can convert between them), but $\epsilon$ trains best.
+
+---
+
+**Q3: "Explain DDIM. How does it achieve faster sampling?"**
+
+**Answer**:
+
+**Key insight**: DDPM's forward process is not unique. Can design different forward processes with **same marginals** $q(x_t|x_0)$ but different conditionals $q(x_{t-1}|x_t,x_0)$.
+
+**DDIM forward**: Non-Markovian—$q(x_{t-1}|x_t,x_0)$ depends on $x_0$, not just $x_t$.
+
+**Sampling update** (deterministic when $\sigma=0$):
+$$x_{t-1} = \sqrt{\bar{\alpha}_{t-1}}\underbrace{\left(\frac{x_t - \sqrt{1-\bar{\alpha}_t}\epsilon_\theta(x_t,t)}{\sqrt{\bar{\alpha}_t}}\right)}_{\text{predicted }x_0} + \sqrt{1-\bar{\alpha}_{t-1}}\epsilon_\theta(x_t,t)$$
+
+**Why faster**:
+- Can skip timesteps (subsample $\{t_1, t_2, ..., t_S\}$ where $S \ll T$)
+- Each step is deterministic, not stochastic
+- Typically 50-100 steps vs 1000 for DDPM
+
+**Trade-off**: Slightly less diverse samples than DDPM (deterministic), but much faster.
+
+---
+
+**Q4: "What is classifier-free guidance and why is it important?"**
+
+**Answer**:
+
+**Goal**: Generate samples strongly aligned with conditioning (class/text) without training separate classifier.
+
+**Method**: Train single model with conditioning randomly dropped:
+- Train unconditional $\epsilon_\theta(x_t, t, \emptyset)$ and conditional $\epsilon_\theta(x_t, t, c)$ jointly
+
+**Sampling**: Interpolate predictions:
+$$\tilde{\epsilon}_\theta(x_t, t, c) = \epsilon_\theta(x_t, t, \emptyset) + w \cdot (\epsilon_\theta(x_t, t, c) - \epsilon_\theta(x_t, t, \emptyset))$$
+
+**Intuition**: 
+- Difference $(\epsilon_c - \epsilon_\emptyset)$ points toward conditional distribution
+- Scale $w > 1$ amplifies this direction
+- Moves sample away from unconditional, toward conditional
+
+**Impact**: 
+- Enables high-quality text-to-image (Stable Diffusion, DALL-E)
+- No need for separate classifier network (simpler)
+- Controllable trade-off between alignment and diversity via $w$
+
+**Typical values**: $w = 7$-$10$ for text-to-image.
+
+---
+
+**Q5: "Explain latent diffusion. Why is it better than pixel-space diffusion?"**
+
+**Answer**:
+
+**Idea**: Run diffusion in latent space of pretrained autoencoder (VAE), not pixel space.
+
+**Architecture**:
+1. Encoder $\mathcal{E}$: $x \to z$ (e.g., $512^2 \times 3 \to 64^2 \times 4$)
+2. Diffusion: Operate on $z$
+3. Decoder $\mathcal{D}$: $z \to \hat{x}$
+
+**Advantages**:
+1. **Efficiency**: 8× smaller spatial dimensions → 64× less memory
+2. **Speed**: Faster training and sampling
+3. **Quality**: Learned latent space is more semantically structured
+4. **Perceptual loss implicitly included** (VAE decoder trained with perceptual objectives)
+
+**Trade-off**: Adds VAE reconstruction artifacts (usually minor).
+
+**Impact**: Enabled open-source high-resolution generation (Stable Diffusion on consumer GPUs).
+
+---
+
+**Q6: "Compare diffusion models to GANs and VAEs. When would you use each?"**
+
+**Answer**:
+
+**Diffusion**:
+- **Pros**: Best quality + diversity, stable training, excellent mode coverage
+- **Cons**: Very slow sampling (50-1000 steps)
+- **Use when**: Quality and diversity critical, generation time acceptable
+
+**GAN**:
+- **Pros**: Fast sampling (1 step), high quality
+- **Cons**: Training instability, mode collapse, no likelihood
+- **Use when**: Real-time generation needed, willing to handle training difficulty
+
+**VAE**:
+- **Pros**: Fast, stable training, explicit latent space, likelihood
+- **Cons**: Blurry samples (posterior collapse)
+- **Use when**: Need latent manipulation, representation learning, anomaly detection
+
+**Current trend (2024)**: 
+- Diffusion dominant for image generation (quality + diversity)
+- GANs still used in latent diffusion VAE decoders
+- Research on fast diffusion samplers (consistency models, flow matching)
+
+---
+
+**Q7: "How would you speed up diffusion model sampling?"**
+
+**Answer**:
+
+**Approaches** (in order of ease):
+
+**1. DDIM sampling** (easiest):
+- Use 50-100 steps instead of 1000
+- Deterministic sampling allows step skipping
+- Minimal quality loss
+
+**2. Better ODE/SDE solvers**:
+- DPM-Solver, UniPC: 10-20 steps
+- Leverage numerical methods from differential equations
+
+**3. Distillation**:
+- Train student model to match teacher in fewer steps
+- Progressive distillation: 1000 → 500 → 250 → ... → 4 steps
+- Consistency models: Single-step generation
+
+**4. Latent diffusion**:
+- Operate in compressed latent space (8× speedup)
+- Stable Diffusion approach
+
+**5. Architectural improvements**:
+- DiT (transformer-based): Better scaling
+- Efficient attention mechanisms
+
+**Trade-offs**:
+- Fewer steps → faster but slightly lower quality/diversity
+- Distillation → fast but requires teacher model
+- Latent space → efficient but VAE artifacts
+
+**Practical recommendation**: Start with DDIM (50 steps), then explore DPM-Solver if need faster.
+
+---
+
+**Q8: "What is ControlNet and how does it work without retraining the base model?"**
+
+**Answer**:
+
+**Goal**: Add spatial control (edges, pose, depth) to pretrained diffusion model without full retraining.
+
+**Architecture**:
+1. **Copy** pretrained UNet encoder → "control network"
+2. **Add** conditioning image as input to control network
+3. **Inject** control features into main UNet via **zero-initialized** convolutions
+
+**Zero convolution trick**:
+```python
+# Initialize final convolution layer with zeros
+control_output = zero_conv(control_features)  # Initially outputs 0
+main_features = main_features + control_output
+```
+
+Initially contributes nothing (preserves pretrained model), gradually learns control.
+
+**Training**: Only train control network + zero conv layers (freeze main UNet).
+
+**Why it works**:
+- Preserves pretrained model's quality
+- Zero initialization ensures smooth learning
+- Encoder copy provides good features for control
+
+**Applications**: Canny edges, pose skeletons, depth maps, semantic segmentation → image.
+
+---
+
+**Q9: "Explain the connection between diffusion models and score-based models."**
+
+**Answer**:
+
+**Score function**: $\nabla_x \log p(x)$ (gradient of log probability).
+
+**Key insight**: Diffusion models implicitly learn scores.
+
+**Connection**: From forward process, can derive:
+$$\nabla_{x_t} \log q(x_t|x_0) = -\frac{x_t - \sqrt{\bar{\alpha}_t}x_0}{1-\bar{\alpha}_t} = -\frac{\epsilon}{\sqrt{1-\bar{\alpha}_t}}$$
+
+So predicting noise $\epsilon_\theta$ is equivalent to predicting score $s_\theta$ (up to scaling):
+$$s_\theta(x_t, t) = -\frac{\epsilon_\theta(x_t, t)}{\sqrt{1-\bar{\alpha}_t}}$$
+
+**Score-based view**: Train model to estimate $\nabla_x \log p_t(x)$ at all noise levels $t$.
+
+**Continuous time**: Formulate as Stochastic Differential Equations (SDEs):
+- Forward SDE adds noise continuously
+- Reverse SDE removes noise using learned scores
+
+**Advantages of score view**:
+- Unified theoretical framework
+- Flexible sampling (ODE vs SDE)
+- Connection to Langevin dynamics
+
+**Practical impact**: Mostly equivalent, but score perspective enables better samplers (DPM-Solver, flow matching).
+
+---
+
+**Q10: "You're training a diffusion model but samples are blurry. What could be wrong?"**
+
+**Answer**:
+
+**Likely causes**:
+
+**1. Not using EMA model** (most common):
+- EMA (exponential moving average) critical for quality
+- Use EMA weights for sampling, not training weights
+```python
+ema_model = EMA(model, decay=0.9999)
+# Sample with ema_model, not model
+```
+
+**2. Too few sampling steps**:
+- Try increasing from 50 to 250-1000 steps
+- DDIM needs more steps for high quality
+
+**3. Poor noise schedule**:
+- Linear schedule may not be optimal for high resolution
+- Try cosine schedule (smoother at endpoints)
+
+**4. Model undertrained**:
+- Diffusion needs long training (days on GPUs)
+- Check if loss still decreasing
+
+**5. Variance schedule wrong**:
+- If predicting variance, check initialization
+- Can fix variance to $\beta_t$ or $\tilde{\beta}_t$ initially
+
+**6. Conditioning issues** (if conditional):
+- Check cross-attention is working
+- Verify text embeddings have correct dimensionality
+
+**Debugging steps**:
+1. Verify EMA is enabled
+2. Generate with more steps (1000)
+3. Check training loss curve
+4. Compare to pretrained model samples
+
+---
+
+### Company-Specific Context
+
+**Anthropic**: 
+- Focus on safety, controllability, interpretability
+- Diffusion useful for: data augmentation, understanding representations
+- Interest in: controllable generation, alignment
+
+**OpenAI**:
+- DALL-E 2/3 (cascaded diffusion + CLIP)
+- Focus on text-to-image, safety, prompt alignment
+
+**Stability AI**:
+- Stable Diffusion (open-source latent diffusion)
+- Focus on efficiency, democratization
+
+**NVIDIA**:
+- DiT (diffusion transformers)
+- Focus on efficiency, GPU optimization, fast sampling
+
+**Google DeepMind**:
+- Imagen (high-quality text-to-image)
+- Research on theoretical foundations, SDE formulations
+
+---
+
+### Further Reading
+
+**Foundational Papers**:
+- [Denoising Diffusion Probabilistic Models](https://arxiv.org/abs/2006.11239) (DDPM, Ho et al., 2020)
+- [Denoising Diffusion Implicit Models](https://arxiv.org/abs/2010.02502) (DDIM, Song et al., 2021)
+- [Score-Based Generative Modeling through SDEs](https://arxiv.org/abs/2011.13456) (Song et al., 2021)
+
+**Key Improvements**:
+- [Classifier-Free Guidance](https://arxiv.org/abs/2207.12598) (Ho & Salimans, 2022)
+- [High-Resolution Image Synthesis with Latent Diffusion](https://arxiv.org/abs/2112.10752) (Stable Diffusion, Rombach et al., 2022)
+- [Scalable Diffusion Models with Transformers](https://arxiv.org/abs/2212.09748) (DiT, Peebles & Xie, 2023)
+
+**Control and Conditioning**:
+- [Adding Conditional Control to Text-to-Image Diffusion](https://arxiv.org/abs/2302.05543) (ControlNet, Zhang et al., 2023)
+- [Prompt-to-Prompt Image Editing](https://arxiv.org/abs/2208.01626) (Hertz et al., 2022)
+
+**Fast Sampling**:
+- [Consistency Models](https://arxiv.org/abs/2303.01469) (Song et al., 2023)
+- [Flow Matching for Generative Modeling](https://arxiv.org/abs/2210.02747) (Lipman et al., 2023)
+
+---
+
+This chapter provides a rigorous yet intuitive understanding of diffusion models, covering theory, training, key innovations, and practical considerations for research roles in top AI labs.

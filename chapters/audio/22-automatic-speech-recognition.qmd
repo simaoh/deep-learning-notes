@@ -1,0 +1,1046 @@
+# Automatic Speech Recognition {#sec-asr}
+
+Automatic Speech Recognition (ASR) maps a spoken utterance to its written
+transcript. Given a discrete-time audio signal
+$\mathbf{x} = (x_1, \ldots, x_T) \in \mathbb{R}^{T}$, the task is to produce a
+token sequence $\mathbf{y} = (y_1, \ldots, y_U)$ with $y_u \in \mathcal{V}$,
+where $\mathcal{V}$ is a finite output vocabulary (characters, subword units, or
+words).
+
+Written as a probabilistic inference problem this is simply
+
+$$
+\hat{\mathbf{y}} = \arg\max_{\mathbf{y} \in \mathcal{V}^{*}} P(\mathbf{y} \mid \mathbf{x})
+$$ {#eq-asr-argmax}
+
+which looks unremarkable until one notices the shapes involved. A ten-second
+utterance at $f_s = 16\,000$ Hz gives $T = 160\,000$ samples, or $T_{\text{frames}} = 1000$
+spectrogram frames; the corresponding transcript is perhaps $U = 25$ tokens. The
+input is longer than the output by roughly two orders of magnitude, the ratio
+varies with speaking rate, and — crucially — **the training data does not tell
+us which input frames produced which output token**. Transcripts are unaligned.
+
+Almost every architectural decision in the history of ASR is a different answer
+to that one difficulty. This chapter follows the field from the noisy-channel
+pipeline that dominated until roughly 2012, through the hybrid DNN-HMM era,
+into the three end-to-end model families that replaced it, and finally to
+today's large weakly-supervised and LLM-decoder systems. It closes with
+evaluation, which turns out to be more contested than the modelling.
+
+::: {.callout-note}
+## Reading order
+
+This is the first audio chapter in the book, and @sec-asr-features introduces
+the signal representations used throughout the remaining audio chapters. The
+alignment machinery developed in @sec-e2e (CTC in particular) reappears in
+speaker diarization (@sec-speaker-diarization), speech translation
+(@sec-st), and speech synthesis (@sec-tts), so it is worth reading carefully
+even if ASR itself is not your target application.
+:::
+
+
+## Notation and Key Concepts {#sec-asr-notation}
+
+### Audio Representations {#sec-asr-features}
+
+A digital audio waveform is obtained by sampling a continuous pressure signal at
+a fixed *sample rate* $f_s$ — conventionally 16 kHz for speech, since the
+phonetically relevant energy lies below the 8 kHz Nyquist limit. Each
+$x_t \in \mathbb{R}$ is an amplitude at discrete time index $t$.
+
+Raw waveforms are rarely fed directly to a model. The signal is quasi-stationary
+only over short windows (10–30 ms), and its most salient perceptual structure is
+spectral rather than temporal. The standard front-end therefore converts
+$\mathbf{x}$ into a sequence of spectral feature vectors.
+
+| Concept | Notation | Definition |
+|:--------|:---------|:-----------|
+| **Raw waveform** | $\mathbf{x} \in \mathbb{R}^{T}$ | $T$ amplitude samples at rate $f_s$. |
+| **Mel spectrogram** | $\mathbf{M} \in \mathbb{R}^{F \times T_{\text{frames}}}$ | Time–frequency representation with the frequency axis warped to the Mel scale ($F$ bands, typically 80). |
+| **Log-Mel frame** | $\mathbf{x}_t \in \mathbb{R}^{F}$ | One column of $\log \mathbf{M}$: the log-energy in $F$ Mel bands at frame $t$. With a 25 ms window and 10 ms hop, $T_{\text{frames}} \approx 100 \times \text{duration (s)}$. |
+| **Encoder output** | $\mathbf{h}_t \in \mathbb{R}^{d}$ | Contextualised acoustic representation at encoder frame $t$, after subsampling. |
+| **Frame rate** | — | Encoder output resolution. Classical systems: 10 ms. Conformer: 40 ms. Fast Conformer: 80 ms. |
+
+: Audio representation terminology. {#tbl-asr-audio-repr}
+
+**From waveform to log-Mel features.** The pipeline is:
+
+1. **Framing and windowing.** Slice $\mathbf{x}$ into overlapping frames
+   ($\sim$25 ms, 10 ms hop) and apply a Hann or Hamming window to suppress
+   spectral leakage at the frame edges.
+2. **Short-Time Fourier Transform.** Take the magnitude spectrum of each frame,
+   producing a linear-frequency spectrogram. Phase is discarded.
+3. **Mel filterbank.** Project onto $F$ triangular filters spaced on the Mel
+   scale,
+   $$
+   \text{Mel}(f) = 2595 \log_{10}\!\left(1 + \frac{f}{700}\right),
+   $$ {#eq-mel}
+   an approximation of the cochlea's roughly logarithmic frequency resolution.
+4. **Logarithm.** Compress the dynamic range, yielding $\log \mathbf{M}$. This
+   also turns multiplicative channel effects (microphone response, room
+   colouration) into additive offsets, which downstream models can normalise
+   away.
+
+Historically this was followed by a Discrete Cosine Transform to produce
+**MFCCs** [@davis1980mfcc], decorrelating the filterbank outputs so that
+Gaussian mixtures with diagonal covariance remained tractable. Neural networks
+have no such constraint, so modern systems feed log-Mel filterbanks directly and
+the DCT has been quietly dropped. It is a small but instructive example of a
+feature-engineering step that existed only to serve a modelling assumption that
+no longer holds.
+
+::: {.callout-note}
+Mel filterbank features have survived every architectural revolution since 1980.
+Whisper, Conformer, and wav2vec 2.0's convolutional front-end all consume either
+log-Mel input or a learned analogue of it. Attempts to learn the front-end from
+raw waveform (SincNet, LEAF, and the convolutional stacks in self-supervised
+models) work, but the gains over a well-tuned filterbank are consistently small.
+:::
+
+### ASR Terminology
+
+| Concept | Symbol | Definition |
+|:--------|:-------|:-----------|
+| **Output vocabulary** | $\mathcal{V}$ | Characters, subword units (BPE/wordpiece), or whole words. Modern systems almost always use subwords, typically 256–1024 units. |
+| **Blank symbol** | $\varnothing$ | Special output meaning "emit nothing at this frame". Central to CTC and RNN-T. |
+| **Alignment / path** | $\boldsymbol{\pi} \in (\mathcal{V} \cup \{\varnothing\})^{T}$ | A frame-level label sequence that collapses to $\mathbf{y}$. |
+| **Acoustic model** | $P(\mathbf{x} \mid \mathbf{y})$ | Classical component scoring how well audio matches a hypothesised transcript. |
+| **Language model** | $P(\mathbf{y})$ | Prior over token sequences, trained on text alone. |
+| **Internal LM** | $P_{\text{ILM}}(\mathbf{y})$ | The text prior an end-to-end model learns implicitly from its paired training data. |
+| **Streaming** | — | Emitting tokens from a causal encoder with bounded latency, before the utterance ends. |
+
+: ASR terminology. {#tbl-asr-notation}
+
+### Evaluation Terminology
+
+| Concept | Definition |
+|:--------|:-----------|
+| **WER** | Word Error Rate: $(S + D + I)/N_{\text{ref}}$ over the optimal Levenshtein alignment (see @sec-wer). |
+| **CER** | Character Error Rate. Used for languages without orthographic word boundaries (Mandarin, Japanese, Thai). |
+| **RTFx** | Inverse real-time factor: seconds of audio processed per second of compute. Higher is faster. |
+| **B-WER / U-WER** | WER restricted to words that are (respectively, are not) in a supplied bias list. See @sec-biasing. |
+| **cpWER** | Concatenated minimum-permutation WER for multi-speaker audio (see @sec-cpwer). |
+| **Text normalisation** | The transformation applied to references and hypotheses before scoring — casing, punctuation, numbers, contractions. Not a detail; see @sec-normalisation. |
+
+: Evaluation terminology. {#tbl-asr-eval-notation}
+
+
+## The Alignment Problem {#sec-alignment}
+
+Before any architecture, it is worth stating precisely what makes ASR harder
+than a typical sequence-classification problem.
+
+We want $P(\mathbf{y} \mid \mathbf{x})$ where $|\mathbf{x}| \gg |\mathbf{y}|$
+and the correspondence between them is unobserved. Three properties of speech
+constrain the space of solutions:
+
+1. **Monotonicity.** Audio and transcript proceed in the same order. If token
+   $y_u$ is produced by frames around $t$, then $y_{u+1}$ is produced by frames
+   at or after $t$. Unlike machine translation, there is no reordering.
+2. **Surjectivity.** Every token must be produced by at least one frame; no
+   token may be skipped, and none may be invented.
+3. **Variable rate.** The number of frames per token varies by an order of
+   magnitude with speaking rate, phone identity, and emphasis.
+
+A model may either **marginalise over alignments** (treat the alignment as a
+latent variable and sum it out), or **learn a soft alignment** (attention), or
+**predict the alignment explicitly** (durations). The classical pipeline chose
+the first via HMMs; CTC and RNN-T also chose the first, but differentiably;
+attention encoder-decoders chose the second. Speech synthesis mostly chose the
+third (@sec-duration). These are the only three options, and the entire field is
+organised around the trade-offs between them.
+
+
+## Historical Overview {#sec-asr-history}
+
+| Era | Years | Key Ideas | Representative Works |
+|:----|:------|:----------|:---------------------|
+| Noisy channel | 1975–2011 | GMM-HMM, lexicon, $n$-gram LM, WFST decoding | @jelinek1976continuous; @davis1980mfcc; @mohri2002wfst |
+| Hybrid DNN-HMM | 2011–2016 | DNN replaces GMM emission model; senone targets | @dahl2012cddnnhmm; @hinton2012dnn; @povey2016lfmmi |
+| End-to-end | 2014–2020 | CTC, RNN-T, attention encoder-decoder; lexicon-free | @graves2006ctc; @graves2012rnnt; @chan2016las; @amodei2016deepspeech2 |
+| Architecture consolidation | 2019–2022 | SpecAugment, Conformer, self-supervised pre-training | @park2019specaugment; @gulati2020conformer; @baevski2020wav2vec2 |
+| Weak supervision at scale | 2022–present | 680k h noisy web data, multitask decoding, zero-shot robustness | @radford2023whisper; @zhang2023usm |
+| LLM decoders | 2023–present | Speech encoder + adapter + language-model decoder | @chen2024salm; @chu2024qwen2audio |
+
+: Timeline of ASR research. {#tbl-asr-timeline}
+
+
+## Before Deep Learning: The Noisy Channel Pipeline {#sec-classical}
+
+The pre-2012 formulation, due to Jelinek and colleagues at IBM
+[@jelinek1976continuous], treats speech as text corrupted by a noisy channel and
+inverts it with Bayes' rule:
+
+$$
+\hat{\mathbf{y}}
+= \arg\max_{\mathbf{y}} P(\mathbf{y} \mid \mathbf{x})
+= \arg\max_{\mathbf{y}} \underbrace{P(\mathbf{x} \mid \mathbf{y})}_{\text{acoustic model}} \cdot \underbrace{P(\mathbf{y})}_{\text{language model}}
+$$ {#eq-noisy-channel}
+
+since $P(\mathbf{x})$ is constant across hypotheses. In practice one adds a
+language-model scale $\alpha$ and a word insertion penalty $\beta$,
+
+$$
+\hat{\mathbf{y}} = \arg\max_{\mathbf{y}} \; \log P(\mathbf{x} \mid \mathbf{y}) + \alpha \log P(\mathbf{y}) + \beta |\mathbf{y}|,
+$$ {#eq-lm-scale}
+
+because the two models are trained separately on different objectives and their
+log-probabilities are not on comparable scales. That tuning hack is the first
+symptom of the deeper problem with this decomposition.
+
+The acoustic model is factorised further through a **pronunciation lexicon**:
+
+$$
+P(\mathbf{x} \mid \mathbf{y}) = \sum_{\mathbf{q}} P(\mathbf{x} \mid \mathbf{q}) \, P(\mathbf{q} \mid \mathbf{y})
+$$ {#eq-lexicon}
+
+where $\mathbf{q}$ is a phone sequence, $P(\mathbf{q} \mid \mathbf{y})$ is a
+hand-built grapheme-to-phoneme map, and $P(\mathbf{x} \mid \mathbf{q})$ is a
+Hidden Markov Model whose states emit acoustic frames under Gaussian mixture
+densities. Alignment is handled by the HMM: the forward algorithm marginalises
+over all state sequences, and Viterbi decoding recovers the best one.
+
+**The five components you had to build.**
+
+| Component | Role | Cost |
+|:----------|:-----|:-----|
+| MFCC front-end | Hand-designed spectral features | DCT existed only to permit diagonal-covariance Gaussians |
+| GMM-HMM acoustic model | Emission densities per HMM state | Generative, low capacity, trained by EM then discriminatively (MMI/MPE) |
+| Triphone decision tree | Context-dependent phones clustered into a few thousand tied states ("senones") | A learned artifact requiring its own alignment pass |
+| Pronunciation lexicon | Grapheme-to-phoneme mapping | Requires a linguist per language; out-of-vocabulary words are unrecognisable in principle |
+| $n$-gram LM + WFST decoder | Search over the composed graph $H \circ C \circ L \circ G$ | Gigabytes of static graph; contextual changes require recompilation |
+
+: The classical ASR pipeline. {#tbl-classical}
+
+The intellectual high point of this era is the **weighted finite-state
+transducer** formulation [@mohri2002wfst], which represents the HMM topology
+$H$, context-dependency $C$, lexicon $L$, and grammar $G$ each as a WFST, then
+composes and optimises them into a single static graph over which decoding is a
+shortest-path search. Five heterogeneous knowledge sources become one algebraic
+object with provably correct determinisation and minimisation. It is genuinely
+elegant, and its descendants persist: `k2`/`icefall` performs differentiable FST
+operations, and both CTC and RNN-T lattices are recognisably FST constructions.
+
+**Why the pipeline was so complex.** Four reasons, each of which the end-to-end
+programme was a direct reaction to:
+
+- **Bootstrapping circularity.** Training the acoustic model requires
+  frame-level state labels; producing those labels requires an acoustic model.
+  The resolution — *forced alignment* — is an iterative loop: train a flat-start
+  monophone model, align, retrain, build a decision tree, realign, train
+  triphones, realign, add speaker adaptation, realign again. Kaldi recipes
+  [@povey2011kaldi] are literally dozens of sequential stages.
+- **Objective mismatch.** Components are trained on maximum likelihood,
+  perplexity, and nothing respectively, then evaluated jointly on WER.
+- **Frame independence.** The HMM assumes $x_t$ depends only on the current
+  state, which is false; delta and delta-delta features are a hack to smuggle in
+  local context.
+- **The lexicon is a hard bottleneck.** No lexicon, no ASR. This is precisely
+  why the field served roughly a hundred languages rather than a thousand.
+
+
+## The Hybrid Era: One Box Replaced {#sec-hybrid-dnn}
+
+The first deep learning wave in speech did not dismantle the pipeline. It
+replaced exactly one component. The GMM computing $P(\mathbf{x}_t \mid s)$ was
+swapped for a DNN computing the posterior $P(s \mid \mathbf{x}_t)$, converted
+back to a scaled likelihood by dividing out the state prior:
+
+$$
+P(\mathbf{x}_t \mid s) \;\propto\; \frac{P(s \mid \mathbf{x}_t)}{P(s)}
+$$ {#eq-pseudo-likelihood}
+
+Everything else survived: the HMM topology, the senone decision tree, the
+lexicon, the $n$-gram LM, the WFST decoder, and the forced-alignment loop that
+generated the DNN's frame-level training targets. This is why the era is called
+*hybrid*.
+
+Two 2012 papers mark the transition. @dahl2012cddnnhmm gave the concrete
+architecture — pre-train a deep belief network, fine-tune it as a frame
+classifier over *context-dependent* senones rather than monophones, and use it
+as the HMM emission model. The context-dependency was the specific insight;
+earlier neural-HMM hybrids had used monophone targets and underperformed.
+@hinton2012dnn is the consensus document: four independent industrial labs
+reporting the same 20–30% relative WER reduction across different tasks. The
+credibility of four-lab convergence moved the entire industry within about
+eighteen months, and it is arguably the first large-scale commercial deployment
+of deep learning anywhere.
+
+Two later refinements are worth naming because their ideas outlived the
+architecture. The **time-delay neural network** [@peddinti2015tdnn] used a
+subsampled dilated 1-D convolutional stack to reach a wide temporal context at
+modest compute — the direct ancestor of the convolutional subsampling front-end
+in every modern speech encoder, and of the x-vector speaker embeddings used in
+diarization (@sec-xvector). **Lattice-free MMI** [@povey2016lfmmi] trained with
+a sequence-discriminative objective computed without a separate lattice
+generation stage, on subsampled frames. It is the conceptual bridge to what came
+next: LF-MMI and CTC are both sequence-level objectives that marginalise over
+alignments, arrived at from opposite directions.
+
+The hybrid era produced large accuracy gains with almost no change to
+infrastructure, which is exactly why it was transitional. The complexity was
+untouched.
+
+
+## End-to-End ASR {#sec-e2e}
+
+End-to-end models map audio directly to characters or subwords, discarding the
+lexicon, the senone tree, the forced-alignment loop, and optionally the external
+LM. The three families differ in how they handle alignment, and that single
+choice propagates into streaming ability, language-model behaviour,
+hallucination profile, and timestamp quality.
+
+### Connectionist Temporal Classification {#sec-ctc}
+
+CTC [@graves2006ctc] introduces a **blank** symbol $\varnothing$ and a
+many-to-one collapsing map $\mathcal{B}$ that removes blanks and merges
+consecutive repeated labels. For example, with $\mathcal{V} = \{a, b\}$:
+
+$$
+\mathcal{B}(a\,\varnothing\,a\,b\,b) = aab, \qquad
+\mathcal{B}(\varnothing\,a\,a\,\varnothing\,b) = ab
+$$
+
+Training maximises the total probability of *all* frame-level paths that
+collapse to the reference:
+
+$$
+P(\mathbf{y} \mid \mathbf{x}) = \sum_{\boldsymbol{\pi} \in \mathcal{B}^{-1}(\mathbf{y})} \prod_{t=1}^{T} P(\pi_t \mid \mathbf{x})
+$$ {#eq-ctc}
+
+The sum has exponentially many terms but factorises into a dynamic program.
+Define the extended label sequence $\mathbf{y}' = (\varnothing, y_1, \varnothing, y_2, \ldots, y_U, \varnothing)$
+of length $2U+1$, and let $\alpha_t(u)$ be the total probability of all paths
+consuming the first $t$ frames and ending at position $u$ of $\mathbf{y}'$. Then
+
+$$
+\alpha_t(u) = P(y'_u \mid \mathbf{x}_t) \Big[ \alpha_{t-1}(u) + \alpha_{t-1}(u-1) + \mathbb{1}\big[y'_u \neq \varnothing \;\wedge\; y'_u \neq y'_{u-2}\big]\, \alpha_{t-1}(u-2) \Big]
+$$ {#eq-ctc-forward}
+
+with $P(\mathbf{y} \mid \mathbf{x}) = \alpha_T(2U+1) + \alpha_T(2U)$. The three
+terms correspond to staying on the current symbol, advancing one position, and
+skipping a blank; the indicator forbids the skip when it would merge two
+identical labels. Cost is $O(TU)$, and the whole thing is differentiable. **No
+alignment supervision is required** — the alignment has become a latent variable
+that is summed out.
+
+**The conditional independence assumption is the crux.** The product
+$\prod_t P(\pi_t \mid \mathbf{x})$ asserts that outputs at different frames are
+independent *given the audio*. Three consequences follow, and they should be
+taught together:
+
+- CTC has essentially **no internal language model**. It gains a great deal from
+  an external LM and degrades badly without one.
+- It cannot model output dependencies, producing characteristic errors on
+  homophones and inflectional morphology.
+- But its posteriors are **peaky and time-localised**, which makes CTC the best
+  of the three families for forced alignment and timestamps — a fact exploited
+  by essentially every modern alignment tool.
+
+**Deep Speech** [@hannun2014deepspeech] and **Deep Speech 2**
+[@amodei2016deepspeech2] were the decisive demonstrations: a large recurrent
+network trained with CTC straight to characters, no phonemes, no lexicon, no
+HMM, with an $n$-gram LM applied only at decode time. Deep Speech 2 trained the
+same architecture on English and Mandarin with only a vocabulary change,
+establishing that the pipeline's language-specific machinery was dispensable.
+
+### Recurrent Neural Network Transducer {#sec-rnnt}
+
+The RNN-T [@graves2012rnnt] repairs CTC's conditional independence by adding a
+**prediction network** that autoregressively encodes the tokens emitted so far,
+and a **joint network** that combines it with the encoder:
+
+$$
+\mathbf{h}_t = \text{Encoder}(\mathbf{x}_{1:t}), \qquad
+\mathbf{g}_u = \text{Prediction}(\mathbf{y}_{1:u-1}), \qquad
+\mathbf{z}_{t,u} = \text{Joint}(\mathbf{h}_t, \mathbf{g}_u)
+$$ {#eq-rnnt-joint}
+
+with $P(k \mid t, u) = \text{softmax}(\mathbf{z}_{t,u})$ over
+$\mathcal{V} \cup \{\varnothing\}$. The alignment lattice is now two-dimensional
+over $(t, u)$: at each cell the model either emits a token (advance $u$) or emits
+blank (advance $t$). The forward recursion is
+
+$$
+\alpha(t, u) = \alpha(t-1, u)\, P(\varnothing \mid t-1, u) \;+\; \alpha(t, u-1)\, P(y_u \mid t, u-1)
+$$ {#eq-rnnt-forward}
+
+Alignment is still marginalised and still strictly monotonic, but output tokens
+are now conditioned on output history.
+
+**Why RNN-T became the dominant streaming architecture.** Four reasons, worth
+being precise about:
+
+1. **Monotonic, frame-synchronous alignment.** The model consumes audio
+   left-to-right and can emit as soon as evidence arrives. There is no mechanism
+   by which it could need the end of the utterance to produce the first word.
+2. **No conditional independence.** The prediction network *is* an internal
+   language model, so RNN-T is strong without external LM fusion — essential
+   when you cannot ship a large LM to a phone.
+3. **Bounded latency.** Combined with causal or limited-lookahead encoders,
+   emission delay is controllable and can be explicitly regularised.
+4. **It fits the product.** On-device assistants need streaming, low latency, no
+   server round-trip, and a small footprint.
+
+@he2019streaming is the deployment landmark: an RNN-T with quantised LSTMs and
+wordpiece outputs running entirely on a phone at roughly 80 MB, *faster than
+real time and more accurate* than the server-side CTC system it replaced. It
+ended the question of whether end-to-end ASR was production-ready.
+
+Two modern variants matter. The **Hybrid Autoregressive Transducer**
+[@variani2020hat] factorises blank prediction from label prediction so that the
+internal LM score becomes explicitly computable — and therefore subtractable,
+which we return to in @sec-lm-fusion. The **Token-and-Duration Transducer**
+[@xu2023tdt] predicts both the token and its **duration** in frames at each
+step, then skips ahead by that duration instead of advancing one frame at a
+time. TDT is the single reason current NVIDIA Parakeet models run roughly an
+order of magnitude faster than comparable-accuracy alternatives, and it yields
+model-native word timestamps as a side effect. Its citation count is modest; its
+practical footprint is enormous.
+
+### Attention-Based Encoder-Decoder {#sec-aed}
+
+Listen, Attend and Spell [@chan2016las] discards blanks and alignment
+marginalisation entirely. An encoder produces $\mathbf{h}_{1:T'}$; a decoder
+autoregressively emits tokens, at each step attending over *all* encoder frames:
+
+$$
+P(\mathbf{y} \mid \mathbf{x}) = \prod_{u=1}^{U} P(y_u \mid y_{<u}, \mathbf{x}),
+\qquad
+\mathbf{c}_u = \sum_{t} a_{u,t}\, \mathbf{h}_t,
+\qquad
+a_{u,t} = \frac{\exp e(\mathbf{s}_u, \mathbf{h}_t)}{\sum_{t'} \exp e(\mathbf{s}_u, \mathbf{h}_{t'})}
+$$ {#eq-aed}
+
+This is conceptually the cleanest formulation — a direct model of
+$P(\mathbf{y} \mid \mathbf{x})$ with a strong internal LM — and it is the
+architecture of Whisper, modulo replacing LSTMs with Transformers
+[@vaswani2017attention; @dong2018speechtransformer]. But nothing constrains the
+attention to be monotonic or surjective, so the model must *learn* a property it
+could simply have been given. The failure modes are the price: deletions, looping
+repetition, early or absent termination, and fluent output with no acoustic
+support.
+
+The standard fix is **hybrid CTC/attention training** [@kim2017joint], which
+shares one encoder between a CTC head and an attention decoder:
+
+$$
+\mathcal{L} = \lambda\, \mathcal{L}_{\text{CTC}} + (1 - \lambda)\, \mathcal{L}_{\text{AED}}, \qquad \lambda \in [0, 1]
+$$ {#eq-hybrid-ctc-att}
+
+typically with $\lambda \approx 0.3$. CTC's monotonicity regularises the
+attention during training, and CTC prefix scores constrain the beam at decode
+time, suppressing deletions and loops. This is the default recipe in ESPnet
+[@watanabe2018espnet] and is used by OWSM and Canary. If a reader takes one
+training trick from this section, it should be this one: **constrain a flexible
+model with a rigid auxiliary loss.**
+
+### Comparing the Three Families {#sec-e2e-comparison}
+
+| Property | **CTC** | **RNN-T / TDT** | **AED (LAS, Whisper)** |
+|:---------|:--------|:----------------|:-----------------------|
+| Alignment | Marginalised, 1-D lattice | Marginalised, 2-D lattice | Soft attention, unconstrained |
+| Output dependencies | None (conditional independence) | Full, via prediction network | Full, via autoregressive decoder |
+| Internal LM | Essentially none | Yes; explicitly computable in HAT | Strong — and it dominates behaviour |
+| Streaming | Trivial | Natural; the production default | Requires surgery (chunked or triggered attention) |
+| External LM fusion | Largest gains, nearly mandatory | Moderate; needs ILM subtraction | Smallest gains, hardest to do correctly |
+| Hallucination | Very low; failures are deletions | Low; blank gives a principled "nothing here" | **High**; decoder can free-run without acoustic support |
+| Timestamps | **Best** — peaky, frame-localised | Good; TDT gives explicit durations | Worst; attention is diffuse and non-monotonic |
+| Accuracy (short-form) | Weakest | Middle | **Best** |
+| Throughput | **Fastest** | Near-fastest | Slowest |
+
+: End-to-end ASR families compared. {#tbl-e2e-comparison}
+
+The trade-off is unusually clean, and the numbers in @sec-leaderboard make it
+concrete: **AED buys accuracy with latency and hallucination risk; CTC buys
+speed and acoustic honesty with accuracy; RNN-T and TDT occupy the
+streaming-viable middle.**
+
+One structural observation deserves emphasis before moving on. End-to-end models
+fused the acoustic model, lexicon, and language model into a single network —
+and the field has spent the years since **re-introducing the pieces it lost**.
+External LM fusion, contextual biasing for rare words, and LLM decoders are all,
+in effect, attempts to recover the modularity that @eq-noisy-channel had for
+free. Keeping that framing in mind turns an otherwise scattered literature into
+a single argument.
+
+
+## Architectures {#sec-arch}
+
+### Conformer {#sec-conformer}
+
+Speech has structure at two very different scales. Formant transitions and phone
+boundaries live on a 10–50 ms scale and are strongly local; speaker identity,
+prosody, and semantic context are global. Pure convolutional encoders capture
+the former and cannot integrate globally; pure Transformers do the reverse and
+measurably underfit local detail.
+
+The **Conformer** [@gulati2020conformer] interleaves both inside every block,
+in a "macaron" sandwich of two half-step feed-forward layers:
+
+$$
+\begin{aligned}
+\tilde{\mathbf{h}} &= \mathbf{h} + \tfrac{1}{2}\,\text{FFN}(\mathbf{h}) \\
+\mathbf{h}' &= \tilde{\mathbf{h}} + \text{MHSA}(\tilde{\mathbf{h}}) \\
+\mathbf{h}'' &= \mathbf{h}' + \text{Conv}(\mathbf{h}') \\
+\mathbf{h}''' &= \text{LayerNorm}\!\left(\mathbf{h}'' + \tfrac{1}{2}\,\text{FFN}(\mathbf{h}'')\right)
+\end{aligned}
+$$ {#eq-conformer}
+
+where $\text{Conv}$ is a depthwise-separable convolution module with gated
+linear units, and $\text{MHSA}$ uses relative positional encoding so the model
+generalises across utterance lengths.
+
+This is the architecture that got the inductive bias right, and it did so at
+every model scale. Six years on it remains the most common encoder family in
+open ASR systems, and every top-ranked model that is not Whisper-derived uses a
+Conformer or a descendant of one.
+
+**Successors.** Four are worth naming, though none has displaced the original
+outright. *Squeezeformer* [@kim2022squeezeformer] adds U-Net-style temporal
+downsampling inside the encoder, answering "do we need full resolution
+throughout?" in the negative. *Branchformer* and E-Branchformer
+[@peng2022branchformer] replace Conformer's *sequential* attention-then-
+convolution with **parallel branches** merged by learned weights; the merge
+weights are interpretable, revealing which layers rely on local versus global
+context, and E-Branchformer became the ESPnet default. *Zipformer*
+[@yao2024zipformer] operates at multiple frame rates simultaneously with block
+reuse and a reworked normalisation and optimiser, achieving better accuracy at
+fewer FLOPs — evidence that architecture search in speech was far from
+exhausted.
+
+**Fast Conformer** [@rekesh2023fastconformer] is the most practically
+consequential. It increases convolutional subsampling to an **80 ms frame
+rate** (8× downsampling, versus Conformer's 40 ms) using depthwise-separable
+convolutions in the subsampling stack, giving roughly 2.8× speedup at equal or
+better accuracy — and, because the sequence is four times shorter, the ability
+to transcribe hours-long audio in a single pass. It is the encoder in Parakeet,
+Canary, and much of the current speed frontier.
+
+### SpecAugment {#sec-specaugment}
+
+**SpecAugment** [@park2019specaugment] augments directly on the log-Mel
+spectrogram with three operations: time warping, **frequency masking** (zero out
+$f$ consecutive Mel channels, $f \sim \mathcal{U}(0, F_{\max})$), and **time
+masking** (zero out $t$ consecutive frames). No extra audio, no vocoder, no
+additional forward pass — roughly twenty lines of code.
+
+It works because it attacks precisely the invariances ASR needs: frequency
+masking simulates channel and speaker variation and forces the model to use
+redundant spectral cues rather than latching onto a narrow band; time masking
+simulates disfluency and packet loss and prevents the model from over-relying on
+any single frame. In effect it converts an over-parameterised encoder's
+tendency to memorise into pressure to generalise, which is why it also permits
+far longer training schedules without overfitting.
+
+SpecAugment turned end-to-end ASR from data-hungry into data-efficient and is
+now on by default in every major toolkit. It has the highest ratio of impact to
+implementation complexity of anything in this chapter.
+
+### Long-Form and Streaming {#sec-longform}
+
+Self-attention is $O(T^2)$, and speech at 10 ms frames gives $T = 6000$ for a
+single minute. Three families of response:
+
+1. **Reduce $T$.** Convolutional subsampling to 40 or 80 ms
+   [@rekesh2023fastconformer]; TDT frame-skipping at decode time [@xu2023tdt].
+2. **Restrict attention.** Chunked or block attention with limited left context,
+   with streaming masks applied *during training* so train and test conditions
+   match. **Cache-aware streaming** [@noroozi2024cacheaware] maintains per-layer
+   key/value caches so a single model serves multiple latency budgets without
+   retraining; this is the current production technique.
+3. **Trigger or delay.** **Triggered attention** [@moritz2019triggered] uses a
+   CTC head to decide *when* to fire the attention decoder, converting an
+   offline AED into a streaming model.
+
+**State-space models** are the live alternative. SSMs are formally close to
+HMMs — a latent state evolving in time — which makes their arrival a satisfying
+full circle. The useful intuition, due to Gu, is that Transformers behave like a
+*database* (fine-grained recall over stored tokens, effective only when the
+tokens are already at the right level of abstraction) while SSMs behave like a
+*brain* (a compressive running state, strong at long range, weak at associative
+recall) [@gu2024mamba]. Raw speech frames are emphatically *not* at the right
+level of abstraction — which is the same reason subsampling is mandatory — so
+speech is a natural SSM domain. They have not yet displaced attention for ASR.
+
+
+## Scale: Weak Supervision and Foundation Models {#sec-scale}
+
+By 2020 the architecture question was largely settled and the binding constraint
+became data. Two answers emerged, and they are complementary rather than
+competing.
+
+The first is **self-supervised pre-training**: learn representations from
+unlabelled audio, then fine-tune with a small labelled set. wav2vec 2.0
+[@baevski2020wav2vec2] reached competitive WER from *ten minutes* of labelled
+speech, reframing the economics of ASR for the thousands of languages with no
+transcribed corpora. HuBERT [@hsu2021hubert], WavLM [@chen2022wavlm], and
+BEST-RQ [@chiu2022bestrq] refined the recipe. Because these representations are
+consumed by every downstream speech task — diarization and speaker
+verification as much as recognition — they are treated properly in @sec-ssl
+rather than here.
+
+The second is **large-scale weak supervision**, and it is Whisper's thesis.
+
+### Whisper {#sec-whisper}
+
+@radford2023whisper abandoned both the SSL-then-finetune recipe and the
+tradition of clean curated corpora. Whisper is a plain encoder-decoder
+Transformer — architecturally a LAS descendant with nothing novel in it —
+trained on **680,000 hours** of weakly-supervised, noisily-labelled,
+internet-scraped audio-transcript pairs across 96+ languages.
+
+The design contribution is the interface. Every task is cast into one multitask
+token sequence that the decoder must produce:
+
+```
+<|startoftranscript|> <|en|> <|transcribe|> <|notimestamps|> text… <|endoftext|>
+```
+
+with `<|translate|>` selecting X→English speech translation, per-language tags
+for language identification, `<|nospeech|>` for voice activity detection, and
+timestamp tokens for segmentation. Language ID, VAD, timestamps, transcription,
+and translation collapse into a single decoding problem.
+
+Three things made it a turning point. It was **zero-shot robust** —
+competitive with supervised systems on datasets it had never seen, and far more
+robust under distribution shift, which exposed how badly LibriSpeech-tuned
+systems had overfit. It demonstrated that **data scale beats data cleanliness**,
+reversing a field-wide assumption. And the MIT-licensed release made strong
+multilingual ASR a commodity overnight.
+
+**Whisper's failure modes are structural, not incidental,** and follow directly
+from @tbl-e2e-comparison:
+
+- **Hallucination on silence and non-speech.** The decoder is a strong language
+  model that can free-run without acoustic grounding, emitting memorised
+  training artifacts on non-speech input. @koenecke2024careless shows the harms
+  are not benign: fabricated content includes invented violent and sexual
+  material, and hallucinations fall disproportionately on speakers with aphasia.
+- **Repetition loops.** Standard degenerate AED decoding, mitigated by
+  temperature fallback and compression-ratio thresholds — all heuristics.
+- **A hard 30-second receptive field.** Long audio requires sequential chunking
+  with the previous transcript as text conditioning, so errors propagate: a bad
+  timestamp shifts the next window, and a hallucination poisons the next
+  window's prompt.
+- **Timestamps are generated tokens, not alignments,** so they are approximate
+  and can be non-monotonic. This is why **WhisperX** [@bain2023whisperx] pairs
+  Whisper with a *separate phoneme-level CTC model* for forced alignment —
+  empirical vindication of @tbl-e2e-comparison: when you need alignment, you
+  reach for CTC.
+
+**The ecosystem.** *Distil-Whisper* [@gandhi2023distilwhisper] distils via
+large-scale pseudo-labelling with WER-based filtering, keeping the full encoder
+and shrinking the decoder to two layers: 6× faster, within about 1% WER, and —
+usefully — *less* prone to hallucination, because a shallow decoder is a weaker
+free-running LM. *USM* [@zhang2023usm] is the industrial-scale counterpart,
+BEST-RQ pre-training on 12M hours across 100+ languages. **OWSM**
+[@peng2023owsm] reproduces Whisper's recipe in ESPnet using only publicly
+available licensed data, with full transparency of data, code, and
+configuration; its scientific value exceeds its citation count, because it makes
+Whisper's design choices ablatable in a way a closed 680k-hour corpus never can.
+*Canary* [@puvvada2024canary] argues the opposite of Whisper's thesis — its
+title is "Less is More" — reaching better English WER with roughly two orders of
+magnitude less data through careful balancing and synthetic augmentation.
+
+### LLM Decoders {#sec-llm-asr}
+
+The current frontier grafts a language model onto a speech encoder: a frozen or
+lightly-tuned encoder, a **modality adapter** (a linear or convolutional
+projector, often with temporal compression), and an LLM decoder adapted with
+LoRA, with speech embeddings injected directly into the text token space
+[@chen2024salm; @chu2024qwen2audio]. Training is typically two-stage: adapter
+only, then adapter plus LoRA.
+
+**Does it beat classical end-to-end ASR?** The honest 2026 answer is *yes on
+short-form accuracy, decisively no on efficiency, and with a serious measurement
+caveat.*
+
+- On short-form English, LLM-decoder systems hold roughly half the top-ten
+  leaderboard slots, but the margin over the best transducer is about 0.4–0.6
+  WER absolute.
+- That margin costs roughly an **8× throughput penalty**.
+- **On long-form audio the ranking inverts**: the best LLM-decoder system is
+  both less accurate *and* about 60× slower than the best TDT model. The LLM
+  advantage is a short-form, in-context-window phenomenon.
+- **Test-set contamination.** @tseng2025contamination shows LLM backbones have
+  frequently seen the evaluation transcripts as text during pre-training. Since
+  LibriSpeech derives from public-domain Project Gutenberg texts, this is not
+  hypothetical, and some of the measured advantage may be memorisation.
+
+Where LLM decoders genuinely win is not WER at all. It is **capability**:
+promptable contextual biasing (pass the hotword list as text), instruction
+following, joint transcription/translation/question-answering in one model, and
+error correction that draws on world knowledge.
+
+
+## Beyond Transcription {#sec-beyond}
+
+### Contextual Biasing {#sec-biasing}
+
+End-to-end models are poor at rare words — proper nouns, product names, medical
+terminology, a user's contact list — precisely because they fused away the
+lexicon and the separately-updatable LM. **Contextual biasing** injects a list
+of $N$ bias phrases at inference. Two mechanisms:
+
+- **Decoder biasing** modifies scores during search: shallow fusion with a
+  class LM, prefix-tree constrained search, or dynamic vocabulary expansion. It
+  is *extrinsic*, gives larger gains, and produces more false positives.
+- **Encoder biasing** modifies the representation itself. **CLAS**
+  [@pundak2018clas] embeds the bias phrases and attends over them *inside* the
+  model, so biasing is learned end-to-end rather than bolted on. It is
+  *intrinsic*, more conservative, and more robust across datasets.
+
+Hybrid schemes are now the default [@le2021trie]. That paper also defines the
+field's standard evaluation protocol, which matters as much as its method:
+report **B-WER** (words in the bias list) and **U-WER** (words not in it)
+separately, with $N \in \{100, 500, 1000, 2000\}$ distractors.
+
+**Scalability is the open problem.** B-WER degrades steadily as $N$ grows, and
+attention-over-list methods break down beyond a few thousand entries. Retrieval
+is the current answer — nearest-neighbour search over embedded catalogue entries
+scales to hundreds of thousands [@jayanthi2023retrievecopy] — and
+retrieval-augmented ASR has the additional benefit that grounding in a retrieved
+knowledge base measurably reduces hallucination.
+
+### External Language Models and Internal LM Estimation {#sec-lm-fusion}
+
+An end-to-end model trained on paired data has implicitly learned a text prior
+$P_{\text{ILM}}(\mathbf{y})$ over its *training* domain. Naively adding an
+external LM double-counts it. The mathematically clean corrections are worth
+teaching because they make the internal-LM concept concrete.
+
+**Shallow fusion** is the baseline, and simply adds a weighted external score:
+
+$$
+\text{score}(\mathbf{y}) = \log P(\mathbf{y} \mid \mathbf{x}) + \lambda \log P_{\text{LM}}(\mathbf{y})
+$$ {#eq-shallow-fusion}
+
+**Cold fusion** [@sriram2018coldfusion] instead trains the model *with* a frozen
+LM in the loop from the start, so it learns to defer to the LM rather than
+duplicate it, and the LM can be swapped at test time.
+
+**Density ratio** [@mcdermott2019densityratio] is the principled Bayesian
+correction for domain shift: divide out a source-domain LM before multiplying in
+the target-domain one,
+
+$$
+\text{score}(\mathbf{y}) = \log P(\mathbf{y} \mid \mathbf{x}) + \lambda_t \log P_{\text{tgt}}(\mathbf{y}) - \lambda_s \log P_{\text{src}}(\mathbf{y})
+$$ {#eq-density-ratio}
+
+**Internal LM estimation** [@meng2021ilme] improves on this by estimating the
+internal LM *directly from the model* rather than proxying it with a separately
+trained source LM — zero out the encoder contribution to the joint network and
+read off what remains:
+
+$$
+\log P_{\text{ILM}}(\mathbf{y}) \approx \sum_u \log \text{softmax}\big(\text{Joint}(\mathbf{0}, \mathbf{g}_u)\big)_{y_u}
+$$ {#eq-ilme}
+
+HAT [@variani2020hat] makes this exact by construction rather than approximate —
+the architectural solution to what ILME solves post hoc.
+
+### Generative Error Correction {#sec-ger}
+
+Classical $N$-best rescoring is bounded by the oracle WER of the candidate list:
+you can only *select*. **Generative error correction** hands the whole $N$-best
+list to an LLM and asks it to *produce* a corrected transcript, breaking that
+bound. @chen2023hyporadise is the benchmark that made this a research area,
+pairing $N$-best hypotheses with ground truth across domains.
+
+### Speech Translation {#sec-st}
+
+Speech translation asks for a transcript in a *different* language from the
+speech. Historically the field debated **cascaded** systems (ASR then machine
+translation) against **end-to-end** models that translate directly, with the
+cascade criticised for compounding errors and discarding prosody, and end-to-end
+models limited by the scarcity of parallel speech-translation data.
+
+Since 2023 the modelling distinction has largely dissolved: Whisper, Canary, and
+SeamlessM4T [@barrault2023seamlessm4t] all perform speech-to-text translation by
+conditioning the same decoder on a task token. Multitask training with ASR
+supplies the data that direct translation lacks.
+
+The empirical verdict is worth stating plainly, because it inverts what the
+founding papers predicted: **cascades currently win.** The 2025 IWSLT
+simultaneous-translation winner was offline Whisper plus a text LLM run under a
+streaming policy, beating purpose-built end-to-end systems by a wide margin on
+every language pair. End-to-end's defensible advantages today are latency and
+access to paralinguistic information, not translation quality.
+
+Evaluation has moved away from BLEU. The field now reports **chrF++** and
+**COMET**, and increasingly **BLASER 2.0** [@chen2023blaser; @barrault2023seamlessm4t], which scores
+semantic similarity directly in a multilingual speech-and-text embedding space
+and therefore needs no reference transcript. For speech-to-speech translation
+the standard proxy is **ASR-BLEU** — transcribe the output and score the text —
+with the obvious caveat that it conflates synthesis and translation errors.
+
+
+## Open-Source Landscape {#sec-asr-opensource}
+
+| Toolkit | Language | Key Capabilities | Pretrained Models | Repository |
+|:--------|:---------|:-----------------|:------------------|:-----------|
+| **ESPnet** | Python / PyTorch | Hybrid CTC/attention, E-Branchformer, OWSM; the academic reference | Yes (HF) | [espnet/espnet](https://github.com/espnet/espnet) |
+| **NeMo** | Python / PyTorch | Fast Conformer, TDT, Parakeet, Canary; production-oriented | Yes (NGC / HF) | [NVIDIA/NeMo](https://github.com/NVIDIA/NeMo) |
+| **k2 / icefall** | Python / C++ | Differentiable FSTs, Zipformer, lattice-based decoding | Yes | [k2-fsa/icefall](https://github.com/k2-fsa/icefall) |
+| **SpeechBrain** | Python / PyTorch | Broad recipes, easy customisation, strong for teaching | Yes (HF) | [speechbrain/speechbrain](https://github.com/speechbrain/speechbrain) |
+| **WeNet** | Python / C++ | Production streaming, U2/U2++ two-pass decoding | Yes | [wenet-e2e/wenet](https://github.com/wenet-e2e/wenet) |
+| **Transformers** | Python / PyTorch | Whisper, wav2vec 2.0, Parakeet inference and fine-tuning | Yes (HF) | [huggingface/transformers](https://github.com/huggingface/transformers) |
+| **faster-whisper** | Python / C++ | CTranslate2-backed Whisper, 4× faster inference | Uses Whisper | [SYSTRAN/faster-whisper](https://github.com/SYSTRAN/faster-whisper) |
+| **WhisperX** | Python | VAD chunking + CTC forced alignment for word timestamps | Uses Whisper | [m-bain/whisperX](https://github.com/m-bain/whisperX) |
+| **Kaldi** | C++ / Bash | The classical WFST pipeline; historical reference | Recipe-based | [kaldi-asr/kaldi](https://github.com/kaldi-asr/kaldi) |
+| **jiwer** | Python | WER / CER computation with normalisation | N/A | [jitsi/jiwer](https://github.com/jitsi/jiwer) |
+
+: Major open-source ASR toolkits. {#tbl-asr-toolkits}
+
+Inference with a modern system is a few lines:
+
+```python
+from transformers import pipeline
+
+asr = pipeline(
+    "automatic-speech-recognition",
+    model="openai/whisper-large-v3",
+    chunk_length_s=30,          # required: 30 s receptive field
+    return_timestamps=True,
+)
+print(asr("meeting.wav")["text"])
+```
+
+```python
+# NeMo Parakeet: TDT decoder, ~an order of magnitude faster
+import nemo.collections.asr as nemo_asr
+
+model = nemo_asr.models.ASRModel.from_pretrained("nvidia/parakeet-tdt-0.6b-v2")
+print(model.transcribe(["meeting.wav"], timestamps=True)[0].text)
+```
+
+
+## Evaluation {#sec-asr-eval}
+
+### Word Error Rate {#sec-wer}
+
+WER is the edit distance between hypothesis and reference under the optimal
+Levenshtein alignment, normalised by reference length:
+
+$$
+\text{WER} = \frac{S + D + I}{N_{\text{ref}}}
+$$ {#eq-wer}
+
+with $S$, $D$, $I$ the substitution, deletion, and insertion counts. Note that
+WER is unbounded above: a hypothesis longer than the reference can exceed 100%.
+**CER** is the same quantity over characters, and is the standard for Mandarin,
+Japanese, and Thai, where orthographic word boundaries do not exist.
+
+**WER is not semantic, and the ordering it induces can be badly wrong.** The
+following example, from the Interspeech 2025 tutorial on long-context ASR
+[@park2025beyond], is the clearest demonstration. Take as reference:
+
+> *"Shinji Watanabe is an Associate Professor at Carnegie Mellon University, Pittsburgh, PA."*
+
+| Hypothesis | WER | Semantic quality |
+|:-----------|----:|:-----------------|
+| "**Cindy** Watanabe is an Associate Professor at Carnegie Mellon University, Pittsburgh, PA" | **17%** | The person's name is wrong — the single most important token failed |
+| "…at the University of Pittsburgh, next to Carnegie Mellon, PA" | 58% | Name right, affiliation wrong |
+| "At Carnegie Mellon University in Pittsburgh, PA, Shinji Watanabe is an Associate Professor" | **108%** | **Semantically perfect**, merely reordered |
+
+: WER's failure to track semantic quality. {#tbl-wer-failure}
+
+Two lessons follow. WER should be **weighted toward important tokens** — hence
+B-WER and entity-level error rates — and it should not be **order-sensitive**
+for tasks where order is free.
+
+### Text Normalisation {#sec-normalisation}
+
+WER depends heavily on how references and hypotheses are normalised before
+alignment: numbers ("twenty thirty" versus "2030"), contractions, spelling
+variants, filler words, punctuation, casing. Whisper shipped an aggressive
+English normaliser *and* used it to compute its own reported numbers, which
+critics argued flattered it relative to systems scored under stricter
+conventions — normalisation was doing part of the work attributed to the model.
+
+The modern response is the right one and should be stated as methodology:
+**apply one normaliser uniformly to every system's output.** Normalisation
+becomes a property of the benchmark rather than of the model. Punctuation and
+casing, meanwhile, are usually not scored at all, despite being exactly what
+downstream consumers — subtitles, clinical notes, LLM inputs — actually need.
+
+::: {.callout-warning}
+Never compare WER figures across papers without checking the normalisation and
+the scoring tool. Differences of 1–2 points absolute can be produced by
+normalisation choices alone, which is larger than the gap between many
+"state-of-the-art" claims.
+:::
+
+### Speed, and Why It Must Be Co-Reported {#sec-rtfx}
+
+**RTFx** is audio duration divided by processing time — how many seconds of
+audio a system transcribes per second of compute, at a stated batch size and
+hardware. Reporting WER alone hides differences of one to two orders of
+magnitude in throughput, and therefore hides most of what determines whether a
+system is deployable. A model at 5.6% WER and 420 RTFx and a model at 6.1% WER
+and 3400 RTFx are not competing on the same axis.
+
+### Multi-Speaker Metrics {#sec-cpwer-asr}
+
+When several speakers overlap, plain WER is ill-defined. The standard metric is
+**concatenated minimum-permutation WER** (cpWER), introduced with CHiME-6
+[@watanabe2020chime6]: concatenate each speaker's utterances in reference and
+hypothesis, compute WER under every speaker permutation, and report the minimum.
+It charges for both recognition and speaker-attribution errors.
+**tcpWER** adds a timing constraint so that a correct word at the wrong time is
+not free. Both are treated in detail in @sec-cpwer.
+
+### Datasets {#sec-asr-datasets}
+
+| Dataset | Domain | Hours | Role today |
+|:--------|:-------|------:|:-----------|
+| **LibriSpeech** [@panayotov2015librispeech] | Read audiobooks | 1k | Saturated (~1.5–2% WER); a sanity check, not a discriminator |
+| **Common Voice** [@ardila2020commonvoice] | Crowdsourced read speech | 30k+ | Multilingual, accent metadata |
+| **GigaSpeech** [@chen2021gigaspeech] | Audiobook / podcast / YouTube | 10k | Multi-domain supervised training |
+| **MLS** [@pratap2020mls] | Multilingual audiobooks | 50k | 8 languages |
+| **FLEURS** [@conneau2023fleurs] | Read, $n$-way parallel | ~1.4k | The multilingual evaluation standard (102 languages) |
+| **VoxPopuli** | European Parliament | 400k unlab. | Multilingual pre-training |
+| **TED-LIUM 3** [@hernandez2018tedlium3] | Oratory | 452 | Long-form; non-commercial licence limits contamination |
+| **SPGISpeech** [@oneill2021spgispeech] | Financial calls | 5k | **Fully formatted** — punctuation and casing |
+| **Libriheavy** [@kang2024libriheavy] | Audiobooks | 50k | Punctuation, casing, *and* preceding-text context |
+| **Earnings-21/22** [@delrio2021earnings21] | Earnings calls | ~160 | Long-form; -22 targets accents in the wild |
+| **AMI** [@carletta2005ami] | Meetings, distant mic | ~100 | Multi-speaker, overlapping |
+| **CHiME-6** [@watanabe2020chime6] | Dinner parties, far-field | ~50 | The hardest standard benchmark |
+| **CORAAL** [@kendall2023coraal] | African American English | ~130 | Fairness evaluation |
+| **Libri-Light** [@kahn2020librilight] | Unlabelled audiobooks | 60k | Self-supervised pre-training; limited-supervision splits |
+
+: Standard ASR datasets. {#tbl-asr-datasets}
+
+**Why LibriSpeech is saturated** is worth spelling out, because the reasoning
+generalises to other benchmarks in this book. First, WER on `test-clean` is at or
+below annotation noise, so differences are not meaningfully resolvable. Second,
+it is *read* audiobook speech — no disfluencies, no overlap, no spontaneity,
+pre-segmented into short utterances. Third, its source text is public-domain
+Project Gutenberg, making it maximally exposed to LLM pre-training
+contamination [@tseng2025contamination]. Fourth, and most damning, it measurably
+fails to predict robustness: Whisper's central result was that LibriSpeech-tuned
+systems degraded far more under distribution shift than their in-domain numbers
+suggested.
+
+### The Open ASR Leaderboard {#sec-leaderboard}
+
+The community's current evaluation standard is the **Open ASR Leaderboard**
+[@srivastav2025openasr], which scores open and commercial systems on a common
+harness across three tracks — short-form English, multilingual, and long-form
+English — reporting **both WER and RTFx** on fixed hardware, with contributions
+made by pull request against verified scripts.
+
+Its three design principles are the headline: **there is no catch-all model, no
+sufficient single dataset, and no sufficient single metric.** Three findings are
+worth carrying into any ASR project:
+
+1. **Conformer encoder plus Transformer or LLM decoder wins accuracy; CTC and
+   TDT win speed.** The best transducer sits around tenth on WER while running
+   roughly 8× faster than anything above it.
+2. **Conformer encoders are roughly 3.8× faster than Whisper encoders** at
+   matched decoder type, which explains the industrial migration away from
+   Whisper encoders despite Whisper's language coverage.
+3. **The multilingual-coverage tax is real and measurable.** Extending the same
+   architecture from 1 to 25 languages costs a few tenths of a point of English
+   WER, and models covering 1000+ languages sit far down the English table.
+
+### Failure Modes {#sec-asr-failures}
+
+| Failure mode | Description |
+|:-------------|:------------|
+| **Accent and dialect bias** | @koenecke2020racial audited five commercial systems on matched interview speech and found average WER of 0.35 for Black speakers against 0.19 for white speakers — roughly double, across *every* vendor, attributable primarily to training-data composition. It remains the field's most important fairness result. |
+| **Hallucination** | Structural to AED and LLM decoders (@sec-whisper); unevenly distributed across speaker populations [@koenecke2024careless]. |
+| **Long-form degradation** | Long-form WER runs roughly 1.5–2× the short-form figure for the same models. |
+| **Far-field and overlap** | LibriSpeech sits near 2% while CHiME-6 remains in the 30–60% range — the field's clearest open wound. |
+| **Rare words and entities** | Motivates the whole biasing agenda (@sec-biasing); B-WER degrades as bias lists grow. |
+| **Code-switching** | Within-utterance language mixing defeats language-ID-conditioned decoders, since Whisper's per-language prompt token forces a single choice for the whole segment. |
+| **Atypical speech** | Children, elderly, and disordered speech are acoustically distinct and severely under-represented in training data. |
+
+: Common ASR failure modes. {#tbl-asr-failures}
+
+
+## Open Problems {#sec-asr-open}
+
+1. **Long-form and conversational ASR.** The headline gap: LibriSpeech ~2%,
+   long-form English 7–13%, far-field multi-talker 30–60%. No current
+   architecture is natively long-form; the best long-form systems win by being
+   fast enough to brute-force the problem, not by modelling context better.
+2. **The accuracy–efficiency–coverage trilemma.** LLM decoders buy a few tenths
+   of a point of WER for an 8× throughput penalty and lose outright on
+   long-form; multilingual coverage costs measurable English accuracy. The
+   Pareto front is real and wide, and no architecture dominates.
+3. **Evaluation validity.** Test-set contamination in LLM backbones may
+   invalidate a portion of recent results [@tseng2025contamination]. Private
+   evaluation sets and non-commercially-licensed test data are partial remedies.
+   This is a measurement crisis and should be treated as one.
+4. **Getting past WER.** WER penalises semantically-correct paraphrase and
+   under-penalises a wrong proper noun (@tbl-wer-failure). Candidate
+   replacements — B-WER, entity error rate, embedding-based scores,
+   LLM-as-judge — each have their own failure modes. The deeper question is
+   whether ASR should be optimised for transcript fidelity at all, or for
+   downstream task utility: *does a lower WER produce a better clinical note?*
+5. **Fairness that generalises.** The disparities @koenecke2020racial measured
+   persist, now compounded by hallucination that is itself demographically
+   skewed. The mechanism — training-data composition — is understood but
+   unfixed.
+6. **Contextual biasing at scale.** B-WER degrades as bias lists grow;
+   retrieval-based approaches reach $10^5$ entries but are immature. Whether to
+   retrieve or simply extend the context window is unresolved.
+7. **Multi-speaker, speaker-attributed, and streaming, jointly.** Each is
+   solved in isolation. Together they require separate acoustic and speaker
+   caches, permutation resolution across chunks, and speaker state persisted
+   across minutes of silence (@sec-joint-asr).
+8. **Alignment as a first-class output.** The accuracy-leading architecture is
+   the worst at timestamps, forcing bolt-on CTC aligners. TDT's native durations
+   are the one principled fix and remain under-explored.
+9. **Hallucination with guarantees.** Every current mitigation is heuristic. No
+   architecture offers a *guarantee* that output is acoustically grounded —
+   though CTC and RNN-T's blank symbol come closest, which is an argument for
+   not abandoning them.
+10. **Truly low-resource ASR.** Self-supervision promised usable ASR from
+    minutes of labels, and multilingual models now claim 1000+ languages, but
+    quality at the tail is poor and evaluation data barely exists.
+
+
+## Summary
+
+ASR is the load-bearing task of speech processing, and its history is a single
+argument about alignment. The classical noisy-channel pipeline
+(@eq-noisy-channel) handled alignment with HMMs and paid for it with five
+separately-trained components, a hand-built lexicon, and a bootstrapping loop
+that made a new language a multi-person-year project. The hybrid era replaced
+one box in that pipeline with a DNN and won 20–30% relative, but changed nothing
+structural.
+
+The end-to-end era removed the lexicon and the alignment loop altogether, and
+split into three families that remain the field's basic vocabulary: **CTC**
+marginalises over monotonic alignments under a conditional-independence
+assumption, **RNN-T** repairs that assumption with a prediction network and
+became the streaming default, and **attention encoder-decoders** learn the
+alignment freely, buying accuracy at the cost of hallucination and poor
+timestamps. Conformer settled the encoder question by combining convolution and
+self-attention; SpecAugment made training data-efficient; Whisper showed that
+680k hours of noisy web audio buys robustness that no amount of clean-corpus
+tuning does.
+
+Two things follow that are easy to miss. First, **end-to-end models fused away
+the modularity of @eq-noisy-channel, and the field has spent years rebuilding
+it** — LM fusion, internal-LM estimation, contextual biasing, retrieval, and now
+LLM decoders are all attempts to recover separately-updatable knowledge that the
+classical system had for free. Second, **evaluation has not kept pace**: WER is
+saturated on the benchmarks everyone reports, insensitive to the errors that
+matter most, and vulnerable to normalisation choices and now to pre-training
+contamination.
+
+For the practitioner, the choice is mostly a point on the accuracy–speed–coverage
+surface. Parakeet-style Fast Conformer with a TDT decoder is the throughput
+choice; Whisper and its derivatives are the multilingual and zero-shot choice;
+LLM-decoder systems are the choice when promptability and instruction-following
+matter more than latency. For streaming, RNN-T remains unbeaten after fourteen
+years.
+
+The next chapter takes up the other answer to the data problem — learning
+speech representations without labels at all — which underpins not only
+low-resource ASR but the speaker, prosodic, and semantic representations used
+throughout the rest of this book.

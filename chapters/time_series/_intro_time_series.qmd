@@ -1,0 +1,16 @@
+# Time Series {.unnumbered}
+
+## Overview
+
+A time series is a sequence of observations indexed by time. Unlike i.i.d. data, consecutive observations are correlated — a property that both enriches the structure and constrains the methodology. This part covers the statistical foundations needed to reason about temporal data, classical and deep learning models for forecasting, and the practical considerations that distinguish time series engineering from standard supervised learning.
+
+**Chapter Scope**:
+
+- **Time Series Fundamentals** (§14): Problem formulation, autocorrelation, stationarity, data handling, classical models (ARIMA family), and evaluation metrics
+- **Deep Learning for Time Series** (§15): Recurrent networks (LSTM, GRU), temporal convolutions (TCN), MLP residual stacks (N-BEATS), probabilistic autoregressive models (DeepAR), attention-based models (TFT, PatchTST), and state space models (Mamba)
+
+**Interview Relevance**: Time series forecasting is central to roles at Amazon (demand forecasting, Alexa), Google (Search trends, ads), Meta (Feed engagement, infrastructure capacity), and virtually every fintech and trading firm. Expect questions on how to handle non-stationarity, how to prevent data leakage in temporal splits, the trade-off between autoregressive and multi-horizon models, and the architectural differences between LSTM, TCN, and Transformer-based approaches.
+
+**Prerequisites**: Foundations (neural networks, optimization). Familiarity with probability and basic statistics (expectation, variance, covariance). Chapter 15 also requires knowledge of attention mechanisms from Part II.
+
+---
