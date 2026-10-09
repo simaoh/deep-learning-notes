@@ -1,0 +1,965 @@
+# Video Understanding {#sec-video-understanding}
+
+Video understanding tasks a model with answering, from a sequence of frames
+$\mathbf{V} = (\mathbf{I}_1, \mathbf{I}_2, \ldots, \mathbf{I}_T) \in
+\mathbb{R}^{T \times H \times W \times 3}$, a downstream question:
+*what is happening, where, when, and who is doing it?* Two model
+families dominate the 2024–2026 landscape and this chapter treats them
+in parallel:
+
+1. **Autoregressive vision-language models (VLMs).** A vision encoder lifts
+   each frame to a sequence of tokens; a language model decoder then
+   *generates* a textual answer (caption, label, free-form response) one token
+   at a time. Examples include the Qwen-VL series (Qwen-VL [@bai2023qwenvl] →
+   Qwen2-VL [@wang2024qwen2vl] → Qwen2.5-VL [@bai2025qwen25vl] →
+   Qwen3-VL [@team2025qwen3vl]), LLaVA-OneVision [@li2024llavaonevision],
+   InternVL3 [@chen2024internvl], and Molmo [@deitke2024molmo].
+
+2. **Representation-style video encoders.** A network maps a clip to a
+   single embedding (or a small set of pooled tokens) that is then
+   either scored against a label, contrasted against text embeddings,
+   or fed to a shallow classifier. Examples include
+   VideoMAEv2 [@wang2023videomaev2], UMT [@li2023umt],
+   VideoMamba [@li2024videomamba], V-JEPA 2 [@assran2025vjepa2], and
+   InternVideo2 [@wang2024internvideo2].
+
+The two families are *not* disjoint. Representation models are often
+the *vision tower* inside an autoregressive VLM, and an autoregressive
+VLM can itself be turned into a representation model by token-averaging
+its vision outputs and training a contrastive head — a recipe used by
+several recent retrieval systems and by the Janus family
+[@chen2025januspro] of *dual* understanding+generation models.
+
+This chapter has four main parts:
+
+- @sec-video-tasks defines the downstream tasks of interest.
+- @sec-video-vlms covers the model architectures, with emphasis on
+  *video-specific* design choices (positional encoding for time,
+  token compression, masking) and traces the historical arc from
+  early Q-Former-based video models to the modern pixel-shuffle +
+  M-RoPE consensus.
+- @sec-video-retrieval discusses temporal moment localization (TML),
+  video corpus moment retrieval (VCMR), and the two-stage
+  retrieval+reranker pattern that has emerged as the standard pipeline
+  for production video search.
+- @sec-video-benchmarks-short gives a one-page overview of the
+  benchmarks; the full survey lives in the companion chapter
+  @sec-video-benchmarks.
+
+Video *generation* is covered separately in @sec-video-generation.
+
+
+## Notation and Key Concepts {#sec-video-notation}
+
+| Concept | Notation | Definition |
+|:--------|:---------|:-----------|
+| **Frame** | $\mathbf{I}_t \in \mathbb{R}^{H \times W \times 3}$ | One image at time $t$. |
+| **Clip** | $\mathbf{V} \in \mathbb{R}^{T \times H \times W \times 3}$ | A finite sequence of $T$ frames, typically sampled at a target FPS from a longer video. |
+| **Video** | — | The underlying recording, of which a clip is a (possibly downsampled) view. |
+| **Native FPS** | $f_{\text{src}}$ | Frame rate of the source file (typically 24, 25, or 30 fps). |
+| **Sample FPS** | $f_{\text{s}}$ | Frame rate at which the model consumes frames (typically 1–8 fps for VLMs, 8–32 fps for action encoders). |
+| **Frame budget** | $T$ | Number of frames a model sees per clip; bounded by GPU memory and context length. |
+| **Tube** | $\mathcal{T} \in \mathbb{R}^{t \times p \times p \times 3}$ | A spatio-temporal patch: $t$ frames $\times$ a $p \times p$ spatial patch. The atomic unit of most video transformers. |
+| **Vision token** | $\mathbf{z}_i \in \mathbb{R}^{d}$ | A $d$-dimensional embedding emitted by the vision encoder, fed to the decoder. |
+| **Token budget** | $N_v$ | Total number of vision tokens after any compression; $N_v$ directly costs decoder context. |
+| **Temporal certificate** | $\tau_c$ | Minimum video duration a human needs to watch to verify an annotation [@mangalam2023egoschema]. Larger $\tau_c$ ⇒ longer-range reasoning required. |
+
+: Video representation terminology. {#tbl-video-repr}
+
+A few invariants worth fixing up front:
+
+- **Sample FPS is almost always lower than native FPS.** A 30-fps,
+  10-minute video has 18 000 frames; no current VLM can fit that in
+  context. Sample FPS for autoregressive VLMs is typically 1–2 fps (so
+  a 10-minute video becomes 600–1200 frames, still aggressively pooled
+  before the decoder).
+- **The two compressions are independent.** Temporal compression
+  (sample FPS, frame selection) and spatial compression (tokens per
+  frame after patch merging) are tuned separately and yield very
+  different trade-offs depending on task (see @sec-token-budgets).
+- **Tubes vs frames.** Pure-frame approaches (LLaVA-Video-style) treat
+  each frame independently and rely on the language model to do
+  temporal reasoning. Tube-based approaches (VideoMAE, ViViT) build
+  temporal reasoning into the vision encoder via 3D patches. The
+  consensus in 2024–2026 is *frame-wise encoders + strong temporal
+  positional encoding in the decoder*, but tube models remain
+  competitive on dense classification benchmarks (SSv2, K400).
+
+
+## Downstream Video Tasks {#sec-video-tasks}
+
+This section names and minimally defines each downstream task we will
+encounter when reading the literature. The benchmark survey in
+@sec-video-benchmarks indexes back to these task labels.
+
+### Action and Activity Recognition {#sec-task-action}
+
+Given a clip $\mathbf{V}$ and a fixed vocabulary $\mathcal{C}$ of
+action classes, predict the most likely class $c^{*} \in \mathcal{C}$.
+The canonical formulation is clip-level multi-class classification
+with top-1 and top-5 accuracy. Multi-label variants (Charades, AVA)
+instead predict $\hat{\mathbf{y}} \in \{0,1\}^{|\mathcal{C}|}$ and
+report mean Average Precision (mAP).
+
+Action recognition is the oldest video task and remains the most
+common *encoder* benchmark. Most pretrained video encoders advertise a
+Kinetics-400 top-1 number first.
+
+### Temporal Action Localization {#sec-task-tal}
+
+Given a long video, predict a set of $(t_s, t_e, c)$ triples — start
+time, end time, action class — for every action instance. Standard
+reporting is mean Average Precision at IoU thresholds
+$\{0.5, 0.75, 0.95\}$:
+
+$$
+\text{mAP}@\tau = \frac{1}{|\mathcal{C}|}\sum_{c \in \mathcal{C}}
+\text{AP}_c\bigl(\text{IoU} \geq \tau\bigr)
+$$ {#eq-map-tau}
+
+Localization tests *when* something happens. Pure clip-level encoders
+typically run a sliding window plus a head; long-context VLMs can
+attempt it end-to-end.
+
+### Spatio-Temporal Action Detection {#sec-task-stad}
+
+Same as TAL but with a bounding box per actor per frame. The canonical
+metric is frame-level mAP at a spatial IoU threshold (typically 0.5),
+averaged over frames. AVA [@gu2018ava] is the dominant benchmark.
+
+### Video Captioning {#sec-task-captioning}
+
+Given a clip, produce a natural-language description. Two variants:
+
+- **Clip captioning** (one caption per clip; MSR-VTT, VATEX, MSVD).
+  Standard metrics: BLEU-4, METEOR, ROUGE-L, CIDEr, SPICE.
+- **Dense video captioning** (a sequence of timestamped captions over
+  a long video; ActivityNet Captions, YouCook2). Metrics: CIDEr and
+  METEOR scored at IoU thresholds, plus the SODA_c [@fujita2020soda]
+  metric for joint event-detection-and-captioning quality.
+
+### Video Question Answering {#sec-task-vqa}
+
+Given a clip $\mathbf{V}$ and a natural-language question $q$, produce
+an answer $a$. Three sub-flavours:
+
+- **Multiple-choice** (MVBench, NeXT-QA, Perception Test, Video-MME):
+  the model picks one of $K$ candidate answers; reported as accuracy.
+  Robust to free-form generation noise — the de-facto evaluation
+  format for VLM papers in 2025–2026.
+- **Open-ended generation** (MSRVTT-QA, MSVD-QA, ActivityNet-QA): the
+  model generates a string and is scored by exact match or by an
+  LLM-judge.
+- **Grounded VQA** (NeXT-GQA, STAR): the model must also predict the
+  temporal segment that supports the answer; scored jointly with a
+  grounding IoU metric.
+
+### Video Temporal Grounding (Moment Retrieval) {#sec-task-moment}
+
+Three closely related tasks, all asking "find when":
+
+- **Video Moment Retrieval (VMR) / Temporal Moment Localization (TML).**
+  Single-video setting: given one video and a natural-language query,
+  predict the segment $(t_s, t_e)$ that best matches the query.
+  Standard benchmarks: Charades-STA, ActivityNet Captions
+  (grounding split), DiDeMo, QVHighlights.
+- **Video Corpus Moment Retrieval (VCMR).** Corpus-scale setting:
+  given a query and a corpus of videos, return the best (video,
+  moment) pair. Standard benchmark: TVR [@lei2020tvr]; emerging:
+  MAD [@soldan2022mad], MomentSeeker [@hu2025momentseeker]. VCMR
+  requires both a *first-stage retriever* (to narrow down candidate
+  videos) and a *moment grounder* (to localize within candidates) —
+  often implemented as a two-stage pipeline (see @sec-rerankers).
+- **Highlight Detection (HD).** Predict a saliency score for each
+  clip-level window in a long video, optionally conditioned on a text
+  query. Often co-trained with VMR on the same dataset (QVHighlights).
+
+Standard metric for VMR / VCMR is **Recall@N at IoU** $\tau$:
+
+$$
+\text{R@N, IoU}=\tau \;=\; \frac{1}{|Q|}\sum_{q \in Q}
+\mathbb{1}\!\left[\max_{i \leq N} \text{IoU}(\hat{m}_i^{(q)}, m^{(q)}) \geq \tau\right]
+$$ {#eq-moment-r}
+
+where $\hat{m}_i^{(q)}$ is the $i$-th predicted moment for query $q$
+and $m^{(q)}$ the ground-truth moment. For HD, the standard metric is
+mAP@k.
+
+### Video Retrieval {#sec-task-retrieval}
+
+Given a corpus of $N$ videos and a query (text or video), rank the
+corpus and report Recall@$\{1, 5, 10\}$ and median rank. The two
+directions — text → video and video → text — are reported separately.
+This is the canonical evaluation for *contrastive* video-text models.
+Benchmarks: MSR-VTT, DiDeMo, LSMDC, VATEX, ActivityNet Captions,
+YouCook2.
+
+### Highlight Detection {#sec-task-highlight}
+
+See @sec-task-moment — usually treated as a sub-task of moment
+retrieval and trained jointly on QVHighlights [@lei2021qvhighlights].
+
+### Single-Object and Multi-Object Tracking {#sec-task-tracking}
+
+Single-object tracking (SOT): given a bounding box in frame 1, predict
+the bounding box in every subsequent frame. Standard datasets: LaSOT,
+GOT-10k, TrackingNet. Metric: AUC of the success plot.
+
+Multi-object tracking (MOT): detect every object in every frame and
+maintain consistent identities. Metric: HOTA [@luiten2021hota] (Higher
+Order Tracking Accuracy), which decomposes into detection accuracy
+(DetA) and association accuracy (AssA). MOT17, MOT20, DanceTrack are
+the standard benchmarks.
+
+### Video Object Segmentation and Referring {#sec-task-vos}
+
+Pixel-level segmentation across frames. Two main variants:
+
+- **Semi-supervised VOS** (DAVIS, YouTube-VOS): a mask is given for
+  frame 1, propagate it. Metric: $\mathcal{J}\&\mathcal{F}$ (region +
+  boundary).
+- **Referring VOS** (Ref-YouTube-VOS, MeViS): a natural-language
+  phrase identifies the object; the model produces masks. Metric:
+  $\mathcal{J}\&\mathcal{F}$.
+
+### Long-Video Understanding {#sec-task-longvideo}
+
+An umbrella label for any task on videos of $\geq 5$ minutes, where
+the challenge is *not* per-frame perception but rather narrative
+reasoning, memory, and aggregation. Dedicated benchmarks (LVBench,
+MLVU, LongVideoBench, Video-MME-long, EgoSchema) are MCQ-style by
+construction.
+
+### Egocentric Understanding {#sec-task-ego}
+
+The video is shot from a head-mounted camera (first-person view). The
+distinguishing features are: extreme motion, hands and objects in
+close view, and a strong temporal structure (continuous activity, not
+edited clips). Ego4D and EPIC-Kitchens-100 are the canonical sources.
+EgoSchema re-uses Ego4D for very-long-form MCQ reasoning.
+
+
+## Vision-Language Models for Video Understanding {#sec-video-vlms}
+
+The architectures in this section share a common ViT-to-LLM template:
+a vision encoder lifts each frame to patch tokens, a *projector*
+compresses them, and an autoregressive LLM consumes the projected
+tokens interleaved with text. The video-specific design choices that
+distinguish models from each other fall into three buckets — token
+compression, temporal positional encoding, and masking — covered in
+@sec-vlm-vocab. The historical arc (early Q-Former + per-frame CLIP
+→ modern pixel-shuffle + multi-axis RoPE + SigLIP) is told through the
+Qwen-VL series in @sec-vlm-qwen.
+
+### Architectural Vocabulary {#sec-vlm-vocab}
+
+#### Token Compression {#sec-token-budgets}
+
+A ViT vision encoder at 384×384 input with a 14×14 patch size emits
+$(384/14)^2 \approx 730$ tokens per frame. At 32 frames per clip that
+is $\sim$ 23K tokens — already saturating a 32K-context LLM with the
+vision side alone. Every video VLM therefore applies a *token
+compression* step between encoder and decoder. The dominant families
+are:
+
+- **Q-Former / Perceiver Resampler** (BLIP-2 style; used by
+  VideoChat2 [@li2024mvbench], Video-LLaMA [@zhang2023videollama],
+  mPLUG-Owl3): a small trainable transformer with $K$ learned query
+  tokens cross-attends to the frame tokens, producing exactly $K$
+  output tokens. Cheap to learn, but adds parameters and is widely
+  viewed as a bottleneck in 2024–2026 papers.
+- **Pixel-shuffle / patch merging** (Qwen2-VL onwards, InternVL2.5,
+  Molmo): a parameter-free $r \times r$ spatial pooling that reduces
+  tokens by $r^2$ with a linear projection back to the decoder's
+  hidden dimension. The current default for new models. In Qwen2-VL,
+  a 2×2 merge halves both axes (~4× fewer tokens) for almost no
+  quality loss.
+- **Slow-Fast / two-stream sampling** (SlowFast
+  [@feichtenhofer2019slowfast], LLaVA-Video, Apollo [@zohar2024apollo]):
+  a small number of "slow" frames are encoded at full resolution, the
+  remaining "fast" frames at aggressive spatial compression. Decouples
+  temporal density from spatial detail.
+- **Learned temporal pooling** (LLaMA-VID [@li2024llamavid] uses 2
+  tokens per frame — content + context — for arbitrarily long videos;
+  Video-XL / Video-XL-2 [@shu2024videoxl] use KV-cache compression).
+
+#### Temporal Positional Encoding {#sec-temporal-pos}
+
+How does the decoder know *when* each vision token came from? Four
+flavours dominate:
+
+- **Interleaved time tokens** (LLaVA-Video, VideoChat2): each frame's
+  visual tokens are preceded by a literal text token like `<frame_5>`
+  or a textual timestamp like `t=12.3s`. Cheap, generalises to
+  arbitrary sequences, but eats context. Qwen3-VL's *explicit
+  text-based video timestamps* are the same idea, refined: each frame
+  is preceded by a textual `<time>` token that the model has been
+  explicitly trained to ground its temporal claims in.
+- **Multi-axis RoPE (M-RoPE / mRoPE)** (Qwen2-VL onwards): the
+  standard 1D rotary embedding [@su2024roformer] is decomposed into
+  three independent axes $(t, h, w)$, each rotating a third of the
+  head dimensions. Captures spatial and temporal position
+  simultaneously without consuming text tokens. Qwen2.5-VL added
+  **absolute time embeddings** so $t$ is keyed to real time in
+  seconds (not just frame index), enabling 10-hour clips at variable
+  FPS. Qwen3-VL uses **interleaved M-RoPE** — alternating the three
+  axes uniformly across head dimensions for better long-range
+  generalisation.
+- **TMRoPE** (Qwen2.5-Omni [@xu2025qwen25omni]): extends M-RoPE to
+  *cross-modality* temporal alignment, so audio frames (40 ms each)
+  and video frames (500 ms each) share a unified timeline of position
+  IDs. Essential when a model takes synchronous audio + video inputs.
+- **Factorised space-time attention** (TimeSformer
+  [@bertasius2021timesformer], ViViT [@arnab2021vivit]): the vision
+  *encoder* alternates spatial and temporal attention layers, so the
+  decoder receives tokens that already encode time. Used inside
+  encoder-only models more than decoder VLMs.
+
+#### Pretraining Masking {#sec-masking}
+
+Self-supervised video encoders rely heavily on masked autoencoding.
+The masking strategy is the main design knob:
+
+- **Random patch masking** (image-MAE baseline, ~75 % ratio).
+- **Tube masking** (VideoMAE [@tong2022videomae], 90–95 % ratio): the
+  same spatial mask is repeated across all $T$ frames of a clip.
+  Prevents temporal leakage between frames and is the highest-ratio
+  masking reported to date.
+- **Dual masking** (VideoMAEv2 [@wang2023videomaev2]): a dual mask on
+  *both* encoder and decoder reduces compute further, enabling
+  1B-parameter encoder training.
+- **Unmasked-teacher distillation** (UMT [@li2023umt]): instead of
+  reconstructing pixels, mask the *student* but feed an *unmasked*
+  CLIP teacher's tokens as the regression target. Combines MAE-style
+  pretraining efficiency with CLIP-style alignment quality.
+- **Latent-prediction masking** (V-JEPA / V-JEPA 2
+  [@assran2025vjepa2]): predict the *features* of masked regions in
+  representation space, not pixels. Yann LeCun's JEPA programme.
+
+### From Q-Former to mRoPE: the Qwen-VL story {#sec-vlm-qwen}
+
+The Qwen-VL series is the most instructive lens through which to read
+the architectural evolution of 2023–2026 video VLMs, because each
+release retired a design choice that the rest of the field then
+followed. Three years of releases:
+
+#### Qwen-VL (Aug 2023) {.unnumbered}
+
+[Qwen-VL](https://arxiv.org/abs/2308.12966) [@bai2023qwenvl] —
+*single-image* VLM with a fixed-resolution 448 × 448 input.
+Architecture:
+
+- **Vision encoder.** A CLIP-style ViT-bigG trained from scratch with
+  contrastive image-text alignment.
+- **Adapter.** A *position-aware vision-language adapter* — a small
+  cross-attention module with 256 learned query tokens — that
+  compresses ~1024 patch features down to 256 tokens, preserving 2D
+  positional information through a 2D rotary embedding on the query
+  side.
+- **Decoder.** Qwen-7B language model.
+- **Training.** Three stages: (i) image captioning on 1.4 B image-text
+  pairs, (ii) multi-task on grounding + OCR + VQA, (iii) instruction
+  tuning. Bounding boxes are encoded as plain text in `<box>` tokens,
+  prefiguring later approaches that put structured outputs into the
+  text stream.
+
+The Q-Former-style adapter is *the* design that 2024 video VLMs (Video-
+LLaMA, VideoChat2) inherited and that the field has since moved away
+from.
+
+#### Qwen2-VL (Sep 2024) {.unnumbered}
+
+[Qwen2-VL](https://arxiv.org/abs/2409.12191) [@wang2024qwen2vl] — the
+first member of the family to take video seriously. Three architectural
+breaks with the v1 line:
+
+- **Native dynamic resolution.** Drop the fixed 448 × 448. Images are
+  processed at their actual resolution, producing a *variable* number
+  of tokens. Adjacent 2×2 patches are merged by a single MLP layer
+  (the **pixel-shuffle** trick that became the field default).
+- **M-RoPE.** Replace 1D RoPE with multi-axis RoPE over (t, h, w).
+  Time and space get independent rotation axes, so the model natively
+  understands both image layout and frame ordering.
+- **Image–video unification.** Video is processed as a *sequence of
+  frames*, sampled at 2 fps. A 3D convolution with temporal kernel
+  size 2 captures inter-frame motion. To make images and videos
+  share one code path, a single image is treated as two identical
+  frames passed through the same 3D conv — yielding a pseudo-3D
+  $2 \times H \times W$ volume.
+
+#### Qwen2.5-VL (Feb 2025) {.unnumbered}
+
+[Qwen2.5-VL](https://arxiv.org/abs/2502.13923) [@bai2025qwen25vl] —
+scales the v2 design and adds three contributions important for *long*
+video:
+
+- **Window attention in the vision encoder.** Replaces global
+  attention in most ViT blocks with windowed attention, making compute
+  scale linearly in pixel count. Essential for the long-clip regime
+  (the v2 design hit a ViT memory wall around 30 s).
+- **Absolute time embeddings on top of M-RoPE.** The temporal axis of
+  M-RoPE is keyed to *real time in seconds*, not to the frame index.
+  Crucial when frames are sampled at variable FPS over a 10-hour clip
+  — the model can now correctly say "this happened at 47 minutes in"
+  rather than "this happened at frame 1411".
+- **Q-Video-1B training corpus.** A new 1B-pair video-text
+  pretraining corpus, in addition to the 4 B-pair image-text mix.
+
+#### Qwen2.5-Omni (Mar 2025) {.unnumbered}
+
+[Qwen2.5-Omni](https://arxiv.org/abs/2503.20215) [@xu2025qwen25omni]
+— extends Qwen2.5-VL to audio (input) and speech (output), keeping a
+single unified transformer (the "Thinker") with a separate streaming
+speech decoder (the "Talker"). The video-relevant contribution is
+**TMRoPE** (*Time-aligned Multimodal RoPE*): position IDs for audio
+frames (40 ms each) and video frames are emitted on a shared real-time
+axis, so the decoder can attend across modalities at synchronised
+timestamps. This is the cleanest published approach to *audio + video
+joint VLM training*.
+
+#### Qwen3-VL (Nov 2025) {.unnumbered}
+
+[Qwen3-VL](https://arxiv.org/abs/2511.21631) [@team2025qwen3vl] —
+pushes the family to **256K native multimodal context** and pure-text
+parity with text-only LLMs at the same scale. Architectural changes:
+
+- **Interleaved M-RoPE.** Instead of dividing the head dimensions into
+  three contiguous blocks (one per axis), the (t, h, w) rotations are
+  interleaved uniformly through the head dimensions. Empirically this
+  generalises better to long contexts and to combinations of axes
+  unseen during training.
+- **Explicit text-based timestamps.** Instead of relying purely on
+  M-RoPE's continuous $t$ axis, Qwen3-VL inserts textual time tokens
+  (e.g. `<time>12.3s</time>`) into the visual sequence. The model is
+  trained to *cite* the timestamp when grounding a temporal claim,
+  which makes hallucination of times much rarer.
+- **DeepStack.** Multi-layer features from the ViT are injected into
+  *multiple* layers of the LLM via residual connections, rather than
+  only into the input layer. This adds bandwidth without expanding
+  the token count — a context-window-friendly form of multi-scale
+  conditioning.
+- **Square-root reweighting.** Balances the text and multimodal loss
+  terms during training without hurting language quality — the model
+  matches dedicated text-only LLMs on language benchmarks while still
+  being a competitive video VLM.
+
+The Qwen-VL series is not unique; **InternVL** (Shanghai AI Lab) takes
+a similar path with adaptive visual-token resolution
+[@chen2024internvl], **Pixtral** (Mistral), **Idefics** (HuggingFace),
+and **Gemma 3** (Google DeepMind) all pair instruction-tuned LLMs with
+SigLIP-style encoders and follow the modern pixel-shuffle + M-RoPE
+template. The shift from Q-Former → pixel-shuffle + multi-axis RoPE is
+now the dominant design pattern in 2024–2026.
+
+### Specialised Video VLMs {#sec-vlm-specialised}
+
+Beyond the generalist image+video pretrained families above, three
+specialised lines are worth knowing:
+
+#### Long-Video Specialists {.unnumbered}
+
+These models trade off short-clip quality for the ability to consume
+hundreds-to-thousands of frames in one forward pass.
+
+- **Eagle 2.5** (NVIDIA, Apr 2025) [@huang2025eagle25]. Designed for
+  RAG-style video search and very-long-context reasoning. Three
+  contributions: (i) **Image Area Preservation (IAP)** — avoids
+  over-cropping during dynamic resolution to preserve fine details;
+  (ii) **Automatic Degrade Sampling (ADS)** — at inference, dynamically
+  trades visual against textual tokens to stay within the context
+  budget; (iii) **Progressive Mixed Post-Training** — context window
+  is grown progressively during fine-tuning, which stabilises long-
+  context learning.
+- **LongVU** [@shen2024longvu] (Meta, Oct 2024). Hour-long videos at
+  1 FPS in 8K context, using a SigLIP + DINOv2 dual-encoder where
+  DINOv2 cross-frame similarity drives **spatiotemporal adaptive
+  compression** — redundant frames collapse to one token each, "key"
+  frames keep their full token set.
+- **LongVA** [@zhang2024longva] (LMMs-Lab, Jun 2024). The conceptual
+  contrast to LongVU: instead of compressing aggressively, *extend the
+  language model's context length first* (to 224K) and then connect
+  the vision encoder — long-video capability transfers from language
+  context for free.
+- **Video-XL / Video-XL-2** [@shu2024videoxl] (Sep 2024 / Mar 2025).
+  Uses **Visual Summarization Tokens (VST)** as KV-cache compression:
+  every $K$ frames, a small set of summary tokens replaces the full
+  frame tokens, enabling 2 000+ frame clips.
+- **Apollo** [@zohar2024apollo] (Meta, Dec 2024). Not a single model
+  but a *design-space study* across FPS, frame count, vision encoder,
+  and projector. Headline finding: **scaling consistency** — design
+  choices that win at 1.5 B transfer almost perfectly to 7 B, so
+  small-model ablations are trustworthy. Also confirms that SigLIP +
+  InternVideo2 dual encoders beat either alone, mirroring LongVU's
+  approach.
+
+#### Moment-Localization Specialists {.unnumbered}
+
+Models built specifically to predict precise $(t_s, t_e)$ segments,
+treating temporal grounding as their first-class output.
+
+- **LLaVA-MR** [@lu2024llavamr] (Peking University, Nov 2024).
+  Addresses the problem that standard MLLMs sample frames sparsely
+  and lose fine temporal cues. Three contributions:
+    - **Dense Frame and Time Encoding (DFTE).** Each sampled frame is
+      paired with an explicit *time token* interleaved into the visual
+      sequence, so the LLM sees `<t=0.5>` `<frame_0>` `<t=1.0>`
+      `<frame_1>` … . The model learns both *what* and *when*.
+    - **Informative Frame Selection (IFS).** A learned scorer
+      identifies *key* frames (significant visual / motion change),
+      separating them from non-key frames.
+    - **Dynamic Token Compression (DTC).** Non-key frames get
+      compressed to a small token budget; key frames keep full tokens.
+      This is moment localization's analogue of LongVU's adaptive
+      compression.
+- **NumPro** [@wu2024numpro] (Mar 2025). Takes a radically simpler
+  approach: *overlay the frame index as a numeric on each frame* and
+  let an off-the-shelf VLM read it. Achieves competitive zero-shot
+  temporal grounding without any temporal architecture, and very
+  strong performance after light fine-tuning. The lesson: explicit
+  *visual* temporal cues can rival dense temporal embeddings.
+- **TimeChat** [@ren2024timechat] (Dec 2023). Earlier work in the
+  same line: a *time-aware Q-Former* whose queries are conditioned on
+  the absolute timestamp, with explicit timestamp tokens interleaved
+  in the prompt.
+
+#### Dual Understanding+Generation Models {.unnumbered}
+
+Models that produce both text *and* images / video in one autoregressive
+loop. Less mature than the pure-understanding line but architecturally
+informative.
+
+- **Janus-Pro** (DeepSeek, Jan 2025) [@chen2025januspro]. Unifies
+  visual understanding and text-conditioned image generation in *one*
+  autoregressive transformer (7 B-param DeepSeek LLM), but **decouples
+  the visual encoding pathways**: a SigLIP-L encoder for understanding
+  (image → semantics), a VQ-tokenizer [@sun2024llamagen] for
+  generation (image → discrete tokens). The shared transformer then
+  predicts either text tokens or image tokens, depending on the task.
+  The argument: visual understanding wants high-level semantics, image
+  generation wants pixel-level detail — using one encoder for both is
+  a forced compromise.
+- **LlamaGen** [@sun2024llamagen] (ByteDance, Jun 2024). The
+  underlying *VQ tokenizer* that Janus-Pro uses. Demonstrated that
+  autoregressive token prediction over a well-trained VQ codebook can
+  match diffusion-model image quality — i.e. *image generation can
+  reduce to next-token prediction* if the tokenizer is good. Discussed
+  further in @sec-video-generation.
+
+### Encoder-Only Video Models {#sec-vlm-encoder}
+
+The pre-LLM line, still alive in 2024–2026 for representation
+learning and as vision towers inside VLMs. Three families:
+
+- **Supervised 3D / factorised attention** — C3D, I3D, R(2+1)D,
+  SlowFast [@feichtenhofer2019slowfast], TSN, TSM, TimeSformer
+  [@bertasius2021timesformer], ViViT [@arnab2021vivit], MViTv2
+  [@li2022mvitv2], Video Swin [@liu2022videoswin]. The pre-MAE
+  workhorses; trained with supervised classification on Kinetics.
+- **Masked self-supervised** — VideoMAE [@tong2022videomae],
+  VideoMAEv2 [@wang2023videomaev2], ST-MAE [@feichtenhofer2022stmae],
+  MaskFeat [@wei2022maskfeat], UMT [@li2023umt], V-JEPA
+  [@bardes2024vjepa] and V-JEPA 2 [@assran2025vjepa2]. The dominant
+  modern self-supervised line; V-JEPA 2 also adds action-conditioned
+  world-model capabilities.
+- **State-space models** — VideoMamba [@li2024videomamba]. The
+  bidirectional-Mamba alternative to ViT; promises linear scaling in
+  frames, delivers competitive accuracy at smaller sizes.
+- **Multi-stage masked + contrastive** — InternVideo
+  [@wang2022internvideo] and InternVideo2 [@wang2024internvideo2].
+  Three-stage training (masked video pretraining → cross-modal
+  contrastive → supervised) on 6M+ hours. The reference video-native
+  encoder of 2024–2026, frequently used as a second encoder inside
+  generalist VLMs (Apollo, VideoGPT+).
+
+### Contrastive Video-Text Models {#sec-vlm-contrastive}
+
+The dominant line for *retrieval*. Almost all 2024–2026 contrastive
+video-text models follow the CLIP4Clip [@luo2022clip4clip] template:
+take a pretrained image-text CLIP, sample $T$ frames, encode each
+independently, then *mean-pool* over time (yes — mean pooling beats
+transformers and LSTMs in the original CLIP4Clip ablation, and the
+result has held up). Modern variants:
+
+- **ViCLIP** [@wang2024internvid] (Shanghai AI Lab, 2024) — video-
+  native ViT-L trained on **InternVid-10M-FLT**, the modern WebVid
+  replacement (re-captioned with multimodal LLM judges). Combined
+  contribution: dataset (InternVid) + model (ViCLIP).
+- **LanguageBind-Video** [@zhu2024languagebind] (PKU, 2024) — binds
+  multiple modalities (video, audio, depth, thermal) to a shared
+  *language* embedding space via an OpenCLIP ViT-L anchor.
+- **InternVideo2** [@wang2024internvideo2] (encoder mode) — the
+  contrastive variant of the InternVideo2 representation also serves
+  as a retrieval model and beats ViCLIP on most leaderboards as of
+  2025–2026.
+
+### Trends in Video VLMs (2024–2026) {#sec-vlm-trends}
+
+A compressed read of the field:
+
+- **Q-Former is out, pixel-shuffle / patch merging is in.** Every
+  major 2024 family (Qwen, InternVL, LLaVA-OneVision, NVILA, Molmo)
+  has dropped Q-Former for a parameter-free spatial merger. The
+  Q-Former line lives on only in older lineages (Video-LLaMA, mPLUG-
+  Owl3) and a few specialists where its parameter cost is acceptable.
+- **Temporal position encoding has consolidated on M-RoPE.** Qwen2-VL
+  introduced it, every late-2024 / 2025 model that takes video
+  seriously now uses it (or a near-variant — InternVL3's V2PE shrinks
+  the position-stride for visual tokens within standard 1D RoPE,
+  same problem, simpler answer).
+- **Vision encoder convergence on SigLIP-SO400M.** Almost every
+  open 2024–2026 model uses it (Qwen2.5-VL, InternVL3, LLaVA-OneVision,
+  Apollo, Tarsier2, VideoLLaMA3, mPLUG-Owl3, LongVU). The OpenAI CLIP
+  ViT-L line has largely been retired.
+- **Data quality > data scale.** The standard 2024–2026 mix is
+  **InternVid + ShareGPT4Video + LLaVA-Video-178K + Panda-70M**, all
+  re-captioned by multimodal LLM judges. The take-down of WebVid-10M
+  in late 2024 over a copyright dispute forced everyone onto these,
+  and the resulting quality jump is the single biggest improvement
+  driver for the 2024 → 2025 generation.
+- **Long-video splits into two camps.** *Compress aggressively*
+  (LongVU, Video-XL-2) or *extend the language context* (LongVA,
+  LongVILA). Neither has fully won; the design tends to be picked by
+  which constraint dominates for the target task (compute vs latency).
+- **Pure-encoder representation models are alive but niche.** V-JEPA 2
+  and VideoMAEv2 deliver state-of-the-art *frozen probing* on K400
+  and SSv2 but are rarely used standalone in production — they sit
+  inside VLMs (Apollo uses InternVideo2 as a second encoder; UMT was
+  the original VideoChat2 vision tower).
+
+
+## Video Retrieval and the Two-Stage Pipeline {#sec-video-retrieval}
+
+Production text-to-video search systems (clip-database retrieval,
+YouTube-search-style lookups, RAG over video corpora) have converged
+on a *two-stage* pipeline very similar to the dense-retrieval-+-
+cross-encoder pattern used in NLP:
+
+1. **First stage — fast retrieval.** A bi-encoder embeds queries and
+   videos (or video segments) into a shared space. Top-$K$ candidates
+   are pulled with cosine similarity over an ANN index. This stage
+   has to be fast enough to scan millions of clips.
+2. **Second stage — expensive reranker.** A cross-modal scorer
+   re-orders the top-$K$ candidates using a more expressive scoring
+   function — typically attention over the query and the candidate
+   simultaneously. Slow per candidate, but only run on the few
+   hundred candidates surviving stage 1.
+
+The reason the two stages are split: the first-stage embedding
+similarity loses the cross-modal interactions that make rerankers
+expressive, but the reranker is too slow to score every video in the
+corpus. The pattern is *exactly* the same trade-off as
+BM25-then-BERT-cross-encoder in passage retrieval.
+
+### Old retrieval pipelines (pre-LLM) {.unnumbered}
+
+Originated in two paradigms, both designed to produce
+*discriminative* video embeddings:
+
+- **Frame-level / token-level.** Treat each frame independently, run
+  a 2D CNN or ViT, aggregate later. CLIP4Clip [@luo2022clip4clip] is
+  the canonical example: per-frame CLIP features, mean-pooled over
+  time.
+- **Spatio-temporal clip-level.** Encode short frame sequences with
+  3D CNNs or video transformers. I3D, R(2+1)D, ViViT, TimeSformer
+  are typical first-stage encoders.
+
+These were trained with contrastive objectives (often InfoNCE) on
+text-video corpora (HowTo100M, WebVid). The output is a single
+embedding per video / per segment, used for cosine retrieval.
+
+### Modern retrieval pipelines {.unnumbered}
+
+Adapt a generative LLM-based video model — originally pretrained for
+captioning / VQA / reasoning — into a *representation* model by:
+
+1. Continuing training with an **unrestricted (non-autoregressive)
+   attention mask**, so the model can attend bidirectionally over
+   the full visual + text sequence.
+2. Aggregating the token-level outputs into a single embedding via
+   either mean-average pooling, attention to a special `<CLS>` token,
+   or a learned pooling head.
+3. Fine-tuning with a contrastive (InfoNCE) objective on (query,
+   relevant-video, irrelevant-videos) tuples.
+
+This is the "Janus-pro-style understanding-then-representation"
+recipe: re-use the powerful, well-aligned token-level representations
+of an autoregressive VLM for retrieval, instead of training a smaller
+specialised contrastive model from scratch. It is the same pattern
+that turned LLaMA-2 into E5-Mistral for text retrieval, applied to
+video.
+
+### Rerankers {#sec-rerankers}
+
+A video reranker takes:
+
+1. a **text query**;
+2. a **set of candidate video representations** (top-$K$ segments
+   from the first-stage retriever).
+
+It re-orders them with a richer scoring function that can use frame
+content, ASR transcript, audio embeddings, and temporal context.
+Three categories:
+
+- **Cross-encoder rerankers** (analogous to BERT-cross-encoder
+  rerankers in NLP). Take query + candidate as a joint input, run a
+  multimodal transformer with cross-attention between text and video
+  tokens, produce a scalar score. Trained with a margin / pairwise
+  ranking loss:
+
+  $$
+  \mathcal{L} = \max\bigl(0,\, m - s(q, d^{+}) + s(q, d^{-})\bigr)
+  $$ {#eq-rerank-margin}
+
+  on (positive moment, hard-negative moment) pairs sampled from the
+  first stage. Examples: CrossTVR [@li2024crosstvr] (cross-modal
+  transformer for VCMR), CascadedDesign [@xie2024cascadeddesign]
+  (coarse retrieval → refined scoring).
+- **LLM-as-reranker.** Use an instruction-tuned multimodal LLM as
+  the scoring function: pass the query and the candidate video and
+  ask "is this relevant?". Score the log-probability of "yes", or
+  add a classification head. Strong but expensive; **UniME-V2**
+  [@gu2025unimev2] is the canonical example, with a soft-label
+  distillation loss from an MLLM teacher providing semantic
+  guidance beyond binary relevance.
+- **Distilled rerankers.** Train a small dedicated reranker to
+  imitate a large MLLM judge. The pattern used in production RAG
+  systems where the LLM judge is too slow to serve.
+- **Late-interaction rerankers** (ColBERT-style). Compute per-token
+  embeddings for both query and video; the score is a sum over
+  query tokens of their max dot-product against video tokens. Faster
+  than full cross-encoders, less expressive.
+
+### Training data for video retrieval and rerankers {.unnumbered}
+
+The big public corpora are *training* sources (no canonical
+test split), not benchmarks:
+
+- **HowTo100M** [@miech2019howto100m] — 136M YouTube clips with
+  ASR-aligned weak captions. Covers cooking, DIY, tutorials. The
+  scale-beats-quality reference corpus, but the captions are noisy
+  enough that no one uses it for evaluation.
+- **WebVid-10M** [@bain2021frozen] — 10M stock-footage clips with
+  human-written captions. **Taken down in late 2024 after a copyright
+  dispute**; pre-2024 papers that cite it are increasingly
+  unreproducible.
+- **InternVid** [@wang2024internvid] — the modern replacement: 7M
+  videos × 234M LLM-re-captioned sentences. The standard "post-WebVid"
+  pretraining corpus.
+- **Panda-70M** [@chen2024panda70m] — 70M auto-captioned clips,
+  filtered by an ensemble of VLM judges. The current largest
+  open captioned-video corpus.
+
+For benchmark / evaluation setups (TVR, MAD, MomentSeeker), see the
+companion chapter at @sec-bench-vcmr.
+
+
+## Benchmarks Overview {#sec-video-benchmarks-short}
+
+The full survey lives in the companion chapter
+@sec-video-benchmarks. This short overview gives the orientation
+needed to read @sec-video-vlms and points to the detailed entry.
+
+@tbl-bench-orient maps task labels to the de-facto reporting
+benchmarks in 2024–2026. A model paper typically reports the
+benchmarks in the rightmost column for its claimed capability set.
+
+| Task family | The default benchmark | Long-form variant | Notes |
+|:------------|:----------------------|:------------------|:------|
+| Action recognition | Kinetics-400 / -700 | — | K400 saturated; K700 is the current target |
+| Action recognition (motion) | SSv2 | — | The classic temporal-sensitivity test |
+| Spatio-temporal detection | AVA | — | Non-saturated; benchmark of choice for SlowFast / MViTv2 |
+| Video MCQ VQA (short) | **MVBench** + **Perception Test** | NeXT-QA | MVBench is the de facto 2024–2026 short-clip number |
+| Video MCQ VQA (general) | **Video-MME** | — | The single most reported video VLM benchmark |
+| Long-video MCQ VQA | **LongVideoBench** + MLVU | LVBench, HourVideo | Standard long-video trio: LVB + Video-MME-long + MLVU |
+| Temporal-only MCQ VQA | TempCompass + TVBench | — | Pair-style tests, used as "true temporal" sanity check |
+| Open-ended VQA | MMBench-Video, VideoChatGPT-bench | — | LLM-as-judge metric; replacing MSRVTT-QA / ActivityNet-QA |
+| Moment retrieval (VMR) | Charades-STA + QVHighlights | TACoS, ActivityNet Captions | QVHighlights also covers highlight detection |
+| Video corpus moment retrieval | TVR + MAD | MomentSeeker | TVR for short-form; MAD for long-form movies |
+| Captioning + retrieval | MSR-VTT | VATEX, ActivityNet Captions, YouCook2 | MSR-VTT 1K-A is the long-running retrieval leaderboard |
+| Dense captioning | ActivityNet Captions + YouCook2 | — | SODA_c is the modern eval metric |
+| Egocentric (general) | Ego4D NLQ + EPIC-Kitchens-100 + EgoSchema | — | Canonical egocentric trio |
+| Tracking (SOT) | LaSOT + GOT-10k + TrackingNet | — | HOTA + AUC metrics |
+| Tracking (MOT) | MOT17 / 20 + DanceTrack | — | DanceTrack is the hard *association* test |
+| Referring VOS | MeViS | Ref-YouTube-VOS | MeViS specifically tests motion-grounded queries |
+
+: Default benchmarks per task family. The full per-benchmark fact blocks are in @sec-video-benchmarks. {#tbl-bench-orient}
+
+The short version of the "what to report" guidance: a 2024–2026 video
+VLM paper that claims state-of-the-art needs to report at least
+**MVBench + Video-MME + Perception Test** (short-clip core) and
+**LongVideoBench + MLVU** (long-video core), with at least one of
+**TVBench / TempCompass / Vinoground** as a "true temporal" sanity
+check. A *contrastive* video-text representation paper instead reports
+**MSR-VTT 1K-A + DiDeMo retrieval + K400 zero-shot + SSv2 linear
+probe** — the same template since CLIP4Clip in 2021, plus the
+inevitable VLM-style benchmarks if the model also serves as an LLM
+adapter.
+
+For full recommendations including a Molmo-style autoregressive
+extension trajectory and a token-average + contrastive head retrieval
+variant, see @sec-choosing-benchmark.
+
+
+## Open Problems and Future Directions {#sec-video-open}
+
+The chapter has gone deep on what is built; this section names what
+is not yet, in roughly the order they appear on conference review
+slides in 2026.
+
+### Temporal reasoning, not just temporal access {.unnumbered}
+
+Most "temporal" benchmarks of 2023–2024 (NeXT-QA, MVBench) could be
+solved by VLMs that *access* a small number of frames cleverly. The
+"true temporal" wave (TVBench, TempCompass, Vinoground) showed that
+when the answer requires *integrating* information across many
+frames in order — e.g. distinguishing two clips that differ only in
+direction of motion — most 2024 models score at chance. The gap is
+between *frame access* and *temporal reasoning*, and closing it is
+the open story of 2025–2026.
+
+### Long-video memory {.unnumbered}
+
+Even at 256K tokens (Qwen3-VL) and 1M tokens (Gemini 2.5), no model
+robustly answers questions that require recalling a specific fact
+from minute 47 of a 2-hour video. The dominant failure modes:
+
+- *Forgetting curves* — accuracy degrades sharply as the relevant
+  evidence moves from the end of the context to the middle. Visual-
+  Needle-In-A-Haystack (V-NIAH) is the standard probe; even the best
+  models miss roughly half of needles in the middle third of long
+  contexts.
+- *Compression loss* — adaptive frame dropping (LongVU,
+  Video-XL-2) saves context but can drop the *one* relevant frame.
+
+The two open camps — *extend the language context* (LongVA,
+LongVILA) vs *compress aggressively* (LongVU, Video-XL-2) — disagree
+on which trade-off to make.
+
+### Dense temporal grounding remains hard {.unnumbered}
+
+NeXT-GQA's *grounding gap* — the fraction of correct MCQs that are
+*also* correctly temporally grounded — is the most informative
+single number for whether a model actually understands *when* the
+answer is. As of 2026 the field is collectively very bad at this:
+even the strongest models have grounding accuracy 20–30 pt below
+MCQ accuracy. Temporal grounding is the next NLU-to-IR-to-RL-style
+benchmark cycle.
+
+### Clip-level perception vs. narrative reasoning {.unnumbered}
+
+Video VLMs are very good at *describing the next 5 seconds* and
+remarkably bad at *summarising a 30-minute movie*. The benchmarks
+that test narrative reasoning (MLVU's summarisation track, LVBench)
+still see relatively few submissions because they require
+open-ended generation evaluation, and LLM-judge scores are noisy
+enough that ablations are hard to interpret. Expect 2026 papers to
+spend more time on judge calibration than on model design here.
+
+### Evaluation methodology gaps {.unnumbered}
+
+Three open methodological problems:
+
+- **MCQ leak.** Many short-clip benchmarks (MVBench, Perception Test)
+  contain questions where the correct answer can be guessed from
+  the *text* alone, with no video. TVBench was created specifically
+  to filter these out. Similar audits are still needed for the long-
+  video benchmarks.
+- **Subtitle leak.** Video-MME's with-subtitles split has a number of
+  questions where the answer is in the subtitles directly; the
+  no-subs split is harder but is sometimes reported less prominently.
+- **LLM-judge variance.** MMBench-Video and VideoChatGPT-bench scores
+  depend on the judge LLM; switching from GPT-4 to GPT-4o changes
+  rankings by several points. The community has not standardised
+  this.
+
+### Dataset bias and cultural coverage {.unnumbered}
+
+Almost all egocentric and instructional data is North-American or
+European. Ego-Exo4D and recent multilingual benchmarks (VATEX)
+partially address this but it remains an under-reported axis. A
+2026 paper that claims "general" video understanding without a
+multilingual / multi-cultural eval is incomplete.
+
+### Open-source video data after WebVid {.unnumbered}
+
+The WebVid-10M take-down in late 2024 was a quiet earthquake. As of
+2026 there is no open replacement at the same scale and licensing
+clarity. The community is patching this with smaller, re-captioned
+corpora (InternVid, Panda-70M, LLaVA-Video-178K), but the legal
+status of the source video remains uncertain for most. Expect
+2026–2027 to see formally licensed video-text corpora released by
+the bigger labs, similar to the trajectory of image-text data
+after the LAION pause in 2023.
+
+
+## Summary
+
+Video understanding in 2024–2026 has converged on an architectural
+template — SigLIP-SO400M vision tower → 2×2 pixel-shuffle projector →
+M-RoPE-aware autoregressive LLM decoder — with two design axes still
+under active study (token compression for long clips; explicit
+temporal positional encoding vs implicit M-RoPE). The Qwen-VL
+trajectory in @sec-vlm-qwen is the cleanest case study: each
+release (Qwen-VL → Qwen2-VL → Qwen2.5-VL → Qwen2.5-Omni → Qwen3-VL)
+introduced one architectural break that the rest of the field then
+adopted within months — from pixel-shuffle replacing Q-Former, to
+M-RoPE for joint spatio-temporal position, to absolute-time
+embeddings for variable-FPS long clips, to interleaved M-RoPE +
+explicit text-timestamps for grounded long-context reasoning.
+
+The evaluation story has consolidated faster than the architectural
+one. *MVBench + Video-MME + Perception Test* (short-clip),
+*LongVideoBench + MLVU* (long-video), *TempCompass / TVBench* (true
+temporal), and the *egocentric trio* (Ego4D NLQ + EPIC-Kitchens-100 +
+EgoSchema) are now the de facto reporting set for any 2026
+generalist video VLM. For contrastive video-text retrieval, the
+CLIP4Clip benchmark template (MSR-VTT 1K-A + DiDeMo + K400 zero-shot
++ SSv2 probe) has been remarkably stable since 2021.
+
+The open frontier sits in three places: (1) true temporal reasoning
+over many frames, where 2024 models still score at chance on
+counterfactually-paired benchmarks; (2) dense temporal grounding,
+where the *grounding gap* is 20–30 pt; and (3) long-video memory and
+narrative reasoning, where neither aggressive compression nor
+context extension has won decisively. Progress in any of these will
+probably require new data — high-quality long-video supervision is
+still rare — and a more honest reckoning with evaluation methodology
+than the field has done so far.
+
+For *video generation*, see @sec-video-generation.
+
+## Interview Questions
+
+**Q: Why is "token compression" necessary for video VLMs, and what are the main families?**
+
+A ViT emits hundreds of tokens per frame; at even a few dozen frames this saturates an LLM's context budget before any text is added. The main families are: Q-Former/Perceiver-style learned queries (fixed output count, but adds trainable parameters and is viewed as a bottleneck); pixel-shuffle/patch-merging (parameter-free spatial pooling, the 2024–2026 default); slow-fast sampling (full resolution for a few "slow" frames, heavy compression for "fast" frames); and learned temporal pooling / KV-cache compression for very long clips. The trend has been away from learned-query bottlenecks toward parameter-free spatial compression plus smarter temporal sampling.
+
+---
+
+**Q: What problem does M-RoPE solve, and how did Qwen2.5-VL extend it for hour-long video?**
+
+Standard 1D RoPE only encodes sequence position, but video tokens have three coordinates — time, row, column. M-RoPE decomposes the rotary embedding into three independent axes $(t, h, w)$, each rotating a third of the head dimensions, so the model natively understands frame ordering and spatial layout simultaneously. Qwen2-VL's $t$ axis was just the frame index, which breaks down for hour-long clips sampled at variable FPS. Qwen2.5-VL keys $t$ to **absolute time in seconds**, so a frame sampled at minute 47 carries that information regardless of how many frames were sampled before it — letting the model correctly ground claims like "this happened 47 minutes in" rather than "at frame 1411".
+
+---
+
+**Q: What is the "grounding gap," and why is it the most informative number for a long-video VLM?**
+
+The grounding gap (measured by NeXT-GQA) is the difference between a model's MCQ accuracy and its accuracy when *also* required to predict the temporal segment that supports the answer. A model can get the right answer for the wrong reason — e.g., from language priors or a lucky frame — without actually "knowing when" the evidence occurred. As of 2026, even top models show a 20–30 point grounding gap, meaning a large fraction of "correct" answers are not actually temporally grounded. It's the single number that distinguishes genuine temporal understanding from pattern-matching.
+
+---
+
+**Q: Describe the two-stage retrieval-and-reranking pipeline for video search, and explain why it's split into two stages.**
+
+Stage 1 is a bi-encoder: queries and video segments are embedded independently into a shared space, and an ANN index returns the top-$K$ candidates by cosine similarity — fast enough to scan millions of clips, but the embeddings can't capture fine-grained cross-modal interactions. Stage 2 is a reranker — a cross-attention model (or an LLM prompted to judge relevance) that scores the query jointly with each candidate, capturing interactions the first stage misses. It's too slow to run on the full corpus but cheap on the few hundred survivors of stage 1. This mirrors BM25-then-BERT-cross-encoder in text retrieval exactly.
+
+---
+
+**Q: Compare tube masking (VideoMAE) and latent-prediction masking (V-JEPA). Why do both approaches remain in use?**
+
+Tube masking keeps a pixel-reconstruction objective but masks the *same spatial positions across all frames*, removing the shortcut of copying an unmasked neighbor in an adjacent frame — this forces the encoder to learn spatiotemporal structure while keeping a simple, well-understood loss. Latent-prediction masking (V-JEPA) instead changes the *target*: predict the *features* of masked regions in representation space, never rewarding the model for reconstructing high-frequency pixel texture. VideoMAE-style pretraining remains competitive and simple to implement; V-JEPA's approach yields representations that transfer better to downstream reasoning and supports action-conditioned world models (V-JEPA 2), at the cost of a more complex training setup (online target encoder, EMA updates).
+
+---
+
+**Q: Why did MVBench need to be replaced by TVBench and TempCompass for "true temporal" claims?**
+
+MVBench (2024) was the first benchmark to construct 20 temporal-reasoning task types from existing clip sources, but many of its questions turned out to be answerable from a single frame or from world knowledge alone — a model could score well without actually integrating information across frames. TVBench filtered MVBench's source clips down to questions that genuinely require multi-frame reasoning, and most 2024 video LMs scored near chance on it at release. TempCompass goes further with *paired* clips that differ only in a temporal property (direction, speed, order) and an additional "paired accuracy" metric requiring the model to get *both* clips in a pair right — a much stricter test that exposes models relying on static-frame shortcuts.

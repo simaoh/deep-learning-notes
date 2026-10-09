@@ -1,5 +1,0 @@
-# Automatic Speech Recognition
-
-*This chapter is a placeholder and will be expanded in a future revision.*
-
-Automatic Speech Recognition (ASR) converts a raw audio waveform into a text transcript. Topics planned for this chapter include: acoustic feature extraction (log-Mel filterbanks, see @sec-features), CTC-based and attention-based encoder-decoder architectures, the Conformer architecture, self-supervised pre-training (wav2vec 2.0, HuBERT, WavLM), and large-scale weakly-supervised models (Whisper).

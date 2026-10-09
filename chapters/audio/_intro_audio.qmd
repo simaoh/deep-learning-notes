@@ -2,15 +2,20 @@
 
 ## Overview
 
-Speech is one of the richest signals in machine learning: a one-dimensional waveform that simultaneously encodes *what* was said, *who* said it, and *how*. This part covers how deep learning models process raw audio — from transcribing speech to text, to determining who spoke when in a multi-speaker recording.
+Speech and audio are among the richest signals in machine learning: a one-dimensional waveform that simultaneously encodes *what* was said, *who* said it, *how*, and — beyond words — emotion, sound events, and non-speech acoustic content. This part covers how deep learning models process raw audio end to end: representation learning, transcription, speaker attribution, tokenisation, synthesis, and the audio-native language models now built on top of all of it.
 
 **Chapter Scope**:
 
-- **Automatic Speech Recognition** (§21): converting speech to text — acoustic features, CTC and attention-based encoder-decoder models, and modern Conformer/Whisper-style architectures.
-- **Speaker Diarization** (§22): answering "who spoke when?" — speaker embeddings (x-vectors, d-vectors), clustering, end-to-end neural diarization (EEND), and evaluation via DER/JER/cpWER.
+- **Speech Representation Learning and Foundation Models** (§21): self-supervised speech encoders — contrastive (wav2vec 2.0), masked-prediction (HuBERT, WavLM, data2vec), layer-wise probing, and multilingual scaling.
+- **Automatic Speech Recognition** (§22): converting speech to text — acoustic features, CTC/RNN-T/attention-based decoders, Conformer architectures, and Whisper-style weakly-supervised foundation models.
+- **Speaker Diarization** (§23): answering "who spoke when?" — speaker embeddings (x-vectors, d-vectors), clustering, end-to-end neural diarization (EEND, Sortformer), and evaluation via DER/JER/cpWER.
+- **Neural Audio Codecs** (§24): tokenising audio for generative models — VQ-VAE, residual vector quantisation, codebook collapse, and the semantic/acoustic token landscape.
+- **Speech Synthesis** (§25): text-to-speech — neural vocoders, autoregressive and non-autoregressive acoustic models, diffusion/flow-matching TTS, codec-token speech LMs, and zero-shot voice cloning.
+- **Speech and Audio Language Models** (§26): adapting LLMs to speak and listen — adapter recipes, interleaving and duplex architectures, the modality gap, and evaluation.
+- **Audio Understanding Beyond Words** (§27): paralinguistics — audio classification backbones, speech emotion recognition, audio captioning, and fairness/validity considerations.
 
-**Interview Relevance**: Speech is core to products at Google (Assistant, Meet captions), Amazon (Alexa), Apple (Siri), and Zoom/Otter.ai (meeting transcription). Expect questions on log-Mel feature extraction, CTC vs. attention-based decoding, self-supervised speech representations (wav2vec 2.0, HuBERT, WavLM), and how to evaluate speaker-attributed transcripts.
+**Interview Relevance**: Speech is core to products at Google (Assistant, Meet captions), Amazon (Alexa), Apple (Siri), NVIDIA (NeMo), and Zoom/Otter.ai (meeting transcription), while audio codecs and speech LMs underpin voice agents at OpenAI and ElevenLabs. Expect questions on log-Mel feature extraction, CTC vs. attention-based decoding, self-supervised speech representations, how neural codecs discretise audio for language models, and how to evaluate speaker-attributed transcripts or synthesized speech.
 
-**Prerequisites**: Foundations (optimization). Sequence Models (§18 — RNNs, attention, the Transformer encoder) and Self-Supervised Learning (Part III — contrastive and masked-prediction objectives) are directly applicable to speech encoders.
+**Prerequisites**: Foundations (optimization). Sequence Models (§18 — RNNs, attention, the Transformer encoder), Self-Supervised Learning (Part III — contrastive and masked-prediction objectives), and Diffusion Models (§09) are directly applicable to speech encoders and synthesis models.
 
 ---

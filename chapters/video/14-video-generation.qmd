@@ -1,0 +1,665 @@
+# Video Generation {#sec-video-generation}
+
+Video generation is a *generalisation* of image generation: a model
+samples a clip
+$\mathbf{V} \in \mathbb{R}^{T \times H \times W \times 3}$ from a
+distribution $p_{\theta}(\mathbf{V} \mid \mathbf{c})$ conditioned on
+some control signal $\mathbf{c}$ — most commonly a text prompt, but
+also an image (image-to-video), a previous clip (extension), a
+reference identity (subject-driven generation), or a structured pose
+/ depth / camera trajectory (control-net style generation).
+
+An image is the degenerate case $T = 1$, so anything that works for
+image generation is a candidate for video. But the temporal axis adds
+two new requirements that change the engineering substantially:
+
+- **Temporal consistency.** Independently generated frames flicker:
+  identities drift, lighting jumps, objects re-appear with different
+  textures. Modelling joint dependencies across frames is what
+  separates a real video model from a slideshow of images.
+- **Sequence length.** A 5-second 720p clip at 24 FPS has
+  $120 \times 720 \times 1280 \times 3 \approx 3.3 \times 10^8$
+  pixels. Even with a 8 × 8 × 4 latent VAE, a denoiser operates on
+  $\sim 10^6$ tokens per clip. Memory and compute become the dominant
+  engineering constraints; almost every video-generation paper of
+  2022–2026 is a memory trick in some form.
+
+The 2022–2026 landscape splits naturally along two axes:
+
+1. **What is the denoiser?** *U-Net + temporal layers* (the inherited
+   image-diffusion stack, 2022–2024) vs *Diffusion Transformer (DiT)*
+   (Peebles & Xie [@peebles2023dit]; the dominant 2024–2026 design,
+   used by Sora, Stable Video Diffusion 3, CogVideoX, HunyuanVideo).
+2. **How is video conditioning added?** Three families, corresponding
+   to *how much training* the video data sees:
+    - **Train from scratch** on video data (VDM, Imagen Video, Sora,
+      CogVideoX).
+    - **Fine-tune a pretrained image model** by adding temporal
+      layers, sometimes only training those (Make-a-Video, Video
+      LDM / Align-Your-Latents, Stable Video Diffusion).
+    - **Train-free adaptation** of a pretrained image model — no
+      weight updates, only inference-time tricks (Text2Video-Zero).
+
+This chapter follows that taxonomy. We first review the diffusion
+fundamentals (@sec-gen-diffusion), then walk through the three
+families in order of increasing training cost (@sec-gen-three),
+discuss the orthogonal *autoregressive* line (@sec-gen-ar), survey
+the closed-source flagships (@sec-gen-flagships) and the
+open-weights landscape (@sec-gen-open), and close with the
+evaluation question (@sec-gen-eval).
+
+::: {.callout-note}
+The focus of these notes is video *understanding*. This chapter is
+included so that a video-VLM engineer reading the rest of the book
+has the vocabulary to follow a generation paper, recognise the
+shared components (VAE, T5/CLIP encoder, DiT backbone), and pick a
+sensible evaluation setup. It is not a substitute for a full
+generative-models text.
+:::
+
+
+## Diffusion Fundamentals {#sec-gen-diffusion}
+
+Almost every video generator in this chapter is a diffusion model.
+This section recaps the minimum prerequisite vocabulary. Readers
+familiar with image diffusion can skim straight to @sec-gen-three.
+
+### Denoising Diffusion {#sec-gen-ddpm}
+
+Diffusion models [@ho2020ddpm; @sohl2015deepunsup] define a forward
+*noising* process that gradually turns a real sample
+$\mathbf{x}_0$ into Gaussian noise $\mathbf{x}_T \sim \mathcal{N}(0,
+\mathbf{I})$ over $T$ steps:
+
+$$
+q(\mathbf{x}_t \mid \mathbf{x}_{t-1}) =
+\mathcal{N}(\mathbf{x}_t; \sqrt{1 - \beta_t}\,\mathbf{x}_{t-1},
+\beta_t\mathbf{I})
+$$ {#eq-diffusion-forward}
+
+with a variance schedule $\{\beta_t\}_{t=1}^{T}$. The forward
+process has a closed-form marginal,
+$\mathbf{x}_t = \sqrt{\bar{\alpha}_t}\,\mathbf{x}_0 +
+\sqrt{1 - \bar{\alpha}_t}\,\boldsymbol{\epsilon}$ with $\bar{\alpha}_t
+\;=\; \prod_{s \leq t} (1 - \beta_s)$. A *denoiser*
+$\boldsymbol{\epsilon}_\theta(\mathbf{x}_t, t, \mathbf{c})$ is trained
+to predict the noise added at step $t$, optimising
+
+$$
+\mathcal{L}_{\text{simple}}(\theta) \;=\;
+\mathbb{E}_{t, \mathbf{x}_0, \boldsymbol{\epsilon}}
+\bigl[ \| \boldsymbol{\epsilon}_\theta(\mathbf{x}_t, t, \mathbf{c}) -
+\boldsymbol{\epsilon} \|_2^2 \bigr].
+$$ {#eq-diffusion-loss}
+
+Sampling reverses the chain: starting from $\mathbf{x}_T \sim
+\mathcal{N}(0, \mathbf{I})$ and iterating
+$\mathbf{x}_t \to \mathbf{x}_{t-1}$ using the predicted noise. A 1000-
+step DDPM trajectory is wasteful; DDIM [@song2021ddim] replaces it
+with a deterministic ODE solve and 20–50 steps are typical in 2024–
+2026. Faster solvers (DPM-Solver-2 / 3, UniPC) push this to single
+digits.
+
+### Classifier-Free Guidance {.unnumbered}
+
+Almost all video generators use classifier-free guidance (CFG)
+[@ho2021cfg]: train the denoiser jointly with conditional and
+unconditional inputs (drop the conditioning $\mathbf{c}$ with
+probability ~10 %), then at sampling time blend them:
+
+$$
+\hat{\boldsymbol{\epsilon}}_\theta(\mathbf{x}_t, \mathbf{c}) \;=\;
+\boldsymbol{\epsilon}_\theta(\mathbf{x}_t, \varnothing)
+\;+\; w \bigl[\boldsymbol{\epsilon}_\theta(\mathbf{x}_t, \mathbf{c})
+- \boldsymbol{\epsilon}_\theta(\mathbf{x}_t, \varnothing)\bigr]
+$$ {#eq-cfg}
+
+with guidance scale $w > 1$ (typically 4–7.5 for image, 6–9 for
+video). CFG is the lever that trades sample diversity for prompt
+fidelity.
+
+### Latent Diffusion {.unnumbered}
+
+Running diffusion on raw pixels is prohibitively expensive for
+video. Latent Diffusion Models (LDMs) [@rombach2022ldm] compress
+$\mathbf{x}$ to a low-dimensional latent
+$\mathbf{z} = \mathcal{E}(\mathbf{x})$ via a frozen VAE, run
+diffusion in $\mathbf{z}$-space, and decode back at the end via
+$\hat{\mathbf{x}} = \mathcal{D}(\mathbf{z}_0)$. For video this
+matters even more: a *3D VAE* (space + time, typically 8 × 8 × 4
+compression — CogVideoX 1.5 uses 16 × 16 × 4, Sora uses an
+"undisclosed but aggressive" 3D VAE) reduces a 16 × 720 × 1280 ×
+3 clip to a 4 × 90 × 160 × 16 latent — a 24× memory saving.
+
+### Text Conditioning {.unnumbered}
+
+Text prompts enter the denoiser via cross-attention from a frozen
+language encoder. The three dominant choices in 2024–2026:
+
+- **CLIP-text** (OpenAI / OpenCLIP) — fast, strong on short prompts,
+  weak on compositional language. The default for the Stable
+  Diffusion 1.x / 2.x line.
+- **T5-XXL / Flan-T5-XXL** [@raffel2020t5] — the heavyweight in
+  Imagen, Imagen Video, DeepFloyd-IF, Sora, and CogVideoX. Excellent
+  at long prompts and compositions, expensive to run.
+- **LLM-as-text-encoder** — direct hidden states from a Llama-3-class
+  LLM, often distilled into a smaller adapter. Used by HunyuanVideo
+  and several 2025 open-weights models; trades T5's robustness for
+  better instruction-following.
+
+### Denoiser architectures: U-Net vs DiT {.unnumbered}
+
+For image diffusion, the original choice was a *U-Net* with cross-
+attention to text [@ronneberger2015unet; @rombach2022ldm]. Peebles &
+Xie [@peebles2023dit] showed that a **Diffusion Transformer (DiT)**
+— a plain transformer over a tokenised latent grid — scales better
+and beats the U-Net once data and compute are abundant. The video
+field has followed the same trajectory:
+
+- 2022–2023 video models (VDM, Make-a-Video, Video LDM, Stable Video
+  Diffusion) used **U-Net + factorised space-time attention or
+  3D convolutions**.
+- 2024 onwards (Sora, CogVideoX, Mochi-1, HunyuanVideo, Wan-2.1,
+  LTX-Video, Open-Sora-Plan) uses **DiT-style transformers** over a
+  3D-VAE latent.
+
+The DiT wins for the same reason it does in image generation: a plain
+transformer scales cleanly, parameter-shares across all spatial and
+temporal positions, and benefits from every infrastructure
+improvement made for LLMs (FlashAttention, pipeline parallelism,
+sequence parallelism, etc.).
+
+
+## Three Families of Video Generation {#sec-gen-three}
+
+The video-diffusion approaches of 2022–2026 fall into three families
+distinguished by how much *video* training they do.
+
+### Family 1 — Train from Scratch on Video {#sec-gen-scratch}
+
+The cleanest baseline: train a denoiser on video data only, with no
+image pretraining. Used by the biggest closed flagships (Sora) and by
+recent open-weights efforts that have the compute (CogVideoX,
+HunyuanVideo). The early open-academic example is VDM.
+
+#### Video Diffusion Models (VDM, 2022) {.unnumbered}
+
+[VDM](https://arxiv.org/abs/2204.03458) [@ho2022vdm] (Ho et al.,
+2022) introduced the modern video-diffusion template. The denoiser is
+a **3D U-Net factorised over space and time**:
+
+- Each *spatial 2D convolution* is extended to a "space-only 3D
+  convolution" with kernel size $(1, 3, 3)$ — only the spatial axes
+  see the kernel; frames are processed independently.
+- Each *spatial self-attention layer* is left as is, but with the
+  frames axis treated as a batch dimension.
+- After every spatial self-attention block, a **temporal attention
+  block** is inserted, with the spatial axes folded into the batch
+  dimension. The temporal positional embedding is a *relative* one
+  (no absolute notion of time, so the model works across arbitrary
+  clip lengths).
+
+This *factorised* design — spatial blocks operating on frames in
+parallel, temporal blocks acting only across time — became the
+canonical pattern. Almost every video diffusion model of 2022–2024
+inherits it; the DiT variants of 2024–2026 generalise it with a
+single transformer that attends across (t, h, w) jointly but still
+often uses block-sparse masks that recover the factorised form for
+compute efficiency.
+
+#### Imagen Video (2022) {.unnumbered}
+
+[Imagen Video](https://arxiv.org/abs/2210.02303) [@ho2022imagenvideo]
+(Google, 2022) tackled the *resolution* problem: generating long,
+high-resolution videos directly is too expensive, so use a *cascade*
+of seven diffusion models that progressively refine spatial and
+temporal resolution:
+
+1. A **base** diffusion model produces a low-resolution, short clip
+   (40 × 24 × 24, 16 frames at ~3 FPS).
+2. Three **spatial super-resolution (SSR)** models progressively
+   upscale: 24×24 → 80×80 → 240×240 → 720×720.
+3. Three **temporal super-resolution (TSR)** models interpolate in
+   time: 16 frames → 32 → 64 → 128 frames (≈5 s at 24 FPS).
+
+Each stage is conditioned on T5-XXL text embeddings and on the
+output of the previous stage. The base model is a 3D-conv U-Net with
+spatio-temporal self-attention; the upsamplers use cheaper
+alternatives — temporal *convolutions* instead of attention (linear
+in frames, not quadratic) and *no* spatial attention at the highest
+resolution (where it would dominate compute). The result was the
+first text-to-video model widely regarded as "production quality" by
+the standards of 2022, and it set the cascade template that Sora
+later inherited.
+
+#### Sora (2024) {.unnumbered}
+
+[Sora](https://openai.com/sora/) [@openai2024sora] (OpenAI, Feb 2024)
+is the headline closed-flagship that made transformer-based video
+generation mainstream. Two architectural breaks with the 2022 line:
+
+- **DiT denoiser.** Replace the 3D U-Net with a plain transformer.
+- **3D space-time patches.** Instead of 2D patches from a single
+  image, Sora extracts $p_t \times p_h \times p_w$ spacetime patches
+  (e.g. $2 \times 16 \times 16$ pixels) from the 3D-VAE-compressed
+  latent. Each patch becomes a token; the transformer applies self-
+  attention across *all* spacetime tokens to model spatial and
+  temporal dependencies *jointly* (rather than via the factorised
+  pattern of VDM/Imagen Video).
+
+The conditioning stack is standard — cross-attention from a T5-XXL
+text encoder, with classifier-free guidance for sampling. The
+training data and exact 3D-VAE design are not disclosed, but the
+inferred recipe is: a high-compression-ratio 3D VAE (likely
+$8 \times 8 \times 4$ or finer), a billion-parameter DiT, and
+multi-aspect-ratio / multi-duration training so the same model
+serves 5-second portrait clips and 60-second landscape clips. Sora 2
+(2024) and the disclosed Wan, HunyuanVideo, Mochi, CogVideoX
+designs follow the same pattern with smaller, public weights.
+
+#### CogVideoX / CogVideoX 1.5 (Tsinghua + Zhipu AI, 2024) {.unnumbered}
+
+[CogVideoX](https://arxiv.org/abs/2408.06072) [@yang2024cogvideox]
+(Aug 2024, 1.5 released Nov 2024) is the canonical open-weights
+*train-from-scratch* video DiT. Three contributions:
+
+- **3D-VAE with $4 \times 8 \times 8$ compression** (1.5 raised this
+  to $4 \times 16 \times 16$).
+- **Expert Adaptive Layer Normalisation.** Conditioning signals
+  (timestep, text) modulate the transformer through dedicated
+  AdaLN "experts" rather than via cross-attention. This was
+  influential — many 2024–2026 video DiTs followed.
+- **Multi-resolution / multi-duration training** with bucketing,
+  similar to Sora's inferred recipe but disclosed.
+
+CogVideoX-5B (5 B-parameter DiT) and 1.5-5B are the most-used open
+references for academic comparisons in 2025–2026.
+
+### Family 2 — Fine-tune a Pretrained Image Model {#sec-gen-finetune}
+
+The pragmatic majority of 2022–2024 work. Start from a strong image
+diffusion model (Stable Diffusion 1.5 / 2.1, eDiff-I, IF) and *add*
+temporal layers. Often only the new temporal layers are trained, with
+the image weights kept frozen — this is cheap, the image model has
+already learned visual priors, and the resulting generator inherits
+the image model's compositional strength.
+
+#### Make-A-Video (2022) {.unnumbered}
+
+[Make-A-Video](https://arxiv.org/abs/2209.14792)
+[@singer2022makeavideo] (Meta, Sep 2022) — the first widely cited
+example. Composition of three modules:
+
+1. A *pretrained* text-to-image diffusion model (eDiff-I-class).
+2. A **spatiotemporal super-resolution** model that upgrades the
+   image generator to a video generator by adding *(2+1)D* layers:
+    - **(2+1)D convolutions**: each pretrained 2D conv is followed
+      by a new 1D temporal conv, initialised to the identity. The
+      2D conv first generates a stack of frames in parallel; the
+      1D conv smooths across time.
+    - **(2+1)D attention**: each spatial attention layer is followed
+      by a new temporal attention layer that attends only across
+      frames at each spatial position.
+3. A **frame interpolation** network that increases frame rate.
+
+Only the new temporal modules are trained; the image weights stay
+frozen, so the model inherits Make-a-Scene-class image quality at
+roughly the training cost of a temporal-only model. The (2+1)D
+factorisation became standard for years.
+
+#### Video LDM / Align-Your-Latents (2023) {.unnumbered}
+
+[Align-Your-Latents](https://arxiv.org/abs/2304.08818)
+[@blattmann2023videoldm] (Blattmann et al., 2023, NVIDIA / LMU
+Munich) — the canonical *latent* variant of the Make-A-Video idea.
+Build on a Stable-Diffusion-style LDM:
+
+- **Insert temporal layers** (3D convolutions + temporal attention)
+  *between* the frozen spatial layers of the image LDM.
+- **Train only the temporal layers** with the spatial LDM weights
+  frozen.
+- Use a **personalised** decoder: the original LDM decoder produces
+  flickering artefacts when frames are decoded independently, so a
+  *video-aware* decoder is fine-tuned — temporal layers are added,
+  spatial encoder weights are kept frozen, and the decoder is
+  trained jointly with a reconstruction loss and a GAN-style 3D-conv
+  patch discriminator that distinguishes real from generated video
+  clips.
+
+Video LDM is the template for **Stable Video Diffusion (SVD)**
+[@blattmann2023svd] (Stability AI, Nov 2023), the most-downloaded
+open-weights video model of 2023–2024. SVD trains the SD-2.1 U-Net
+with added temporal layers on a curated 5-million-clip subset of the
+LVD corpus and produces 14- or 25-frame 1024 × 576 clips. It is the
+default *image-to-video* baseline in most 2024 papers.
+
+### Family 3 — Train-Free Adaptation {#sec-gen-trainfree}
+
+Inference-time tricks that produce video from a pretrained image
+diffusion model with no weight updates. Cheap, fast, sufficient for
+short demos, but lacking the realism of trained models. Useful
+mainly as a baseline and for one-off effects.
+
+#### Text2Video-Zero (2023) {.unnumbered}
+
+[Text2Video-Zero](https://arxiv.org/abs/2303.13439)
+[@khachatryan2023text2videozero] (Picsart AI Research, Mar 2023) — the
+reference train-free method. Two tricks:
+
+1. **Camera-motion noise initialisation.** Start with one random
+   latent $\mathbf{z}_T$. Run a single DDIM backward step to denoise
+   it slightly. Apply a sequence of *translations* to the resulting
+   latent (simulating a panning camera). Then take a DDPM forward
+   step to obtain a sequence of noised latents, each related to the
+   first by a known linear shift in latent space. This injects
+   coherent inter-frame motion at the noise level.
+2. **Cross-frame attention.** Reprogram the U-Net's self-attention
+   so that each frame's queries cross-attend (using the *image*
+   model's pretrained Q, K, V matrices) to the *first* frame's
+   keys and values. The first frame thus acts as an anchor for
+   object identity and background.
+
+The result is short, somewhat coherent video from a frozen image
+diffusion model. Not competitive with trained models on benchmarks,
+but a useful diagnostic — when an image diffusion model produces
+better short clips with these tricks than a poorly-trained video
+diffusion model produces with full training, the latter has
+something wrong.
+
+
+## Autoregressive Video Generation {#sec-gen-ar}
+
+Orthogonal to the diffusion line is the **autoregressive (AR)**
+approach: tokenise video into a sequence of discrete codes and
+predict the next code. Two variants:
+
+- **Discrete VAE / VQ-VAE tokenisation** [@vandenoord2017vqvae;
+  @esser2021vqgan; @sun2024llamagen]. A VQ-VAE maps each clip to a
+  sequence of integer codes from a fixed codebook (e.g. 16 384
+  entries). A transformer is trained with a next-token-prediction
+  loss on these codes; sampling decodes from codes back to pixels.
+  The original VQ-VAE-based video generators (Video VQ-VAE, NUWA-XL)
+  date to 2021–2022; the more capable modern examples are below.
+- **Continuous AR with a diffusion head** [@li2024marsmar;
+  @tian2024nextscale]. Predict the *parameters* of the next frame's
+  distribution autoregressively, but parameterise that distribution
+  as a small diffusion model. Hybrid; recent and less proven for
+  video specifically.
+
+The autoregressive line is appealing for two reasons:
+
+- **Token interface unification with LLMs.** A video tokeniser turns
+  video into the same token stream as text, so a single transformer
+  can read a video and write a video — exactly the *understanding +
+  generation* unification that Janus-Pro pursued in
+  @sec-vlm-specialised.
+- **Inherits LLM infrastructure.** Speculative decoding, prefix
+  caching, FlashAttention, pipeline parallelism — every win the LLM
+  community gets transfers for free.
+
+The headline open-source examples:
+
+- **VideoPoet** [@kondratyuk2024videopoet] (Google, Dec 2023). The
+  first large-scale (~8B-param) autoregressive video LM. Predicts a
+  unified stream of *image tokens + audio tokens + text tokens*,
+  enabling text-to-video, image-to-video, video stylisation, and
+  audio-to-video in a single model. Uses MAGVIT-v2 [@yu2024magvit2]
+  as the video tokeniser, which crucially improved tokeniser quality
+  to the point AR video matched diffusion on FVD.
+- **LlamaGen** [@sun2024llamagen] (ByteDance, Jun 2024). Image-only
+  but architecturally the cleanest demonstration: a vanilla LLaMA
+  transformer with a high-quality VQ tokeniser produces images at
+  Stable-Diffusion quality. The video extension is implicit in the
+  Janus-Pro line — Janus-Pro [@chen2025januspro] uses the same VQ
+  tokeniser approach for image generation, embedded in a unified
+  understanding/generation transformer (see @sec-vlm-specialised).
+- **MAGI-1, Cosmos-1** (NVIDIA, late 2024) — recent autoregressive
+  video models for world simulation; smaller community footprint than
+  the diffusion line but increasingly relevant for robotics and
+  embodied AI.
+
+As of mid-2026 the diffusion-DiT line is still ahead on raw video
+quality (Sora, Veo 3, CogVideoX 1.5), but the AR + diffusion-head
+hybrids are closing the gap, and the *unification* argument keeps
+this line architecturally alive.
+
+
+## Closed-Source Flagships {#sec-gen-flagships}
+
+Brief mentions to anchor the architecture discussion in the public
+state of the art. None of these have full disclosed weights but most
+have technical reports.
+
+- **Sora / Sora 2** [@openai2024sora] (OpenAI). The reference
+  text-to-video DiT, 1080p, up to ~1 minute. Sora 2 (Sep 2024) adds
+  synchronised audio generation and improved long-clip coherence.
+- **Veo / Veo 2 / Veo 3** [@deepmind2024veo] (Google DeepMind).
+  4K-capable, 8-second prompts with strong physics. Veo 3 (May 2025)
+  added native audio (dialogue, sound effects) at video-generation
+  time and now matches or exceeds Sora 2 on most evaluation axes.
+- **Movie Gen** [@meta2024moviegen] (Meta, Oct 2024). 30B-parameter
+  text-to-video DiT trained on a curated 100M-video corpus; also
+  generates synced audio and allows *video editing* (text-guided
+  edits to a given clip).
+- **Genie / Genie 2 / Genie 3** [@bruce2024genie] (Google DeepMind).
+  Action-conditioned world model — given an image, the model
+  generates *playable* video where the user can control the agent.
+  Conceptually distinct from the text-to-video flagships above —
+  more an interactive world simulator than a film generator.
+- **Runway Gen-3 / Gen-4, Pika 2.0, Luma Dream Machine** (2024–2025).
+  Commercial generators with strong consumer features (motion
+  brushes, style transfer, character LoRAs) and undisclosed
+  architectural details.
+
+
+## Open-Source Landscape (2024–2026) {#sec-gen-open}
+
+The open-weights line has been moving extremely fast since
+CogVideoX. The current shortlist, all DiT-based unless noted:
+
+- **CogVideoX-2B / 5B / CogVideoX 1.5-5B** [@yang2024cogvideox]
+  (Aug 2024 → Nov 2024) — see @sec-gen-scratch. 5 B-param DiT,
+  Apache-2.0; the academic baseline.
+- **Mochi 1** [@genmo2024mochi] (Genmo, Oct 2024) — 10 B-param DiT
+  with asymmetric attention (text tokens get cheaper attention);
+  Apache-2.0. Strong on motion realism.
+- **HunyuanVideo** [@kong2024hunyuanvideo] (Tencent, Dec 2024) —
+  13 B-param DiT with a *dual-stream* attention layout (image
+  tokens and text tokens are processed in parallel then fused);
+  Apache-2.0. The first open model to challenge closed-source quality
+  in side-by-side preference tests.
+- **Wan 2.1 / Wan 2.2** [@alibaba2025wan] (Alibaba, Feb 2025 /
+  Jul 2025) — 14 B-param DiT with high-compression 3D VAE; Apache-2.0.
+  Multilingual prompts (English + Chinese) work natively.
+- **LTX-Video** [@lightricks2024ltx] (Lightricks, Nov 2024) — 2 B-
+  param DiT optimised for *speed*: produces 5-second 768×512 clips
+  in 4 seconds on an H100. Trades quality for inference latency in
+  the same way SDXL Turbo did for images.
+- **Open-Sora / Open-Sora-Plan** [@zheng2024opensora; @lin2024opensoraplan]
+  (PKU + HuaWei + community, 2024–2025) — community
+  reimplementations of the inferred Sora recipe. Useful for ablations
+  and for understanding what a high-quality DiT pipeline looks like
+  end-to-end; not yet competitive with the curated commercial models.
+- **Stable Video Diffusion (SVD) / SVD-XT / Stable Video 4D**
+  [@blattmann2023svd] (Stability AI, 2023–2024) — the U-Net line.
+  SVD-XT generates 25-frame clips; Stable Video 4D adds multi-view
+  generation (4 views × 8 frames). Still widely used for
+  image-to-video where the input is a still image.
+
+The convergence in 2025–2026 is striking: every open generator uses
+a **DiT** with a **3D-VAE** latent, **T5-XXL or LLM** text
+conditioning, and trains on a **filtered re-captioned video corpus**
+(closely mirroring the data evolution of @sec-bench-pretrain in
+@sec-video-benchmarks). The differences sit in (i) parameter count,
+(ii) attention layout (joint vs dual-stream), (iii) precise VAE
+compression ratio, and (iv) inference-time tricks (Mochi's asymmetric
+attention, LTX's speed-optimised solver).
+
+
+## Evaluation {#sec-gen-eval}
+
+Video generation evaluation is in a much worse state than video
+understanding evaluation, because there is no single "correct"
+output. The 2024–2026 reporting suite is:
+
+### Distributional metrics {.unnumbered}
+
+- **Fréchet Video Distance (FVD)** [@unterthiner2018fvd] (2018). The
+  video analogue of FID: compute I3D features for real and generated
+  clips, fit Gaussians, measure 2-Wasserstein distance between them.
+  Reported on UCF-101 and MSR-VTT. Strong correlation with human
+  preference for *content quality*, weak correlation with temporal
+  consistency.
+- **Inception Score (IS) / Kinetics-FID / CLIP-FID** — variants on
+  the FID theme with different feature extractors. Less common in
+  2024–2026.
+
+FVD has known issues — sensitive to clip length, frame rate, and the
+choice of I3D checkpoint — but it is the only reported number for
+nearly every paper, so it persists.
+
+### Compositional / dimension-decomposed metrics {.unnumbered}
+
+- **VBench / VBench++** [@huang2024vbench] (2024). The dominant
+  evaluation suite for 2024–2026 generation papers. Breaks down
+  generation quality into **16 dimensions** — *subject consistency*,
+  *background consistency*, *temporal flickering*, *motion smoothness*,
+  *dynamic degree*, *aesthetic quality*, *imaging quality*,
+  *object class*, *multiple objects*, *human action*, *colour*,
+  *spatial relationship*, *scene*, *appearance style*,
+  *temporal style*, *overall consistency* — each scored by a small
+  dedicated evaluator (CLIP, ViCLIP, MUSIQ, RAFT, ViT-based
+  classifiers). The headline number is a weighted mean; the per-
+  dimension breakdown lets papers argue about *which* aspect their
+  model is good at.
+- **EvalCrafter** [@liu2024evalcrafter] (2024). A similar
+  dimension-decomposed benchmark with ~700 prompts × 17 metrics.
+  Often reported alongside VBench.
+- **VideoScore** [@he2024videoscore] (2024). A learned LLM-based
+  evaluator trained on human preference data; emerging as a single-
+  number sanity check.
+
+### Human preference {.unnumbered}
+
+Side-by-side preference tests against a strong baseline (typically
+Sora, Veo, or CogVideoX-5B). Almost every 2025–2026 paper reports
+this in addition to FVD + VBench, because the automatic metrics still
+fail to discriminate among the top open models. The standard
+protocol: 50–100 prompts × 3–5 raters, blinded A/B comparison, report
+win rate.
+
+### Prompt sets {.unnumbered}
+
+The standard ones:
+
+- **VBench prompts** (~950 prompts across the 16 dimensions).
+- **EvalCrafter prompts** (~700 prompts).
+- **T2V-CompBench** [@sun2024t2vcompbench] — adversarial compositional
+  prompts (e.g. *"a red cube on top of a blue cylinder, rotating
+  while a yellow ball orbits"*); designed to expose compositional
+  failures that pretty pictures hide.
+
+### Recommendations {.unnumbered}
+
+For a 2026 video-generation paper:
+
+1. **FVD on UCF-101 + MSR-VTT** — legacy but expected.
+2. **VBench (full 16 dimensions + headline mean)** — the de facto
+   2024–2026 default.
+3. **A human-preference A/B against a flagship** — Sora 2, Veo 3, or
+   CogVideoX 1.5-5B depending on what is fair (closed vs open weights).
+4. **Sanity check on a compositional prompt set** (T2V-CompBench or
+   one of the VBench compositional sub-axes) — to confirm the model
+   has not collapsed to "pretty but wrong".
+
+
+## Open Problems and Future Directions {#sec-gen-open-problems}
+
+Brief, because the chapter is intentionally short.
+
+- **Long-form video.** Most open models cap out at 5–10 seconds. Sora
+  showed 1 min, Veo 3 nominally supports 8 s, Movie Gen ~16 s — but
+  *coherent narrative* over a minute is still rare. The open frontier
+  is autoregressive *chunked* generation (generate $k$ seconds,
+  condition the next chunk on the last) vs *one-shot long-context*
+  DiTs.
+- **Controllability.** Text alone is a weak control signal for video.
+  Pose / depth / camera-trajectory control (Video-ControlNet,
+  CameraCtrl), reference-image identity preservation, and structured
+  edits (Movie Gen's text-guided editing) are active research lines.
+- **Physics.** Top-of-leaderboard models still produce subtle
+  physics violations (objects passing through each other, gravity
+  glitches, fluid dynamics implausibilities). The 2025–2026 wave of
+  *world model* generators (Genie 3, Cosmos) explicitly trades
+  generality for physical plausibility.
+- **Audio.** Veo 3 and Movie Gen generate synced audio; Sora 2 does
+  not yet. Joint video+audio generation is the most likely next
+  flagship axis — the model needs to know which sound goes with which
+  visible event.
+- **Evaluation honesty.** VBench is increasingly *gameable* — papers
+  optimise for high VBench scores rather than for human preference.
+  The community is working on more adversarial prompt sets
+  (T2V-CompBench, Movie Gen Bench) but no clean replacement exists
+  yet.
+
+
+## Summary
+
+Video generation in 2024–2026 has converged on a tight stack: a
+**3D-VAE** that compresses pixels to a low-dimensional latent, a
+**Diffusion Transformer (DiT)** that denoises that latent, and a
+**T5-XXL or LLM text encoder** that injects prompts via
+cross-attention. Within that stack, three families differ in how much
+*video* training they do — train from scratch (Sora, CogVideoX,
+HunyuanVideo), fine-tune from an image model (Make-a-Video, Stable
+Video Diffusion), or adapt for free (Text2Video-Zero) — but the
+architecture is increasingly the same. The autoregressive line
+(VideoPoet, Janus-Pro, MAGI/Cosmos) is the credible orthogonal
+alternative, especially for *unified* understanding+generation models.
+
+Compared with video *understanding* (@sec-video-understanding), the
+generation field is roughly 18 months behind on data quality and
+benchmark consolidation. There is no MVBench-equivalent for generation
+in 2026 — VBench is closest, but every paper has its own headline
+number and human preference is still the ground truth. As the
+infrastructure and data converge, expect the next two years to look
+much like the understanding side did in 2024: rapid architectural
+convergence, a stable evaluation suite, and a sharper focus on the
+remaining hard axes — long form, controllability, physics, and
+honest evaluation.
+
+## Interview Questions
+
+**Q: What is the core architectural difference between Sora/CogVideoX and earlier video diffusion models like VDM or Imagen Video?**
+
+VDM and Imagen Video use a U-Net denoiser with 3D convolutions and *factorized* spatiotemporal attention — spatial and temporal processing are largely separate operations. Sora and CogVideoX replace the U-Net with a **Diffusion Transformer (DiT)**, tokenizing the video into 3D spacetime patches and applying full self-attention jointly across all spatial and temporal positions. This lets the same architecture handle variable-length, variable-resolution video (and degenerate to image generation at $T=1$), and benefits from transformer scaling laws — at the cost of higher per-step compute than the factorized U-Net pattern.
+
+---
+
+**Q: Describe how Make-a-Video generates video without training a video diffusion model from scratch.**
+
+Make-a-Video inserts (2D+1) convolutional and attention layers into a pretrained text-to-image diffusion model: each 2D conv is followed by a temporal 1D conv initialized to the identity, and each spatial attention layer is followed by a temporal attention layer. The image weights stay frozen (or lightly fine-tuned); only the new temporal layers are trained on video data. Because the temporal layers initialize as identity functions, the model initially behaves exactly like the image model on individual frames — a stable starting point that preserves image generation quality while learning motion cheaply.
+
+---
+
+**Q: Why does almost every video generator use a 3D VAE rather than the 2D VAE from image diffusion?**
+
+A 2D VAE compresses each frame independently, so a video tensor is still $T$ times larger than a single image latent — the dominant cost for video diffusion. A 3D VAE compresses space *and* time jointly (e.g. $8{\times}8{\times}4$), giving an additional ~4× reduction along the temporal axis on top of the spatial compression. This is what makes it feasible to run a transformer or U-Net over the latent at all; without it, even a modest 16-frame clip would have a sequence length 16× larger than the equivalent image.
+
+---
+
+**Q: VBench reports 16 separate dimensions instead of one number. Why, and what's the risk?**
+
+Video quality is multi-axis: a model can have excellent per-frame aesthetics but flicker badly (low temporal consistency), or move very little because static frames score well on most metrics (low "dynamic degree"). A single averaged score hides these trade-offs and can be gamed — e.g., a model that barely moves scores well on subject/background consistency. The 16-dimension breakdown lets a paper show *which* axis it improves, but the flip side is that papers increasingly optimize directly for VBench sub-scores rather than for human preference, which is why human A/B testing remains mandatory alongside it.
+
+---
+
+**Q: Compare the autoregressive and diffusion approaches to video generation. Why might unification with LLMs matter beyond raw quality?**
+
+Diffusion generates a clip by iterative denoising of a continuous (or VAE) latent and currently leads on raw visual quality (Sora, Veo 3, CogVideoX 1.5). Autoregressive generation tokenizes video into discrete VQ codes and predicts them one at a time, like text — currently behind on quality but improving rapidly with better tokenizers (MAGVIT-v2). The unification argument is architectural: an AR video model uses the *same* token interface as an LLM, so a single transformer can both understand video (read tokens, write text — Chapter 11) and generate it (read text, write tokens), and inherits every LLM-serving optimization (speculative decoding, KV-cache reuse, prefix sharing) for free. This is why Janus-Pro and the broader "unified" model line bet on AR despite the current quality gap.
+
+---
+
+**Q: How does classifier-free guidance behave differently for video versus image generation?**
+
+CFG blends conditional and unconditional denoiser outputs, $\hat{\boldsymbol{\epsilon}} = \boldsymbol{\epsilon}_\theta(\mathbf{x}_t,\varnothing) + w[\boldsymbol{\epsilon}_\theta(\mathbf{x}_t,\mathbf{c}) - \boldsymbol{\epsilon}_\theta(\mathbf{x}_t,\varnothing)]$, trading diversity for prompt fidelity. For video, the practical guidance scale is typically higher (6–9 vs. 4–7.5 for images) because the temporal-consistency requirement makes under-conditioned samples noticeably worse — a video that drifts off-prompt over time looks like a different video halfway through, which is far more jarring than a single off-prompt image. Over-guidance also has a video-specific failure mode: oversaturated, low-motion ("frozen") clips, since high guidance pushes toward the conditional mode at the expense of the diversity that produces natural motion.
