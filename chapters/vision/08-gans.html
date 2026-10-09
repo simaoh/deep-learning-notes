@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>8&nbsp; Generative Adversarial Networks (GANs) – deep_learning_notes</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../chapters/vision/09-diffusion-models.html" rel="next">
+<link href="../../chapters/vision/07-vaes.html" rel="prev">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-fd0503e23dce65854c81c5baaade3bdf.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../custom.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/_intro-generative-models.html">Part IV: Generative Modeling</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/08-gans.html"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../">deep_learning_notes</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part I: Foundations</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/01-neural-networks-and-optimization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Neural Networks and Optimization</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/02-generalization-and-learning-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Generalization and Learning Theory</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro_computer_vision.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Computer Vision</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Visual Understanding</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/03-cnns.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Convolutional Neural Networks</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/04-object-detection-and-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Detection and Segmentation</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/05-vision-transformers.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Vision Transformers</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Self-Supervised Learning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Generative Modeling</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Models</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/07-vaes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/08-gans.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/09-diffusion-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_conclusion-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Conclusion</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../intro.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Introduction</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../summary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Summary</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">8.1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#minmax-game-formulation" id="toc-minmax-game-formulation" class="nav-link" data-scroll-target="#minmax-game-formulation"><span class="header-section-number">8.1.1</span> Minmax Game Formulation</a></li>
+  <li><a href="#architecture-components" id="toc-architecture-components" class="nav-link" data-scroll-target="#architecture-components"><span class="header-section-number">8.1.2</span> Architecture Components</a></li>
+  <li><a href="#training-algorithm" id="toc-training-algorithm" class="nav-link" data-scroll-target="#training-algorithm"><span class="header-section-number">8.1.3</span> Training Algorithm</a></li>
+  </ul></li>
+  <li><a href="#unconditional-image-generation" id="toc-unconditional-image-generation" class="nav-link" data-scroll-target="#unconditional-image-generation"><span class="header-section-number">8.2</span> Unconditional Image Generation</a>
+  <ul class="collapse">
+  <li><a href="#dcgan-deep-convolutional-gan-2015" id="toc-dcgan-deep-convolutional-gan-2015" class="nav-link" data-scroll-target="#dcgan-deep-convolutional-gan-2015"><span class="header-section-number">8.2.1</span> DCGAN (Deep Convolutional GAN, 2015)</a></li>
+  <li><a href="#wgan-wasserstein-gan-2017" id="toc-wgan-wasserstein-gan-2017" class="nav-link" data-scroll-target="#wgan-wasserstein-gan-2017"><span class="header-section-number">8.2.2</span> WGAN (Wasserstein GAN ,2017)</a></li>
+  <li><a href="#wgan-gp-2017" id="toc-wgan-gp-2017" class="nav-link" data-scroll-target="#wgan-gp-2017"><span class="header-section-number">8.2.3</span> WGAN-GP (2017)</a></li>
+  </ul></li>
+  <li><a href="#conditional-image-generation" id="toc-conditional-image-generation" class="nav-link" data-scroll-target="#conditional-image-generation"><span class="header-section-number">8.3</span> Conditional Image Generation</a>
+  <ul class="collapse">
+  <li><a href="#conditional-gan-cgan-2014" id="toc-conditional-gan-cgan-2014" class="nav-link" data-scroll-target="#conditional-gan-cgan-2014"><span class="header-section-number">8.3.1</span> Conditional GAN (cGAN, 2014)</a></li>
+  <li><a href="#progressive-gan-2017" id="toc-progressive-gan-2017" class="nav-link" data-scroll-target="#progressive-gan-2017"><span class="header-section-number">8.3.2</span> Progressive GAN (2017)</a></li>
+  <li><a href="#stylegan-2018-2019" id="toc-stylegan-2018-2019" class="nav-link" data-scroll-target="#stylegan-2018-2019"><span class="header-section-number">8.3.3</span> StyleGAN (2018-2019)</a></li>
+  </ul></li>
+  <li><a href="#image-to-image-translation" id="toc-image-to-image-translation" class="nav-link" data-scroll-target="#image-to-image-translation"><span class="header-section-number">8.4</span> Image-to-Image Translation</a>
+  <ul class="collapse">
+  <li><a href="#pix2pix-2016-paired-translation" id="toc-pix2pix-2016-paired-translation" class="nav-link" data-scroll-target="#pix2pix-2016-paired-translation"><span class="header-section-number">8.4.1</span> Pix2Pix (2016) — <em>Paired Translation</em></a></li>
+  <li><a href="#cyclegan-2017-unpaired-translation" id="toc-cyclegan-2017-unpaired-translation" class="nav-link" data-scroll-target="#cyclegan-2017-unpaired-translation"><span class="header-section-number">8.4.2</span> CycleGAN (2017) — <em>Unpaired Translation</em></a></li>
+  </ul></li>
+  <li><a href="#evaluation-metrics" id="toc-evaluation-metrics" class="nav-link" data-scroll-target="#evaluation-metrics"><span class="header-section-number">8.5</span> Evaluation Metrics</a>
+  <ul class="collapse">
+  <li><a href="#inception-score-is" id="toc-inception-score-is" class="nav-link" data-scroll-target="#inception-score-is"><span class="header-section-number">8.5.1</span> Inception Score (IS)</a></li>
+  <li><a href="#fréchet-inception-distance-fid" id="toc-fréchet-inception-distance-fid" class="nav-link" data-scroll-target="#fréchet-inception-distance-fid"><span class="header-section-number">8.5.2</span> Fréchet Inception Distance (FID)</a></li>
+  <li><a href="#precision-and-recall" id="toc-precision-and-recall" class="nav-link" data-scroll-target="#precision-and-recall"><span class="header-section-number">8.5.3</span> Precision and Recall</a></li>
+  </ul></li>
+  <li><a href="#training-challenges" id="toc-training-challenges" class="nav-link" data-scroll-target="#training-challenges"><span class="header-section-number">8.6</span> Training Challenges</a>
+  <ul class="collapse">
+  <li><a href="#mode-collapse" id="toc-mode-collapse" class="nav-link" data-scroll-target="#mode-collapse"><span class="header-section-number">8.6.1</span> Mode Collapse</a></li>
+  <li><a href="#vanishing-gradients" id="toc-vanishing-gradients" class="nav-link" data-scroll-target="#vanishing-gradients"><span class="header-section-number">8.6.2</span> Vanishing Gradients</a></li>
+  <li><a href="#training-instability" id="toc-training-instability" class="nav-link" data-scroll-target="#training-instability"><span class="header-section-number">8.6.3</span> Training Instability</a></li>
+  </ul></li>
+  <li><a href="#training-monitoring" id="toc-training-monitoring" class="nav-link" data-scroll-target="#training-monitoring"><span class="header-section-number">8.7</span> Training Monitoring</a></li>
+  <li><a href="#comparison-gan-vs-vae-vs-diffusion" id="toc-comparison-gan-vs-vae-vs-diffusion" class="nav-link" data-scroll-target="#comparison-gan-vs-vae-vs-diffusion"><span class="header-section-number">8.8</span> Comparison: GAN vs VAE vs Diffusion</a></li>
+  <li><a href="#interview-preparation" id="toc-interview-preparation" class="nav-link" data-scroll-target="#interview-preparation"><span class="header-section-number">8.9</span> Interview Preparation</a>
+  <ul class="collapse">
+  <li><a href="#core-concepts-checklist" id="toc-core-concepts-checklist" class="nav-link" data-scroll-target="#core-concepts-checklist"><span class="header-section-number">8.9.1</span> Core Concepts Checklist</a></li>
+  <li><a href="#key-interview-questions" id="toc-key-interview-questions" class="nav-link" data-scroll-target="#key-interview-questions"><span class="header-section-number">8.9.2</span> Key Interview Questions</a></li>
+  <li><a href="#company-context" id="toc-company-context" class="nav-link" data-scroll-target="#company-context"><span class="header-section-number">8.9.3</span> Company Context</a></li>
+  <li><a href="#further-reading" id="toc-further-reading" class="nav-link" data-scroll-target="#further-reading"><span class="header-section-number">8.9.4</span> Further Reading</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/_intro-generative-models.html">Part IV: Generative Modeling</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/08-gans.html"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introduction" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="introduction"><span class="header-section-number">8.1</span> Introduction</h2>
+<p><strong>Generative Adversarial Networks</strong> (GANs) learn to generate data through a two-player game between competing neural networks. Unlike VAEs which use explicit density modeling, GANs learn an implicit generative model through adversarial training.</p>
+<p><strong>Core Idea</strong>: Train two networks in opposition:</p>
+<ul>
+<li><strong>Generator</strong> <span class="math inline">\(G\)</span>: Creates fake samples to fool the discriminator</li>
+<li><strong>Discriminator</strong> <span class="math inline">\(D\)</span>: Distinguishes real data from generated fakes</li>
+</ul>
+<p><strong>Key Insight</strong>: The generator never sees real data directly—it only receives gradients from the discriminator’s judgment. This indirect supervision produces remarkably sharp, high-quality samples.</p>
+<hr>
+<section id="minmax-game-formulation" class="level3" data-number="8.1.1">
+<h3 data-number="8.1.1" class="anchored" data-anchor-id="minmax-game-formulation"><span class="header-section-number">8.1.1</span> Minmax Game Formulation</h3>
+<p>Generator and discriminator play a minimax game with value function <span class="math inline">\(V(G, D)\)</span>:</p>
+<p><span class="math display">\[\min_G \max_D V(D, G) = \min_G \max_D \Big(\mathbb{E}_{x \sim p_{\text{data}}(x)}[\log D(x)] + \mathbb{E}_{z \sim p_z(z)}[\log(1 - D(G(z)))]\Big)\]</span></p>
+<p><strong>Discriminator’s objective</strong>:<br>
+Maximize <span class="math inline">\(V(D, G)\)</span>; &nbsp; by correctly classifying real data (<span class="math inline">\(D(x) \to 1\)</span>) and fake data (<span class="math inline">\(D(G(z)) \to 0\)</span>).</p>
+<p><strong>Generator’s objective</strong>:<br>
+Minimize <span class="math inline">\(V(D, G)\)</span>; &nbsp; by fooling the discriminator (<span class="math inline">\(D(G(z)) \to 0\)</span>).</p>
+<hr>
+</section>
+<section id="architecture-components" class="level3" data-number="8.1.2">
+<h3 data-number="8.1.2" class="anchored" data-anchor-id="architecture-components"><span class="header-section-number">8.1.2</span> Architecture Components</h3>
+<p><strong>Generator</strong> <span class="math inline">\(G: \mathcal{Z} \to \mathcal{X}\)</span>:</p>
+<ul>
+<li>Input: Latent code <span class="math inline">\(z \sim p(z) = \mathcal{N}(0, I)\)</span> (typically)</li>
+<li>Output: Generated sample <span class="math inline">\(\hat{x} = G(z) \in \mathbb{R}^D\)</span></li>
+<li>Architecture: Transposed convolutions (images) or MLPs (tabular)</li>
+</ul>
+<p><span class="math display">\[z \to \text{FC} \to \text{Reshape} \to \text{TransposedConv} \times N \to \text{Tanh} \to \hat{x}\]</span></p>
+<p><strong>Discriminator</strong> <span class="math inline">\(D: \mathcal{X} \to [0,1]\)</span>:</p>
+<ul>
+<li>Input: Sample <span class="math inline">\(x\)</span> (real or fake)</li>
+<li>Output: Probability that <span class="math inline">\(x\)</span> is real: <span class="math inline">\(D(x) \in [0,1]\)</span></li>
+<li>Architecture: Convolutional network (images) or MLPs</li>
+</ul>
+<p><span class="math display">\[x \to \text{Conv} \times N \to \text{Flatten} \to \text{FC} \to \text{Sigmoid} \to D(x)\]</span></p>
+<hr>
+</section>
+<section id="training-algorithm" class="level3" data-number="8.1.3">
+<h3 data-number="8.1.3" class="anchored" data-anchor-id="training-algorithm"><span class="header-section-number">8.1.3</span> Training Algorithm</h3>
+<p><strong>Alternating optimization</strong>—train discriminator and generator in turns:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> epoch <span class="kw">in</span> epochs:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Train Discriminator (k steps, typically k=1)</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(k):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Sample real data</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        x_real <span class="op">~</span> p_data(x)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Sample noise and generate fakes</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        z <span class="op">~</span> p(z)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        x_fake <span class="op">=</span> G(z)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Discriminator loss (binary cross-entropy)</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        L_D <span class="op">=</span> <span class="op">-</span>[log D(x_real) <span class="op">+</span> log(<span class="dv">1</span> <span class="op">-</span> D(x_fake))]</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Update discriminator</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        θ_D ← θ_D <span class="op">-</span> η ∇_θD L_D</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Train Generator (1 step)</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    z <span class="op">~</span> p(z)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    x_fake <span class="op">=</span> G(z)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Generator loss (non-saturating)</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    L_G <span class="op">=</span> <span class="op">-</span>log D(G(z))</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Update generator</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    θ_G ← θ_G <span class="op">-</span> η ∇_θG L_G</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Key design choice</strong>: Update discriminator more frequently (<span class="math inline">\(k\)</span> times) per generator update to maintain discriminator strength.</p>
+<hr>
+</section>
+</section>
+<section id="unconditional-image-generation" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="unconditional-image-generation"><span class="header-section-number">8.2</span> Unconditional Image Generation</h2>
+<section id="dcgan-deep-convolutional-gan-2015" class="level3" data-number="8.2.1">
+<h3 data-number="8.2.1" class="anchored" data-anchor-id="dcgan-deep-convolutional-gan-2015"><span class="header-section-number">8.2.1</span> DCGAN (Deep Convolutional GAN, 2015)</h3>
+<p><strong>Key contribution</strong>: Stable architecture guidelines for training GANs on images.</p>
+<p><strong>Architecture principles</strong>: 1. Replace pooling layers with strided convolutions (discriminator) and transposed convolutions (generator) 2. Use batch normalization in both networks (except generator output and discriminator input) 3. Remove fully connected hidden layers 4. Use ReLU in generator (except output: Tanh) 5. Use LeakyReLU in discriminator</p>
+<p><strong>Generator architecture</strong> (for 64×64 images):</p>
+<pre><code>z (100) → FC(4×4×1024) → Reshape
+  → TransposedConv(512, 4×4, stride=2) → BN → ReLU  # 8×8
+  → TransposedConv(256, 4×4, stride=2) → BN → ReLU  # 16×16
+  → TransposedConv(128, 4×4, stride=2) → BN → ReLU  # 32×32
+  → TransposedConv(3, 4×4, stride=2) → Tanh          # 64×64</code></pre>
+<p><strong>Impact</strong>: Enabled stable training, became foundation for future GAN research.</p>
+<hr>
+</section>
+<section id="wgan-wasserstein-gan-2017" class="level3" data-number="8.2.2">
+<h3 data-number="8.2.2" class="anchored" data-anchor-id="wgan-wasserstein-gan-2017"><span class="header-section-number">8.2.2</span> WGAN (Wasserstein GAN ,2017)</h3>
+<p><strong>Motivation</strong>: Address training instability through better distance metric.</p>
+<p><strong>Key idea</strong>: Instead of Jensen-Shannon divergence, use <strong>Wasserstein distance</strong> (Earth Mover’s Distance):</p>
+<p><span class="math display">\[W(p_r, p_g) = \sup_{\|f\|_L \leq 1} \mathbb{E}_{x \sim p_r}[f(x)] - \mathbb{E}_{x \sim p_g}[f(x)]\]</span></p>
+<p><strong>WGAN objective</strong>: <span class="math display">\[\min_G \max_{D \in \mathcal{D}} \mathbb{E}_{x \sim p_{\text{data}}}[D(x)] - \mathbb{E}_{z \sim p_z}[D(G(z))]\]</span></p>
+<p><strong>Key differences from standard GAN</strong>:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Aspect</th>
+<th>Standard GAN</th>
+<th>WGAN</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Discriminator output</td>
+<td>Sigmoid (probability)</td>
+<td>Linear (score)</td>
+</tr>
+<tr class="even">
+<td>Loss</td>
+<td>Binary cross-entropy</td>
+<td>Wasserstein distance</td>
+</tr>
+<tr class="odd">
+<td>Constraint</td>
+<td>None</td>
+<td>1-Lipschitz</td>
+</tr>
+<tr class="even">
+<td>Stability</td>
+<td>Sensitive to hyperparameters</td>
+<td>More stable</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Advantages</strong>: Provides meaningful gradients even when distributions don’t overlap, more stable training.</p>
+<p><strong>Enforcing Lipschitz constraint</strong>: The Wasserstein GAN optimizes the Earth-Mover distance, which requires the critic to be <strong>1-Lipschitz</strong>. This smoothness constraint is essential for the distance to be valid (via the Kantorovich–Rubinstein duality). The original WGAN enforces this constraint by <strong>clipping the critic’s weights</strong>, a simple but crude way to bound the gradients.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Enforcing 1-Lipschitz constraint (original WGAN)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> p <span class="kw">in</span> discriminator.parameters():</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    p.data.clamp_(<span class="op">-</span><span class="fl">0.01</span>, <span class="fl">0.01</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Problems with weight clipping</strong>:</p>
+<ul>
+<li>Limits discriminator model capacity</li>
+<li>Can lead to unstable or flat value surfaces</li>
+<li>Slows Convergence</li>
+</ul>
+<hr>
+</section>
+<section id="wgan-gp-2017" class="level3" data-number="8.2.3">
+<h3 data-number="8.2.3" class="anchored" data-anchor-id="wgan-gp-2017"><span class="header-section-number">8.2.3</span> WGAN-GP (2017)</h3>
+<p><strong>Improvement</strong>: Replace weight clipping with gradient penalty.</p>
+<p><strong>Gradient penalty</strong>: <span class="math display">\[\lambda \mathbb{E}_{\hat{x} \sim p_{\hat{x}}}[(\|\nabla_{\hat{x}} D(\hat{x})\|_2 - 1)^2]\]</span></p>
+<p>for any interpolated point <span class="math inline">\(\hat{x}\)</span> between a real data sample and a generated sample<br>
+(i.e., convex combinations of the form <span class="math inline">\(\hat{x} = \epsilon x + (1-\epsilon)G(z), \, \epsilon \in [0,1]\)</span>).</p>
+<p><strong>Complete loss</strong>: <span class="math display">\[\mathcal{L}_D = \mathbb{E}_z[D(G(z))] - \mathbb{E}_x[D(x)] + \lambda \mathbb{E}_{\hat{x}}[(\|\nabla_{\hat{x}} D(\hat{x})\|_2 - 1)^2]\]</span></p>
+<p><strong>Benefits</strong>: Better gradient behavior, no weight clipping issues.</p>
+<p><strong>Standard practice</strong> for Wasserstein GANs (typically <span class="math inline">\(\lambda = 10\)</span>).</p>
+<hr>
+</section>
+</section>
+<section id="conditional-image-generation" class="level2" data-number="8.3">
+<h2 data-number="8.3" class="anchored" data-anchor-id="conditional-image-generation"><span class="header-section-number">8.3</span> Conditional Image Generation</h2>
+<section id="conditional-gan-cgan-2014" class="level3" data-number="8.3.1">
+<h3 data-number="8.3.1" class="anchored" data-anchor-id="conditional-gan-cgan-2014"><span class="header-section-number">8.3.1</span> Conditional GAN (cGAN, 2014)</h3>
+<p><strong>Idea</strong>: Condition both networks on labels <span class="math inline">\(y\)</span>:</p>
+<p><span class="math display">\[\min_G \max_D \mathbb{E}_{x,y}[\log D(x|y)] + \mathbb{E}_{z,y}[\log(1 - D(G(z|y)|y))]\]</span></p>
+<p><strong>Implementation</strong>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Generator</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>y_embedded <span class="op">=</span> embedding(y)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>z_cond <span class="op">=</span> concat([z, y_embedded])</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> G(z_cond)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Discriminator  </span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>x_cond <span class="op">=</span> concat([x, y_embedded])</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>score <span class="op">=</span> D(x_cond)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Applications</strong>:</p>
+<ul>
+<li>Class-conditional image generation (ImageNet)</li>
+<li>Text-to-image synthesis</li>
+<li>Image-to-image translation (pix2pix)</li>
+<li>Super-resolution</li>
+</ul>
+<hr>
+<p>Having covered conditional GANs, we now move to advances in <strong>unconditional high-resolution image generation</strong>, which ultimately led to StyleGAN.</p>
+<hr>
+<p>Prior to StyleGAN, <strong>Progressive GAN</strong> introduced progressive growing — a key technique that allowed stable training at very high resolutions (up to 1024×1024), and was later adopted in early versions of StyleGAN.</p>
+</section>
+<section id="progressive-gan-2017" class="level3" data-number="8.3.2">
+<h3 data-number="8.3.2" class="anchored" data-anchor-id="progressive-gan-2017"><span class="header-section-number">8.3.2</span> Progressive GAN (2017)</h3>
+<p><strong>Key idea:</strong> Train generator &amp; discriminator by gradually increasing resolution<br>
+(4×4 → 8×8 → 16×16 → … → 1024×1024)</p>
+<p><strong>Fade-in mechanism:</strong> Smooth transition when adding layers</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>x_lowres <span class="op">=</span> upsample(prev_block(x))</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>x_highres <span class="op">=</span> new_block(x)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> α <span class="op">*</span> x_highres <span class="op">+</span> (<span class="dv">1</span> <span class="op">-</span> α) <span class="op">*</span> x_lowres  <span class="co"># α: ramps from 0→1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>Stable training at high resolution</li>
+<li>Faster convergence</li>
+<li>Much sharper high-resolution results than prior GANs</li>
+</ul>
+<hr>
+</section>
+<section id="stylegan-2018-2019" class="level3" data-number="8.3.3">
+<h3 data-number="8.3.3" class="anchored" data-anchor-id="stylegan-2018-2019"><span class="header-section-number">8.3.3</span> StyleGAN (2018-2019)</h3>
+<p><strong>Key innovation</strong>: Style-based generator with explicit control over image features at different scales.</p>
+<p><strong>Architecture overview</strong>:</p>
+<p><strong>1. Mapping Network</strong> <span class="math inline">\(f: \mathcal{Z} \to \mathcal{W}\)</span>:</p>
+<ul>
+<li>8-layer MLP maps <span class="math inline">\(z\in \mathcal{Z}\)</span> to disentangled latent <span class="math inline">\(w \in \mathcal{W}\)</span></li>
+</ul>
+<p><strong>2. Synthesis Network</strong>: Generates image from <span class="math inline">\(w\)</span></p>
+<ul>
+<li>Starts from learned constant tensor (not latent vector)</li>
+<li>Progressive upsampling; each layer modulated by style vector <span class="math inline">\(w\)</span> through <strong>Adaptive Instance Normalization (AdaIN)</strong></li>
+</ul>
+<p><strong>AdaIN (Style Modulation)</strong>: Applies style controls by normalizing activations and re-scaling them with learned scale/bias from <span class="math inline">\(w\)</span>: <span class="math display">\[\text{AdaIN}(x_i, y) = y_{s,i} \frac{x_i - \mu(x_i)}{\sigma(x_i)} + y_{b,i}\]</span></p>
+<p><strong>3. Hierarchical Style Control</strong>:</p>
+<ul>
+<li><strong>Coarse</strong> (4×4–8×8): pose, face shape</li>
+<li><strong>Middle</strong> (16×16–32×32): facial features, hair</li>
+<li><strong>Fine</strong> (64×64–1024×1024): colors, pores, micro-structure</li>
+</ul>
+<p><strong>Style mixing regularization</strong>: Inject different <span class="math inline">\(w\)</span> vectors at different layers to encourage disentanglement and prevent the network from encoding all variation in early layers.</p>
+<p><strong>4. Noise Injection</strong>: Per-pixel Gaussian noise at each layer → stochastic realism (hair strands, pores, skin variation)</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> conv(x)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> x <span class="op">+</span> noise <span class="op">*</span> learned_weight  <span class="co"># Uncorrelated Gaussian noise</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> activation(x)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Results</strong>: State-of-the-art 1024×1024 image quality (FID ~3 on FFHQ faces dataset).</p>
+<p><strong>StyleGAN2</strong> later removed progressive growing and improved normalization to eliminate artifacts.</p>
+<hr>
+</section>
+</section>
+<section id="image-to-image-translation" class="level2" data-number="8.4">
+<h2 data-number="8.4" class="anchored" data-anchor-id="image-to-image-translation"><span class="header-section-number">8.4</span> Image-to-Image Translation</h2>
+<p><strong>Goal:</strong> Learn a mapping between two visual domains <span class="math inline">\(X\)</span> and <span class="math inline">\(Y\)</span>. Given input <span class="math inline">\(x \in X\)</span>, generate <span class="math inline">\(y \in Y\)</span>.</p>
+<ul>
+<li><strong>Paired setting</strong>: explicit aligned pairs <span class="math inline">\((x_i, y_i)\)</span> are available</li>
+<li><strong>Unpaired setting</strong>: only samples from each distribution, no direct correspondences</li>
+</ul>
+<section id="pix2pix-2016-paired-translation" class="level3" data-number="8.4.1">
+<h3 data-number="8.4.1" class="anchored" data-anchor-id="pix2pix-2016-paired-translation"><span class="header-section-number">8.4.1</span> Pix2Pix (2016) — <em>Paired Translation</em></h3>
+<p><strong>Setting:</strong> Learn <span class="math inline">\((G: X \rightarrow Y)\)</span> with paired examples <span class="math inline">\((x, y)\)</span>.</p>
+<ul>
+<li><strong>Generator:</strong> U-Net (skip connections preserve spatial details)</li>
+<li><strong>Discriminator:</strong> PatchGAN (classifies local patches as real/fake)</li>
+</ul>
+<p><strong>Loss</strong>: <span class="math display">\[\mathcal{L}_\text{Pix2Pix} = \mathcal{L}_{\text{GAN}} + \lambda \mathcal{L}_{\text{L1}}\]</span></p>
+<ul>
+<li><span class="math inline">\(\mathcal{L}_{\text{L1}} = \mathbb{E}[\|y - G(x)\|_1]\)</span></li>
+<li><span class="math inline">\(\mathcal{L}_{\text{GAN}} = \mathbb{E}_{x,y}[\log D(x,y)] + \mathbb{E}_{x}[\log(1 - D(x, G(x)))]\)</span></li>
+<li>GAN loss encourages realistic textures; L1 keeps output close to the paired target.</li>
+</ul>
+<p><strong>Applications</strong>: Conditional generation across paired domains, including:</p>
+<ul>
+<li>edges → photos</li>
+<li>labels → scenes (semantic → realistic)</li>
+<li>image colorization</li>
+<li>super-resolution</li>
+</ul>
+</section>
+<section id="cyclegan-2017-unpaired-translation" class="level3" data-number="8.4.2">
+<h3 data-number="8.4.2" class="anchored" data-anchor-id="cyclegan-2017-unpaired-translation"><span class="header-section-number">8.4.2</span> CycleGAN (2017) — <em>Unpaired Translation</em></h3>
+<p><strong>Setting:</strong> Unsupervised translation (no paired data). Learn mappings both ways: <span class="math display">\[
+G: X \rightarrow Y, \quad F: Y \rightarrow X
+\]</span></p>
+<p><strong>Key idea — Cycle Consistency:</strong> Translating forward then back should reconstruct the original:</p>
+<p><span class="math display">\[
+F(G(x)) \approx x, \quad G(F(y)) \approx y
+\]</span></p>
+<p><strong>Loss</strong>: <span class="math display">\[\mathcal{L} = \mathcal{L}_{\text{GAN}}(G) + \mathcal{L}_{\text{GAN}}(F) +
+\lambda_1 \mathcal{L}_{\text{cyc}} +
+\lambda_2 \mathcal{L}_{\text{id}}
+\]</span></p>
+<p><em>Adversarial loss</em>: &nbsp; enforces that translating to the other domain and back recovers the original image</p>
+<ul>
+<li><span class="math inline">\(\mathcal{L}_{\text{GAN}}(G)=
+\mathbb{E}_{y \sim p_{\text{data}}(y)}[(D_Y(y) - 1)^2]+
+\mathbb{E}_{x \sim p_{\text{data}}(x)}[D_Y(G(x))^2]\)</span><br>
+<span class="math inline">\(\mathcal{L}_{\text{GAN}}(F)=
+\mathbb{E}_{x \sim p_{\text{data}}(x)}[(D_X(x) - 1)^2]+
+\mathbb{E}_{y \sim p_{\text{data}}(y)}[D_X(F(y))^2]\)</span></li>
+</ul>
+<p><em>Cycle Loss</em>: &nbsp; enforces that translating to the other domain and back recovers the original image</p>
+<ul>
+<li><span class="math inline">\(\mathcal{L}_{\text{cyc}} =
+\mathbb{E}_{x \sim p(x)}[\|F(G(x)) - x\|_1] +
+\mathbb{E}_{y \sim p(y)}[\|G(F(y)) - y\|_1]\)</span></li>
+</ul>
+<p><em>Identity Loss</em>: &nbsp; preserves content when input already resembles target domain</p>
+<ul>
+<li><span class="math inline">\(\mathcal{L}_{\text{id}} \,\ = \mathbb{E}_{y \sim p(y)} \left[ \lVert G(y) - y \rVert_1 \right]+
+\mathbb{E}_{x \sim p(x)} \left[ \lVert F(x) - x \rVert_1 \right]\)</span></li>
+</ul>
+<p><strong>Applications</strong>: Cross-domain translation without paired supervision, e.g.,</p>
+<ul>
+<li>season transfer</li>
+<li>horse ↔︎ zebra</li>
+<li>apples ↔︎ oranges</li>
+<li>photo ↔︎ painting style</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="evaluation-metrics" class="level2" data-number="8.5">
+<h2 data-number="8.5" class="anchored" data-anchor-id="evaluation-metrics"><span class="header-section-number">8.5</span> Evaluation Metrics</h2>
+<p>Evaluating generative models is challenging because we cannot compute exact likelihoods for GANs. Instead, we rely on proxy metrics that measure different aspects of generation quality.</p>
+<section id="inception-score-is" class="level3" data-number="8.5.1">
+<h3 data-number="8.5.1" class="anchored" data-anchor-id="inception-score-is"><span class="header-section-number">8.5.1</span> Inception Score (IS)</h3>
+<p><strong>Motivation</strong>: Good generated images should satisfy two properties:</p>
+<ol type="1">
+<li><strong>Sharpness</strong>: Each image should clearly belong to one class → <span class="math inline">\(p(y|x)\)</span> has low entropy</li>
+<li><strong>Diversity</strong>: Generated images should cover many classes → marginal <span class="math inline">\(p(y)\)</span> has high entropy</li>
+</ol>
+<p><strong>Formula</strong>: <span class="math display">\[\text{IS} = \exp\left(\mathbb{E}_{x \sim p_g}[\text{KL}(p(y|x) \| p(y))]\right)\]</span></p>
+<ul>
+<li><span class="math inline">\(p(y|x)\)</span> is Inception-v3’s predicted class distribution,</li>
+<li><span class="math inline">\(p(y) = \mathbb{E}_x[p(y|x)]\)</span> is the marginal.</li>
+</ul>
+<p><strong>Intuition</strong>:</p>
+<p><span class="math display">\[\ln(\text{IS}) = \underbrace{H(y)}_{\text{diversity across dataset}} -
+\underbrace{\mathbb{E}[H(y|x)]}_{\text{avg. uncertainty per image}}\]</span></p>
+<div class="callout callout-style-simple callout-tip no-icon callout-titled" title="Mathematical Derivation (click to expand)">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Mathematical Derivation (click to expand)
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-1" class="callout-1-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p><span class="math display">\[\text{KL}(p(y|x) \| p(y)) = \sum_y p(y|x) \log p(y|x) - \sum_y p(y|x) \log p(y)\]</span> <span class="math display">\[= -H(y|x) - \sum_y p(y|x) \log p(y)\]</span></p>
+<p>Taking expectation over <span class="math inline">\(x \sim p_g\)</span>: <span class="math display">\[\mathbb{E}_x[\text{KL}(p(y|x) \| p(y))] = -\mathbb{E}_x[H(y|x)] + H(y)\]</span></p>
+<p>Therefore: <span class="math display">\[\boxed{\ln(\text{IS}(G)) = H(y) - \mathbb{E}_{x}[H(y|x)]}\]</span></p>
+</div>
+</div>
+</div>
+<p><span style="display:block; height:0.4em;"></span></p>
+<ul>
+<li>High <span class="math inline">\(H(y)\)</span>: Generator produces many different classes (diversity)</li>
+<li>Low <span class="math inline">\(H(y|x)\)</span>: Each image is sharp and recognizable (quality)</li>
+</ul>
+<p><strong>Critical limitation</strong>:</p>
+<ul>
+<li>Depends on Inception network</li>
+<li><strong>IS evaluates <span class="math inline">\(p_g\)</span> in isolation—not comparing it to real distribution <span class="math inline">\(p_{\text{data}}\)</span></strong>.<br>
+A generator could game a high IS by:
+<ul>
+<li>Producing a single perfect image per class (high <span class="math inline">\(H(y)\)</span>, low <span class="math inline">\(\mathbb{E}[H(y|x)]\)</span>)</li>
+<li>Memorizing training set (Overfitting)</li>
+<li>Generating unrealistic but sharp images (Deviation from real distribution)</li>
+</ul></li>
+</ul>
+<hr>
+</section>
+<section id="fréchet-inception-distance-fid" class="level3" data-number="8.5.2">
+<h3 data-number="8.5.2" class="anchored" data-anchor-id="fréchet-inception-distance-fid"><span class="header-section-number">8.5.2</span> Fréchet Inception Distance (FID)</h3>
+<p>Measure distance between real and generated distributions in feature space.</p>
+<p><strong>Key difference</strong>:</p>
+<ul>
+<li><strong>IS</strong>: Evaluates <span class="math inline">\(p_g\)</span> in isolation (requires only generated samples)</li>
+<li><strong>FID</strong>: Compares <span class="math inline">\(p_g\)</span> to <span class="math inline">\(p_{\text{data}}\)</span> (requires both real and generated samples)</li>
+</ul>
+<p><strong>Method</strong>:</p>
+<ol type="1">
+<li>Extract features from Inception-v3 (before final classification layer) for real and generated images</li>
+<li>Assume feature distributions follow multivariate Gaussians:</li>
+<li>Compute Fréchet distance (Wasserstein-2 distance between Gaussians)</li>
+</ol>
+<p><strong>Formula</strong>: <span class="math display">\[\text{FID}(p_r, p_g) = \|\mu_r - \mu_g\|^2 + \text{Tr}\left(\Sigma_r + \Sigma_g - 2(\Sigma_r \Sigma_g)^{1/2}\right)\]</span></p>
+<ul>
+<li><span class="math inline">\(\mu_r, \Sigma_r\)</span> are mean and covariance of <strong>real data</strong> features</li>
+<li><span class="math inline">\(\mu_g, \Sigma_g\)</span> are mean and covariance of <strong>generated data</strong> features</li>
+</ul>
+<p><strong>Interpretation of terms</strong>:</p>
+<ol type="1">
+<li><strong>Lower FID is better</strong>: closer match to real data. FID = 0 when distributions are identical.</li>
+<li><strong><span class="math inline">\(\|\mu_r - \mu_g\|^2\)</span></strong>: &nbsp; Distance between feature means.
+<ul>
+<li>Measures how far the average generated sample is from the average real sample in feature space (if this term is large, the generator is producing images that, on average, look different from real ones - wrong global appearance, color tone, style bias, etc..).<br>
+</li>
+</ul></li>
+<li><strong><span class="math inline">\(\text{Tr}(\Sigma_r + \Sigma_g - 2\sqrt{\Sigma_r \Sigma_g})\)</span></strong>: &nbsp; Difference in covariances.
+<ul>
+<li>Measures if generated samples have similar diversity and correlations as real data</li>
+<li>Penalizes mode collapse (when generator produces only a few types of images).</li>
+</ul></li>
+</ol>
+<p><strong>Best practice</strong>: Use FID as primary metric (measures distance to real distribution), IS for quick checks only.</p>
+<hr>
+</section>
+<section id="precision-and-recall" class="level3" data-number="8.5.3">
+<h3 data-number="8.5.3" class="anchored" data-anchor-id="precision-and-recall"><span class="header-section-number">8.5.3</span> Precision and Recall</h3>
+<p>FID is a single number that doesn’t distinguish between quality and diversity failures.<br>
+Precision and Recall separately measure <strong>quality from diversity</strong>:</p>
+<ul>
+<li><strong>Precision</strong>: Fraction of generated samples that are realistic (quality)</li>
+<li><strong>Recall</strong>: Fraction of real data modes covered by generator (diversity)</li>
+</ul>
+<p><strong>Computation</strong> (using k-NN in feature space):</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract Inception features</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>real_features <span class="op">=</span> Inception(real_images)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>fake_features <span class="op">=</span> Inception(generated_images)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Precision: fraction of fake samples with real neighbor nearby</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>distances_fake_to_real <span class="op">=</span> knn_distance(fake_features, real_features, k<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>precision <span class="op">=</span> (distances_fake_to_real <span class="op">&lt;</span> threshold).mean()</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Recall: fraction of real samples with fake neighbor nearby</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>distances_real_to_fake <span class="op">=</span> knn_distance(real_features, fake_features, k<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>recall <span class="op">=</span> (distances_real_to_fake <span class="op">&lt;</span> threshold).mean()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Diagnosis</strong>:</p>
+<ul>
+<li>High precision, low recall → mode collapse</li>
+<li>Low precision, high recall → diverse but low quality</li>
+</ul>
+<p><strong>Use case</strong>: Diagnose specific failures when FID insufficient.</p>
+<hr>
+</section>
+</section>
+<section id="training-challenges" class="level2" data-number="8.6">
+<h2 data-number="8.6" class="anchored" data-anchor-id="training-challenges"><span class="header-section-number">8.6</span> Training Challenges</h2>
+<section id="mode-collapse" class="level3" data-number="8.6.1">
+<h3 data-number="8.6.1" class="anchored" data-anchor-id="mode-collapse"><span class="header-section-number">8.6.1</span> Mode Collapse</h3>
+<p><strong>Problem</strong>: Generator produces limited variety, ignoring parts of data distribution.</p>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>Generated samples look similar</li>
+<li>Low Recall metric</li>
+<li>Discriminator loss oscillates</li>
+</ul>
+<p><strong>Fixes</strong>:</p>
+<ul>
+<li><strong>WGAN-GP</strong> (stable gradients)</li>
+<li><strong>Minibatch discrimination</strong> (penalize lack of diversity)</li>
+<li><strong>Unrolled GANs</strong> (look ahead in discriminator updates)</li>
+</ul>
+<hr>
+</section>
+<section id="vanishing-gradients" class="level3" data-number="8.6.2">
+<h3 data-number="8.6.2" class="anchored" data-anchor-id="vanishing-gradients"><span class="header-section-number">8.6.2</span> Vanishing Gradients</h3>
+<p><strong>Problem</strong>: Discriminator becomes too strong → generator receives tiny or zero gradients.</p>
+<p><strong>Why it happens:</strong><br>
+In the vanilla GAN objective, when <span class="math inline">\(D(G(z)) \to 0, \,\, \nabla_G \log (1 - D(G(z))) \to 0\)</span>.</p>
+<p><strong>Fixes</strong>:</p>
+<ul>
+<li><strong>Non-saturating loss</strong>: <span class="math inline">\(\max_G \mathbb{E}[\log D(G(z))]\)</span></li>
+<li><strong>Feature matching</strong>: Match statistics of discriminator’s intermediate features</li>
+<li><strong>One-sided label smoothing</strong>: Real labels = 0.9 (not 1.0)</li>
+</ul>
+<hr>
+</section>
+<section id="training-instability" class="level3" data-number="8.6.3">
+<h3 data-number="8.6.3" class="anchored" data-anchor-id="training-instability"><span class="header-section-number">8.6.3</span> Training Instability</h3>
+<p><strong>Problem</strong>: GANs optimize a min–max game, not a single objective → unstable fixed point behavior. Training dynamics can oscillate wildly and the minmax game may fail to converge.</p>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>Losses do not correlate with image quality</li>
+<li>Discriminator and generator take turns “winning”</li>
+<li>Sudden collapse in sample quality</li>
+</ul>
+<p><strong>Solutions</strong>:</p>
+<ul>
+<li><strong>Architecture Stabilization</strong>:
+<ul>
+<li><strong>Spectral normalization</strong> → enforces Lipschitz constraint on <span class="math inline">\(D\)</span></li>
+<li><strong>Batch normalization in G</strong> (avoid in final layer of <span class="math inline">\(D\)</span>)</li>
+<li><strong>LeakyReLU in D</strong> → prevents dead units</li>
+<li><strong>Residual connections / skip connections</strong> (modern GANs)</li>
+</ul></li>
+<li><strong>Optimization stabilization</strong>
+<ul>
+<li><strong>TTUR</strong> (Two-Time-Scale Update Rule):</li>
+</ul>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Two Time-Scale Update Rule (TTUR)</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>lr_D <span class="op">=</span> <span class="fl">4e-4</span>  <span class="co"># Higher discriminator learning rate</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>lr_G <span class="op">=</span> <span class="fl">1e-4</span>  <span class="co"># Lower generator learning rate</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>optimizer <span class="op">=</span> Adam(lr, betas<span class="op">=</span>(<span class="fl">0.0</span>, <span class="fl">0.9</span>))  <span class="co"># Different from default</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<ul>
+<li><strong>Balanced update ratio</strong> e.g., 1 D step, per 1 G step; or 5:1 in WGANs.</li>
+</ul></li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="training-monitoring" class="level2" data-number="8.7">
+<h2 data-number="8.7" class="anchored" data-anchor-id="training-monitoring"><span class="header-section-number">8.7</span> Training Monitoring</h2>
+<p><strong>What to plot</strong>:</p>
+<p><strong>1. Losses</strong> (but interpret carefully):</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Discriminator loss should be stable, not too low</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>plot(D_loss_real, D_loss_fake, D_loss_total)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Generator loss should decrease (but may oscillate)</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>plot(G_loss)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>⚠️ Warning</strong>: GAN losses are NOT good indicators of quality!</p>
+<ul>
+<li>Discriminator loss approaching 0 → too strong (generator gets no gradient)</li>
+<li>Generator loss approaching 0 → fooling discriminator (might be mode collapse)</li>
+<li>Oscillating losses can indicate healthy adversarial dynamics</li>
+</ul>
+<p><strong>2. Generated samples</strong> (most important):</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Save samples every N iterations</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">iter</span> <span class="op">%</span> save_freq <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> torch.no_grad():</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>        fake <span class="op">=</span> G(fixed_noise)  <span class="co"># Use same noise for comparison</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>        save_image(fake, <span class="ss">f'samples_</span><span class="sc">{</span><span class="bu">iter</span><span class="sc">}</span><span class="ss">.png'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>3. Evaluation metrics</strong>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute every epoch or few epochs</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> epoch <span class="op">%</span> eval_freq <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    FID_score <span class="op">=</span> compute_FID(real_images, generated_images)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    IS_score <span class="op">=</span> compute_IS(generated_images)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    log(FID_score, IS_score)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Red flags</strong>:</p>
+<ul>
+<li>Generator produces identical samples → <em>mode collapse</em></li>
+<li>Generator produces noise or blurry blobs → <em>vanishing gradient</em></li>
+<li>Discriminator loss drops to 0 early → <em>generator stops improving</em> (Discriminator is too strong)</li>
+<li>Sudden quality degradation → <em>training instability</em></li>
+</ul>
+<hr>
+</section>
+<section id="comparison-gan-vs-vae-vs-diffusion" class="level2" data-number="8.8">
+<h2 data-number="8.8" class="anchored" data-anchor-id="comparison-gan-vs-vae-vs-diffusion"><span class="header-section-number">8.8</span> Comparison: GAN vs VAE vs Diffusion</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Aspect</th>
+<th>GAN</th>
+<th>VAE</th>
+<th>Diffusion</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Sample quality</strong></td>
+<td>★★★★★</td>
+<td>★★★☆☆</td>
+<td>★★★★★</td>
+</tr>
+<tr class="even">
+<td><strong>Training stability</strong></td>
+<td>★★☆☆☆</td>
+<td>★★★★★</td>
+<td>★★★★☆</td>
+</tr>
+<tr class="odd">
+<td><strong>Mode coverage</strong></td>
+<td>★★☆☆☆</td>
+<td>★★★★★</td>
+<td>★★★★★</td>
+</tr>
+<tr class="even">
+<td><strong>Speed</strong></td>
+<td>★★★★★ (1 pass)</td>
+<td>★★★★★ (1 pass)</td>
+<td>★☆☆☆☆ (1000 steps)</td>
+</tr>
+<tr class="odd">
+<td><strong>Likelihood</strong></td>
+<td>✗</td>
+<td>✓ (lower bound)</td>
+<td>✓</td>
+</tr>
+</tbody>
+</table>
+<p><strong>When to use GANs</strong>:</p>
+<ul>
+<li>Need highest quality samples</li>
+<li>Real-time generation required</li>
+<li>Have expertise in adversarial training</li>
+</ul>
+<p><strong>Current trend</strong>: Diffusion models dominating image generation, but GANs still used where speed matters.</p>
+<hr>
+</section>
+<section id="interview-preparation" class="level2" data-number="8.9">
+<h2 data-number="8.9" class="anchored" data-anchor-id="interview-preparation"><span class="header-section-number">8.9</span> Interview Preparation</h2>
+<section id="core-concepts-checklist" class="level3" data-number="8.9.1">
+<h3 data-number="8.9.1" class="anchored" data-anchor-id="core-concepts-checklist"><span class="header-section-number">8.9.1</span> Core Concepts Checklist</h3>
+<ul class="task-list">
+<li><label><input type="checkbox">GAN minimax objective and Nash equilibrium</label></li>
+<li><label><input type="checkbox">Non-saturating loss vs saturating loss</label></li>
+<li><label><input type="checkbox">Mode collapse: causes and solutions</label></li>
+<li><label><input type="checkbox">Wasserstein distance vs JS divergence</label></li>
+<li><label><input type="checkbox">WGAN-GP gradient penalty mechanism</label></li>
+<li><label><input type="checkbox">FID vs Inception Score</label></li>
+<li><label><input type="checkbox">StyleGAN architecture innovations</label></li>
+</ul>
+<hr>
+</section>
+<section id="key-interview-questions" class="level3" data-number="8.9.2">
+<h3 data-number="8.9.2" class="anchored" data-anchor-id="key-interview-questions"><span class="header-section-number">8.9.2</span> Key Interview Questions</h3>
+<p><strong>Q1: “What is mode collapse and how do you prevent it?”</strong></p>
+<p><strong>Answer</strong>: Mode collapse is when generator produces limited variety, ignoring parts of data distribution. Generator finds samples that fool discriminator and exploits these without exploring other modes.</p>
+<p><strong>Detection</strong>: Visual inspection (similar samples), low Recall metric, oscillating discriminator loss.</p>
+<p><strong>Solutions</strong>:</p>
+<ol type="1">
+<li>WGAN-GP (better gradients, less prone to collapse)</li>
+<li>Minibatch discrimination (penalizes lack of diversity)</li>
+<li>Multiple discriminators/generators</li>
+</ol>
+<hr>
+<p><strong>Q2: “Why use Wasserstein distance instead of Jensen-Shannon divergence?”</strong></p>
+<p><strong>Answer</strong>: When real and fake sample distributions don’t overlap:</p>
+<ul>
+<li><p><strong>JS divergence</strong> stops providing learning signal,<br>
+since <span class="math inline">\(\text{JS}(p_{\text{data}} | p_g)  \equiv \log 2\)</span> is constant when <span class="math inline">\(p_{\text{data}}\)</span> and <span class="math inline">\(p_g\)</span> have disjoint supports.</p></li>
+<li><p><strong>The Wasserstein distance</strong> gives non-zero gradients during training,<br>
+since it always measures the “cost” of moving probability mass from <span class="math inline">\(p_g\)</span> to <span class="math inline">\(p_r\)</span>.</p></li>
+</ul>
+<p><strong>Advantages</strong>:</p>
+<ul>
+<li>Continuous and differentiable everywhere</li>
+<li>Provides meaningful gradients even with disjoint distributions</li>
+<li>More stable training</li>
+</ul>
+<p><strong>Disadvantage:</strong>: Requires enforcing Lipschitz constraint (gradient penalty).</p>
+<hr>
+<p><strong>Q3: “Explain WGAN-GP’s gradient penalty. Why better than weight clipping?”</strong></p>
+<p><strong>Answer</strong>:</p>
+<p><strong>Goal</strong>: Enforce 1-Lipschitz constraint on discriminator.</p>
+<p><strong>Weight clipping</strong> (original WGAN):</p>
+<ul>
+<li>Limits capacity (parameters stuck at boundaries)</li>
+<li>Pathological optimization surfaces</li>
+</ul>
+<p><strong>Gradient penalty</strong> (WGAN-GP): <span class="math display">\[\lambda \mathbb{E}_{\hat{x}}[(\|\nabla_{\hat{x}} D(\hat{x})\|_2 - 1)^2]\]</span></p>
+<p>where <span class="math inline">\(\hat{x}\)</span> are interpolations between real and fake.</p>
+<p><strong>Why better</strong>: Soft constraint, discriminator uses full parameter space, smoother optimization.</p>
+<hr>
+<p><strong>Q4: “Compare GANs, VAEs, and Diffusion models.”</strong></p>
+<p><strong>Answer</strong>:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Model</th>
+<th>Quality</th>
+<th>Speed</th>
+<th>Stability</th>
+<th>Likelihood</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>GAN</td>
+<td>Excellent</td>
+<td>Fast</td>
+<td>Hard</td>
+<td>No</td>
+</tr>
+<tr class="even">
+<td>VAE</td>
+<td>Good (blurry)</td>
+<td>Fast</td>
+<td>Easy</td>
+<td>Yes (lower bound)</td>
+</tr>
+<tr class="odd">
+<td>Diffusion</td>
+<td>Excellent</td>
+<td>Slow</td>
+<td>Moderate</td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Use GAN</strong>: Need speed + quality (real-time applications).<br>
+<strong>Use VAE</strong>: Need stability + latent manipulation.<br>
+<strong>Use Diffusion</strong>: Need quality + diversity (current SOTA).</p>
+<hr>
+<p><strong>Q5: “How do you evaluate GAN performance?”</strong></p>
+<p><strong>Answer</strong>:</p>
+<p><strong>FID</strong> (primary metric):</p>
+<ul>
+<li>Measures distance between real/generated distributions in feature space</li>
+<li>Lower is better</li>
+<li>Sensitive to mode collapse</li>
+<li>Correlates with human judgment</li>
+</ul>
+<p><strong>Inception Score</strong> (secondary):</p>
+<ul>
+<li>Measures sharpness and diversity</li>
+<li>Doesn’t compare to real distribution</li>
+<li>Can be fooled</li>
+</ul>
+<p><strong>Precision/Recall</strong>:</p>
+<ul>
+<li>Separately measure quality vs diversity</li>
+<li>Diagnose specific failures</li>
+</ul>
+<p><strong>Best practice</strong>: FID + visual inspection + Precision/Recall for diagnosis.</p>
+<hr>
+</section>
+<section id="company-context" class="level3" data-number="8.9.3">
+<h3 data-number="8.9.3" class="anchored" data-anchor-id="company-context"><span class="header-section-number">8.9.3</span> Company Context</h3>
+<p><strong>Anthropic</strong>:</p>
+<ul>
+<li>Focus is on safety &amp; interpretability</li>
+<li>GANs less central than transformers/diffusion</li>
+<li>Safety research - GANs used in synthetic data augmentation for adversarial attacks/robustness;</li>
+<li>Interpretability research - GANs used in Understanding learned latent features.</li>
+</ul>
+<p><strong>Google DeepMind</strong>:</p>
+<ul>
+<li>Research on GAN theory and variants</li>
+<li>BigGAN, VQ-GAN (for video)</li>
+</ul>
+<p><strong>NVIDIA</strong>:</p>
+<ul>
+<li>StyleGAN series (StyleGAN, StyleGAN2, StyleGAN3)</li>
+<li>Focus on high-resolution generation</li>
+</ul>
+<p><strong>OpenAI / Stability AI</strong>:</p>
+<ul>
+<li>Moved away from GANs toward diffusion models</li>
+<li>But GAN descriminators used in: latent compression (Stable Diffusion VAE), for sharper reconstructions</li>
+</ul>
+<hr>
+</section>
+<section id="further-reading" class="level3" data-number="8.9.4">
+<h3 data-number="8.9.4" class="anchored" data-anchor-id="further-reading"><span class="header-section-number">8.9.4</span> Further Reading</h3>
+<p><strong>Foundational Papers</strong>:</p>
+<ul>
+<li><a href="https://arxiv.org/abs/1406.2661">Generative Adversarial Networks</a> (GAN, Goodfellow et al., 2014)</li>
+<li><a href="https://arxiv.org/abs/1511.06434">Unsupervised Representation Learning with DCGANs</a> (DCGAN, 2015)</li>
+<li><a href="https://arxiv.org/abs/1701.07875">Wasserstein GAN</a> (WGAN, 2017)</li>
+<li><a href="https://arxiv.org/abs/1704.00028">Improved Training of Wasserstein GANs</a> (WGAN-GP, 2017)</li>
+<li><a href="https://arxiv.org/abs/1710.10196">Progressive Growing of GANs</a> (ProGAN, 2017)</li>
+<li><a href="https://arxiv.org/abs/1812.04948">A Style-Based Generator Architecture</a> (StyleGAN, 2018)</li>
+</ul>
+<p><strong>Theoretical Analysis</strong>:</p>
+<ul>
+<li><a href="https://arxiv.org/abs/1701.00160">NIPS 2016 Tutorial: Generative Adversarial Networks</a> (Goodfellow)</li>
+<li><a href="https://arxiv.org/abs/1706.08500">GANs Trained by a Two Time-Scale Update Rule</a> (TTUR)</li>
+</ul>
+<p><strong>Evaluation</strong>:</p>
+<ul>
+<li><a href="https://arxiv.org/abs/1606.03498">Improved Techniques for Training GANs</a> (Feature matching, minibatch discrimination)</li>
+<li><a href="https://arxiv.org/abs/1706.08500">GANs Trained by a Two Time-Scale Update Rule Converge to a Local Nash Equilibrium</a> (FID metric)</li>
+</ul>
+<hr>
+<p><strong>This completes the Generative Adversarial Networks</strong> theory, architectures and training techniques. While GANs revolutionized image synthesis through adversarial learning, their training remains notoriously unstable. Diffusion models emerged as a more robust alternative — easier to train, more interpretable, and capable of producing samples with unprecedented fidelity.</p>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const callouts = document.querySelectorAll('.callout-tip');
+    callouts.forEach(function(callout) {
+      callout.style.borderLeftColor = '#2196f3'; //#616161; //'#4caf50';
+      callout.style.color = 'ffffff'; // Dark purple-gray text
+    });
+  });
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../chapters/vision/07-vaes.html" class="pagination-link" aria-label="Variational Autoencoders (VAEs)">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../chapters/vision/09-diffusion-models.html" class="pagination-link" aria-label="Diffusion Models">
+        <span class="nav-page-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="../../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

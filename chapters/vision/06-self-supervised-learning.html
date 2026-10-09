@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>6&nbsp; Self-Supervised Learning – deep_learning_notes</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../chapters/vision/_intro-generative-models.html" rel="next">
+<link href="../../chapters/vision/05-vision-transformers.html" rel="prev">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-fd0503e23dce65854c81c5baaade3bdf.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../custom.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/06-self-supervised-learning.html">Part III: Self-Supervised Learning</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/06-self-supervised-learning.html"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../">deep_learning_notes</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part I: Foundations</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/01-neural-networks-and-optimization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Neural Networks and Optimization</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/02-generalization-and-learning-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Generalization and Learning Theory</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro_computer_vision.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Computer Vision</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Visual Understanding</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/03-cnns.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Convolutional Neural Networks</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/04-object-detection-and-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Detection and Segmentation</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/05-vision-transformers.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Vision Transformers</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Self-Supervised Learning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Generative Modeling</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Models</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/07-vaes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/08-gans.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/09-diffusion-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_conclusion-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Conclusion</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../intro.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Introduction</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../summary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Summary</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#motivation-and-paradigm-overview" id="toc-motivation-and-paradigm-overview" class="nav-link active" data-scroll-target="#motivation-and-paradigm-overview"><span class="header-section-number">6.1</span> Motivation and Paradigm Overview</a></li>
+  <li><a href="#taxonomy-of-self-supervised-approaches" id="toc-taxonomy-of-self-supervised-approaches" class="nav-link" data-scroll-target="#taxonomy-of-self-supervised-approaches"><span class="header-section-number">6.2</span> Taxonomy of Self-Supervised Approaches</a></li>
+  <li><a href="#invariance-based-learning" id="toc-invariance-based-learning" class="nav-link" data-scroll-target="#invariance-based-learning">Invariance-Based Learning</a></li>
+  <li><a href="#similarity-based-methods" id="toc-similarity-based-methods" class="nav-link" data-scroll-target="#similarity-based-methods"><span class="header-section-number">6.3</span> Similarity-Based Methods</a>
+  <ul class="collapse">
+  <li><a href="#contrastive-learning" id="toc-contrastive-learning" class="nav-link" data-scroll-target="#contrastive-learning"><span class="header-section-number">6.3.1</span> Contrastive Learning</a></li>
+  <li><a href="#clustering-based-methods" id="toc-clustering-based-methods" class="nav-link" data-scroll-target="#clustering-based-methods"><span class="header-section-number">6.3.2</span> Clustering-Based Methods</a></li>
+  <li><a href="#self-distillation-methods" id="toc-self-distillation-methods" class="nav-link" data-scroll-target="#self-distillation-methods"><span class="header-section-number">6.3.3</span> Self-Distillation Methods</a></li>
+  <li><a href="#comparison-of-similarity-based-methods" id="toc-comparison-of-similarity-based-methods" class="nav-link" data-scroll-target="#comparison-of-similarity-based-methods"><span class="header-section-number">6.3.4</span> Comparison of Similarity-Based Methods</a></li>
+  </ul></li>
+  <li><a href="#redundancy-reduction-methods" id="toc-redundancy-reduction-methods" class="nav-link" data-scroll-target="#redundancy-reduction-methods"><span class="header-section-number">6.4</span> Redundancy Reduction Methods</a></li>
+  <li><a href="#reconstructive-learning" id="toc-reconstructive-learning" class="nav-link" data-scroll-target="#reconstructive-learning">Reconstructive Learning</a></li>
+  <li><a href="#masked-auto-encoding" id="toc-masked-auto-encoding" class="nav-link" data-scroll-target="#masked-auto-encoding"><span class="header-section-number">6.5</span> Masked Auto-Encoding</a></li>
+  <li><a href="#evaluation-and-transfer-learning" id="toc-evaluation-and-transfer-learning" class="nav-link" data-scroll-target="#evaluation-and-transfer-learning"><span class="header-section-number">6.6</span> Evaluation and Transfer Learning</a></li>
+  <li><a href="#summary-and-interview-preparation" id="toc-summary-and-interview-preparation" class="nav-link" data-scroll-target="#summary-and-interview-preparation"><span class="header-section-number">6.7</span> Summary and Interview Preparation</a>
+  <ul class="collapse">
+  <li><a href="#core-concepts-checklist" id="toc-core-concepts-checklist" class="nav-link" data-scroll-target="#core-concepts-checklist"><span class="header-section-number">6.7.1</span> Core Concepts Checklist</a></li>
+  <li><a href="#common-interview-questions" id="toc-common-interview-questions" class="nav-link" data-scroll-target="#common-interview-questions"><span class="header-section-number">6.7.2</span> Common Interview Questions</a></li>
+  <li><a href="#method-selection-guide" id="toc-method-selection-guide" class="nav-link" data-scroll-target="#method-selection-guide"><span class="header-section-number">6.7.3</span> Method Selection Guide</a></li>
+  <li><a href="#company-context" id="toc-company-context" class="nav-link" data-scroll-target="#company-context"><span class="header-section-number">6.7.4</span> Company Context</a></li>
+  <li><a href="#further-reading" id="toc-further-reading" class="nav-link" data-scroll-target="#further-reading"><span class="header-section-number">6.7.5</span> Further Reading</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/06-self-supervised-learning.html">Part III: Self-Supervised Learning</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/06-self-supervised-learning.html"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="motivation-and-paradigm-overview" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="motivation-and-paradigm-overview"><span class="header-section-number">6.1</span> Motivation and Paradigm Overview</h2>
+<p><strong>The Labeling Bottleneck</strong>: Training large vision models requires massive datasets, but manual annotation is expensive and slow. ImageNet took 3 years and $50K to label 14M images. Modern foundation models need billions of images.</p>
+<p><strong>Self-Supervised Learning (SSL)</strong>: Learn useful visual representations from unlabeled data by creating pretext tasks where supervision comes from the data itself.</p>
+<p><strong>Why SSL Works</strong>: Natural images have rich structure—spatial coherence, semantic consistency across augmentations, predictable patterns. SSL exploits these properties to learn features transferable to downstream tasks.</p>
+<p><strong>Performance Evolution</strong>: - 2018: SSL lags supervised by 10%+ on ImageNet - 2020: SSL matches supervised (SimCLR, MoCo) - 2023: SSL outperforms supervised for transfer (DINOv2: 82.1% linear probe vs.&nbsp;76.5% supervised)</p>
+<hr>
+</section>
+<section id="taxonomy-of-self-supervised-approaches" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="taxonomy-of-self-supervised-approaches"><span class="header-section-number">6.2</span> Taxonomy of Self-Supervised Approaches</h2>
+<p><strong>Two Main Paradigms</strong>:</p>
+<ol type="1">
+<li><p><strong>Invariance-Based Learning</strong>: Learn features invariant to augmentations <span class="math inline">\((f(x) \approx f(\text{Aug}(x))\)</span>.<br>
+The main challenge is how to prevent collapse to the constant representation.</p>
+<ol type="a">
+<li><p><strong>Similarity-Based Methods</strong></p>
+<ul>
+<li><strong>Contrastive Learning</strong>: Explicit negative samples (SimCLR, MoCo, PIRL)</li>
+<li><strong>Clustering</strong>: Discrete cluster assignments (DeepCluster, SwAV)</li>
+<li><strong>Self-Distillation</strong>: Asymmetry + momentum (BYOL, SimSiam, DINO)</li>
+</ul></li>
+<li><p><strong>Redundancy Reduction</strong></p>
+<ul>
+<li><strong>Decorrelation Methods</strong>: Feature covariance → identity (Barlow Twins, VICReg)</li>
+</ul></li>
+</ol></li>
+<li><p><strong>Reconstructive Learning</strong>: Learn by predicting <span class="math inline">\(x\)</span> from corrupted/masked input <span class="math inline">\(\tilde{x}\)</span> (MAE, VideoMAE).<br>
+No collapse issue (reconstruction target is informative).<br>
+The main challenge is how to avoid low-level texture copying.</p></li>
+</ol>
+<p><strong>Organization of This Chapter</strong>: We first cover invariance-based methods (§6.3), subdivided by their collapse prevention mechanism, then reconstructive approaches (§6.4).</p>
+<hr>
+</section>
+<section id="invariance-based-learning" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="invariance-based-learning">Invariance-Based Learning</h2>
+<p><strong>Goal</strong>: Learn features invariant to augmentations <span class="math inline">\(f(x) \approx f(\text{Aug}(x))\)</span>.</p>
+<p><strong>Challenge</strong>: Avoiding Collapse. Given the objective of “making features of augmented views similar” the network could simply learn the <strong>Trivial Solution</strong>:</p>
+<p><span class="math display">\[f_\theta(x) = c \quad \forall x\]</span></p>
+<p>where <span class="math inline">\(c\)</span> is a constant vector. This satisfies similarity but learns nothing.</p>
+<p><strong>Collapse Types</strong>:</p>
+<ol type="1">
+<li><strong>Complete collapse</strong>: All outputs identical</li>
+<li><strong>Dimensional collapse</strong>: All variance in few dimensions</li>
+<li><strong>Mode collapse</strong>: Different samples map to same points</li>
+</ol>
+<p><strong>Prevention Strategies</strong> (organizing principle of this chapter):</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 24%">
+<col style="width: 24%">
+<col style="width: 26%">
+<col style="width: 24%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Category</th>
+<th>Strategy</th>
+<th>Mechanism</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Similarity-Based</strong></td>
+<td>Contrastive</td>
+<td>Explicit negatives</td>
+<td>SimCLR, MoCo</td>
+</tr>
+<tr class="even">
+<td></td>
+<td>Clustering</td>
+<td>Discrete assignments</td>
+<td>DeepCluster, SwAV</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td>Self-Distillation</td>
+<td>Asymmetry + momentum</td>
+<td>BYOL, DINO</td>
+</tr>
+<tr class="even">
+<td><strong>Redundancy Reduction</strong></td>
+<td>Decorrelation</td>
+<td>Feature covariance → identity</td>
+<td>Barlow Twins, VICReg</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="similarity-based-methods" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="similarity-based-methods"><span class="header-section-number">6.3</span> Similarity-Based Methods</h2>
+<p><strong>Core Objective</strong>: Maximize similarity between augmented views of same image.</p>
+<p><span class="math display">\[\mathcal{L}_{\text{sim}} = d(f_\theta(\text{Aug}_1(x)), f_\theta(\text{Aug}_2(x)))\]</span></p>
+<p>where <span class="math inline">\(d\)</span> is distance metric (cosine, MSE). Methods differ in collapse prevention.</p>
+<hr>
+<section id="contrastive-learning" class="level3" data-number="6.3.1">
+<h3 data-number="6.3.1" class="anchored" data-anchor-id="contrastive-learning"><span class="header-section-number">6.3.1</span> Contrastive Learning</h3>
+<p><strong>Principle</strong>: Explicitly push apart different images (negatives) while pulling together augmented views (positives).</p>
+<p><strong>General Contrastive Loss</strong>: <span class="math display">\[\mathcal{L} = -\log \frac{\exp(\text{sim}(f(x^+), f(x))/\tau)}{\exp(\text{sim}(f(x^+), f(x))/\tau) + \sum_{x^- \in \mathcal{N}} \exp(\text{sim}(f(x^-), f(x))/\tau)}\]</span></p>
+<p>where <span class="math inline">\(x^+\)</span> is positive pair, <span class="math inline">\(\mathcal{N}\)</span> is negative set, <span class="math inline">\(\tau=0.1\)</span> is temperature.</p>
+<p><strong>Key Design Choice</strong>: How to obtain negative samples?</p>
+<hr>
+<p><strong>SimCLR (2020): In-Batch Negatives</strong></p>
+<p><strong>Algorithm</strong>:</p>
+<ol type="1">
+<li>Sample mini-batch of <span class="math inline">\(N\)</span> images</li>
+<li>Apply two random augmentations to each → <span class="math inline">\(2N\)</span> views</li>
+<li>Encode: <span class="math inline">\(\mathbf{z}_i = g(f(t_i(x)))\)</span> where <span class="math inline">\(g\)</span> is projection MLP</li>
+<li>For each view <span class="math inline">\(i\)</span>, compute loss against its positive pair <span class="math inline">\(j\)</span> and <span class="math inline">\(2N-2\)</span> negatives</li>
+</ol>
+<p><strong>InfoNCE Loss</strong> (Noise Contrastive Estimation) also called<br>
+<strong>NT-Xent Loss</strong> (Normalized Temperature-scaled Cross-Entropy): <span class="math display">\[\mathcal{L}_i = -\log \frac{\exp(\text{sim}(\mathbf{z}_i, \mathbf{z}_j)/\tau)}{\sum_{k=1}^{2N} \mathbb{1}_{k \neq i} \exp(\text{sim}(\mathbf{z}_i, \mathbf{z}_k)/\tau)}\]</span> where <span class="math inline">\(\text{sim}(\mathbf{u}, \mathbf{v}) = \mathbf{u}^\top \mathbf{v} / (\|\mathbf{u}\| \|\mathbf{v}\|)\)</span> is cosine similarity, <span class="math inline">\(\tau = 0.1\)</span> is temperature.</p>
+<p><strong>Critical Components</strong>:</p>
+<ul>
+<li><strong>Large batches</strong> (4096-8192): More negatives → better discrimination</li>
+<li><strong>Strong augmentations</strong>: Random crop, color jitter, Gaussian blur</li>
+<li><strong>Projection head</strong>: 2-layer MLP (128d output) improves features</li>
+<li><strong>Temperature</strong>: <span class="math inline">\(\tau=0.1\)</span> sharpens distribution</li>
+</ul>
+<p><strong>Performance</strong>: ResNet-50, 69.3% ImageNet linear probe (200 epochs)</p>
+<p><strong>Limitation</strong>: Requires very large batches (memory-intensive on multi-GPU).</p>
+<hr>
+<p><strong>MoCo (2020) - Queue-Based Negatives</strong>:</p>
+<p><strong>Innovation</strong>: Decouple dictionary size from batch size using queue + momentum encoder.</p>
+<p><strong>Architecture Components</strong>:</p>
+<pre><code>Query Encoder f_q: Learnable (gradient descent)
+Key Encoder f_k:   Momentum EMA of f_q  
+Queue:             K=65,536 encoded keys</code></pre>
+<p><strong>Algorithm</strong>:</p>
+<ol type="1">
+<li>Encode query: <span class="math inline">\(\mathbf{q} = f_q(\text{aug}_1(x))\)</span> (with gradient)</li>
+<li>Encode key: <span class="math inline">\(\mathbf{k} = f_k(\text{aug}_2(x))\)</span> (no gradient)</li>
+<li>Loss: <span class="math inline">\(\mathbf{q}\)</span> vs.&nbsp;<span class="math inline">\(\mathbf{k}\)</span> (positive) and all queue keys (negatives)</li>
+<li>Update queue: Enqueue <span class="math inline">\(\mathbf{k}\)</span>, dequeue oldest</li>
+<li>Update <span class="math inline">\(f_k\)</span>: <span class="math inline">\(\theta_k \leftarrow m \theta_k + (1-m) \theta_q\)</span> , where <span class="math inline">\(m=0.999\)</span></li>
+</ol>
+<p><strong>Why Momentum?</strong> Queue contains keys from different training iterations. Momentum ensures slow encoder evolution → consistent dictionary.</p>
+<p><strong>Advantages</strong>:</p>
+<ul>
+<li>Large dictionary (65K) with small batches (256)</li>
+<li>Memory-efficient: Queue stores features, not images</li>
+<li>Consistent negatives across training</li>
+</ul>
+<p><strong>Performance</strong>: ResNet-50, 71.1% ImageNet linear probe (MoCo v2, 200 epochs)</p>
+<hr>
+<p><strong>PIRL (2020): Memory Bank Negatives</strong></p>
+<p><strong>Approach</strong>: Negative samples from memory bank storing features of all training images.</p>
+<p><strong>Key Difference from MoCo</strong>: - PIRL: Memory bank stores features of all dataset images - MoCo: Queue stores recent mini-batch features</p>
+<p><strong>NCE Loss</strong> (Noise Contrastive Estimation): <span class="math display">\[\mathcal{L} = -\log \frac{\exp(f(x)^\top f(t(x))/\tau)}{\exp(f(x)^\top f(t(x))/\tau) + \sum_{i=1}^K \exp(f(x)^\top f(x_i^-)/\tau)}\]</span></p>
+<p>where <span class="math inline">\(K\)</span> negatives sampled uniformly from memory bank.</p>
+<p><strong>Performance</strong>: Similar to MoCo v1 (~60% linear probe).</p>
+<hr>
+<p><strong>Key Insight - Contrastive Methods</strong>: Performance improves with:</p>
+<ol type="1">
+<li>More negatives (SimCLR: larger batches, MoCo: larger queues)</li>
+<li>Consistent negatives (MoCo momentum encoder)</li>
+<li>Stronger augmentations (color jitter + blur critical)</li>
+</ol>
+<hr>
+</section>
+<section id="clustering-based-methods" class="level3" data-number="6.3.2">
+<h3 data-number="6.3.2" class="anchored" data-anchor-id="clustering-based-methods"><span class="header-section-number">6.3.2</span> Clustering-Based Methods</h3>
+<p><strong>Core Principle</strong>: Prevent collapse by assigning features to discrete clusters, then enforce consistency of cluster assignments across augmented views.</p>
+<p><strong>Advantage</strong>: No explicit negatives needed (cluster assignment provides discrimination).</p>
+<hr>
+<p><strong>DeepCluster (2018): Offline Clustering</strong></p>
+<p><strong>Algorithm</strong> (alternating optimization) - Repeat each epoch:</p>
+<ol type="1">
+<li><strong>Cluster Assignment</strong>: Run k-means on all image features <span class="math display">\[c_i = \arg\min_k \|f(x_i) - \mu_k\|^2\]</span></li>
+<li><strong>Network Training</strong>: Train with cluster labels as pseudo-labels <span class="math display">\[\mathcal{L} = -\sum_i \log p(c_i | x_i)\]</span></li>
+</ol>
+<p><strong>Analysis via Normalized Mutual Information</strong>:<br>
+To evaluate how meaningful the learned clusters are, DeepCluster compares its pseudo-labels <span class="math inline">\(A\)</span> with the ground-truth ImageNet class labels <span class="math inline">\(B\)</span> using <strong>Normalized Mutual Information</strong>: <span class="math display">\[\text{NMI}(A, B) = \frac{2 \cdot I(A; B)}{H(A) + H(B)}\]</span> where:<br>
+<span class="math inline">\(I(A;B)\)</span> — <em>mutual information</em>: how much knowing the cluster assignment tells you about the true class.<br>
+<span class="math display">\[I(A;B) = \sum_{a \in A} \sum_{b \in B} p(a,b) \log \frac{p(a,b)}{p(a)\,p(b)}\]</span> <span class="math inline">\(H(A)\)</span> and <span class="math inline">\(H(B)\)</span> — <em>entropies</em> of the cluster and class label distributions. <span class="math display">\[H(A) = -\sum_{a \in A} p(a)\log p(a), \quad H(B) = -\sum_{b \in B} p(b)\log p(b)\]</span> <strong>Interpretation:</strong></p>
+<ul>
+<li>NMI = 1 → perfect alignment (clusters perfectly match classes)<br>
+</li>
+<li>NMI = 0 → no relation between clusters and classes</li>
+</ul>
+<p><strong>Findings</strong>:</p>
+<ul>
+<li>Learned Clusters stabilize after ~50 epochs.</li>
+<li>Learned Clusters roughly align with ImageNet classes (NMI ~0.4)</li>
+<li>Best performance with <em>k</em> ≈ 10,000 clusters (10× more than ImageNet’s 1000 classes)</li>
+</ul>
+<p><strong>Limitation</strong>: k-means over full dataset is slow bottleneck (~1 hour/epoch).</p>
+<hr>
+<p><strong>SwAV (2020): - Swapped Assignment Prediction</strong></p>
+<p><strong>Key Innovation</strong>: Online clustering** algorithm with Sinkhorn-Knopp normalization—no k-means needed.</p>
+<p><strong>Components</strong>:</p>
+<ul>
+<li>Encoder: <span class="math inline">\(f_\theta\)</span> (ResNet or ViT)</li>
+<li>Prototype vectors: <span class="math inline">\(\mathbf{C} = [\mathbf{c}_1, \ldots, \mathbf{c}_K]\)</span> (learnable, <span class="math inline">\(K\)</span>=3000 typically)</li>
+</ul>
+<p><strong>Algorithm</strong>:</p>
+<ol type="1">
+<li>Extract features for two augmentations: <span class="math inline">\(\mathbf{z}_1 = f(\text{aug}_1(x))\)</span>, <span class="math inline">\(\mathbf{z}_2 = f(\text{aug}_2(x))\)</span></li>
+<li>Compute soft cluster assignments (codes): <span class="math display">\[\mathbf{q}_1 = \text{SinkhornKnopp}(\mathbf{z}_1^\top \mathbf{C} / \tau)\]</span> where <span class="math inline">\(\mathbf{C} = [\mathbf{c}_1, \ldots, \mathbf{c}_K]\)</span></li>
+<li>Swap Prediction: Predict <span class="math inline">\(\mathbf{q}_1\)</span> from <span class="math inline">\(\mathbf{z}_2\)</span> and vice versa</li>
+</ol>
+<p><strong>Sinkhorn-Knopp</strong>: Iterative normalization to make assignment matrix doubly stochastic</p>
+<ul>
+<li>Row constraint: Each sample distributes across clusters (sum to 1)</li>
+<li>Column constraint: Equal cluster usage (each cluster gets <span class="math inline">\(B/K\)</span> samples)</li>
+</ul>
+<p><strong>Loss</strong>: Cross-entropy between predicted and target codes <span class="math display">\[\mathcal{L} = \ell(\mathbf{z}_1, \mathbf{q}_2) + \ell(\mathbf{z}_2, \mathbf{q}_1)\]</span> <span class="math display">\[\ell(\mathbf{z}, \mathbf{q}) = -\sum_{k=1}^K q_k \log \frac{\exp(\mathbf{z}^\top \mathbf{c}_k / \tau)}{\sum_{k'} \exp(\mathbf{z}^\top \mathbf{c}_{k'} / \tau)}\]</span></p>
+<p><strong>Why Swapping?</strong> Predict cluster of one view from features of another → enforces consistency.</p>
+<p><strong>Multi-Crop Strategy</strong>:</p>
+<ul>
+<li>2 global crops (224×224)</li>
+<li>6 local crops (96×96)</li>
+<li>Total 8 views per image → richer training signal</li>
+</ul>
+<p><strong>Key Advantages</strong>:</p>
+<ul>
+<li>Online clustering (no k-means needed)</li>
+<li>Works with small batches (256)</li>
+<li>Faster than DeepCluster</li>
+</ul>
+<p><strong>Performance</strong>: ResNet-50, 71.8% ImageNet linear probe (200 epochs)</p>
+<hr>
+</section>
+<section id="self-distillation-methods" class="level3" data-number="6.3.3">
+<h3 data-number="6.3.3" class="anchored" data-anchor-id="self-distillation-methods"><span class="header-section-number">6.3.3</span> Self-Distillation Methods</h3>
+<p><strong>Principle</strong>: Prevent collapse via <strong>asymmetry</strong> between two networks (no negatives needed).</p>
+<p><strong>General Framework</strong>:</p>
+<ul>
+<li><strong>Online network</strong>: Learnable encoder + predictor</li>
+<li><strong>Target network</strong>: Momentum encoder (no predictor)</li>
+<li><strong>Key</strong>: Asymmetry between the two architectures or between their gradient updates prevents collapse (such as stopping the gradient updates of target network)</li>
+</ul>
+<p><strong>Advantage</strong>: No negatives or clustering needed.</p>
+<hr>
+<p><strong>BYOL (2020) - Bootstrap Your Own Latent</strong>:</p>
+<p><strong>Architecture</strong>:</p>
+<pre><code>Online:  Encoder f_θ → Projection g_θ → Prediction h_θ
+Target:  Encoder f_ξ → Projection g_ξ  (EMA, no predictor)</code></pre>
+<p><strong>Algorithm</strong>:</p>
+<ol type="1">
+<li>Two augmentations: <span class="math inline">\(v, v' \sim \text{Aug}(x)\)</span></li>
+<li><strong>Online forward</strong>: <span class="math inline">\(\mathbf{q} = h_\theta(g_\theta(f_\theta(v)))\)</span></li>
+<li><strong>Target forward</strong>: <span class="math inline">\(\mathbf{z}' = \text{stop-gradient}(g_\xi(f_\xi(v')))\)</span></li>
+<li><strong>Loss</strong> (L2 on normalized features): <span class="math display">\[\mathcal{L(v, v')} = \left\| \frac{\mathbf{q}}{\|\mathbf{q}\|_2} - \frac{\mathbf{z}'}{\|\mathbf{z}'\|_2} \right\|_2^2\]</span></li>
+<li><strong>Symmetrize</strong>: Also compute loss <span class="math inline">\(\mathcal{L}(v', v)\)</span></li>
+<li><strong>Update</strong> target: <span class="math inline">\(\theta' \leftarrow \tau \theta' + (1-\tau)\theta\)</span>, &nbsp; where <span class="math inline">\(\tau=0.99\)</span></li>
+</ol>
+<p><strong>Why No Collapse?</strong></p>
+<ul>
+<li><strong>Architecture Asymmetry</strong>: Predictor <span class="math inline">\(h\)</span> only in online network</li>
+<li><strong>Stop-gradient</strong>: Target provides fixed targets (no gradient flow back)</li>
+<li><strong>Momentum</strong>: <span class="math inline">\(\tau = 0.99\)</span> stabilizes target network</li>
+</ul>
+<p><strong>Intuition</strong>: Online network must predict target outputs, but target doesn’t “see” online predictions → information flow is one-way.</p>
+<p><strong>Performance</strong>: ResNet-50, 74.3% ImageNet linear probe (200 epochs)</p>
+<p><strong>Impact</strong>: Showed negative samples are not strictly necessary with right architecture.</p>
+<hr>
+<p><strong>SimSiam (2021) - Simplification</strong>:</p>
+<p><strong>Insight</strong>: Remove momentum encoder—just use stop-gradient!</p>
+<p><strong>Architecture</strong>:</p>
+<pre><code>Branch 1: Encoder f → Projection g → Prediction h
+Branch 2: Encoder f → Projection g (shared, stop-gradient)</code></pre>
+<p><strong>Loss</strong> (Negative cosine similarity, symmetrized over both views): <span class="math display">\[\mathcal{L} = -\frac{h(g(f(x_1))) \cdot \text{stop-gradient}(g(f(x_2)))}{\|h(g(f(x_1)))\| \cdot \|\text{stop-gradient}(g(f(x_2)))\|}\]</span></p>
+<p><strong>Simpler than BYOL</strong>: - ✗ No momentum encoder (same <span class="math inline">\(f\)</span> and <span class="math inline">\(g\)</span> for both views) - ✓ Still has predictor <span class="math inline">\(h\)</span> (critical for preventing collapse) - ✓ Still has Stop-gradient on one branch</p>
+<p><strong>Performance</strong>: ResNet-50, 71.3% ImageNet linear probe (200 epochs)</p>
+<p><strong>Advantage</strong>: Simplest SSL method — no negatives, no momentum, no clustering</p>
+<hr>
+<p><strong>DINO (2021) - Self-Distillation with ViT</strong>:</p>
+<p><strong>Innovation</strong>: Apply self-distillation to Vision Transformers with centering to prevent dimensional collapse.</p>
+<p><strong>Architecture</strong>:</p>
+<pre><code>Student: ViT (learned via gradient descent)
+Teacher: ViT (EMA of student, τ=0.996)</code></pre>
+<p><strong>Key Mechanisms</strong>:</p>
+<ol type="1">
+<li><strong>Multi-crop</strong>: Teacher sees 2 global crops (224×224), student 2 global (224×224) + 8 local crops (96×96)</li>
+<li><strong>Centering</strong>: (prevent dimensional collapse — when one output dimension of the teacher consistently dominates, causing embeddings to lose diversity): A running mean (called the <em>center</em>) of the teacher’s outputs is maintained and subtracted each iteration: <span class="math display">\[
+c \leftarrow m \cdot c + (1 - m) \cdot \frac{1}{B} \sum_{i=1}^B g_t(f_t(x_i))
+\]</span> where<br>
+</li>
+</ol>
+<ul>
+<li>$ c $: running mean of teacher outputs<br>
+</li>
+<li>$ m = 0.9 $: momentum for the update<br>
+</li>
+<li>$ B $: batch size<br>
+</li>
+<li><span class="math inline">\(g_t(f_t(x_i))\)</span>: pre-softmax teacher output for image ( <span class="math inline">\(x_i\)</span> ). The centered teacher probability distribution is then computed as:</li>
+</ul>
+<p><span class="math display">\[
+P_t = \text{softmax}\!\left(\frac{g_t(f_t(x)) - c}{\tau_t}\right)
+\]</span></p>
+<ol start="3" type="1">
+<li><strong>Temperature Sharpening</strong>:</li>
+</ol>
+<ul>
+<li>Teacher: <span class="math inline">\(\tau_t = 0.04\)</span> (sharp, confident pseudo-labels)</li>
+<li>Student: <span class="math inline">\(\tau_s = 0.1\)</span> (smooth, easier optimization)</li>
+</ul>
+<p><strong>Loss</strong>: Cross-entropy between teacher and student distributions <span class="math display">\[\mathcal{L} = \sum_{i \in \text{crops}} H(P_t, P_s^{(i)})\]</span></p>
+<p>where <span class="math inline">\(H(p, q) = -\sum_k p_k \log q_k\)</span> is cross-entropy.</p>
+<p><strong>Emergent Properties</strong>:</p>
+<ul>
+<li><strong>Self-Attention Visualizations</strong>: Attention maps segment objects without segmentation labels!
+<ul>
+<li>ViT naturally learns to attend to object boundaries</li>
+<li>Can extract object masks directly from attention</li>
+</ul></li>
+<li>Strong k-NN performance: 75% ImageNet with frozen features</li>
+</ul>
+<p><strong>Performance</strong>:<br>
+ResNet-50, 75.3% ImageNet linear probe (300 epochs)<br>
+ViT-S/16, &nbsp; &nbsp; 77.0% ImageNet linear probe (300 epochs)</p>
+<div class="callout callout-style-simple callout-tip no-icon callout-titled">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Pseudocode
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-1" class="callout-1-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Student forward (all 10 crops)</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>student_out <span class="op">=</span> [student(crop) <span class="cf">for</span> crop <span class="kw">in</span> crops]  <span class="co"># 10 views</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>student_probs <span class="op">=</span> [softmax(out <span class="op">/</span> tau_s) <span class="cf">for</span> out <span class="kw">in</span> student_out]</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Teacher forward (2 global crops only)</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> torch.no_grad():</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    teacher_out <span class="op">=</span> [teacher(global_crop) <span class="cf">for</span> global_crop <span class="kw">in</span> global_crops[:<span class="dv">2</span>]]</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    teacher_out_centered <span class="op">=</span> [out <span class="op">-</span> center <span class="cf">for</span> out <span class="kw">in</span> teacher_out]</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    teacher_probs <span class="op">=</span> [softmax(out <span class="op">/</span> tau_t) <span class="cf">for</span> out <span class="kw">in</span> teacher_out_centered]</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Update center</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    center <span class="op">=</span> momentum <span class="op">*</span> center <span class="op">+</span> (<span class="dv">1</span> <span class="op">-</span> momentum) <span class="op">*</span> teacher_out[<span class="dv">0</span>].mean(dim<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Loss: each student view predicts each teacher view</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>loss <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> t_prob <span class="kw">in</span> teacher_probs:</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> s_prob <span class="kw">in</span> student_probs:</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>        loss <span class="op">+=</span> <span class="op">-</span>torch.<span class="bu">sum</span>(t_prob <span class="op">*</span> torch.log(s_prob), dim<span class="op">=-</span><span class="dv">1</span>).mean()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</div>
+</div>
+<hr>
+<p><strong>DINOv2 (2023) - Scaling Up</strong>:</p>
+<p><strong>Key Changes</strong>:</p>
+<ul>
+<li><strong>Data</strong>: 142M curated images (from 1B web images via retrieval + deduplication)</li>
+<li><strong>Training</strong>: iBOT (masked prediction) + DINO + regularizers (Sinkhorn-Knopp, KoLeo)</li>
+<li><strong>Scale</strong>: ViT-L/14, longer training</li>
+</ul>
+<p><strong>Result</strong>: 82.1% ImageNet linear probe (frozen features) — <strong>outperforms supervised pre-training</strong>.</p>
+<p><strong>Impact</strong>: General-purpose features usable out-of-the-box for segmentation, detection, depth estimation. SOTA across 20+ benchmarks.</p>
+<hr>
+<p><strong>DINOv3 (2025) - Gram Anchoring</strong>:</p>
+<p><strong>Problem</strong>: Long training (DINOv2 style) causes feature drift — dense features become “blurry” or inconsistent, hurting pixel-level tasks.</p>
+<p><strong>Solution</strong>: Preserve spatial feature correlations via Gram matrix loss,<br>
+matching second-order statistics (co-occurrence patterns of texture/style) rather than exact features.</p>
+<p><strong>Gram Matrix</strong> (from neural style transfer - Gatys et al., 2015): <span class="math display">\[\mathbf{G}_{ij} = \sum_{k=1}^{HW} F_{ki} F_{kj}\]</span></p>
+<p>where <span class="math inline">\(F \in \mathbb{R}^{HW \times C}\)</span> are spatial features (<span class="math inline">\(HW\)</span> locations, <span class="math inline">\(C\)</span> channels).</p>
+<p><strong>Gram Anchoring Loss</strong>: <span class="math display">\[\mathcal{L}_{\text{Gram}} = \|\bar{\mathbf{G}}_s - \bar{\mathbf{G}}_t\|_F^2\]</span></p>
+<p>where <span class="math inline">\(\bar{\mathbf{G}}\)</span> is normalized Gram matrix: <span class="math display">\[\bar{\mathbf{G}} = \frac{\mathbf{G}}{\|\mathbf{G}\|_F}\]</span></p>
+<p><strong>Why This Works</strong>:</p>
+<ul>
+<li>Preserves second-order statistics (feature correlations)</li>
+<li>Allows individual features to refine (first-order can change)</li>
+<li>Maintains spatial consistency across training</li>
+</ul>
+<p><strong>Final Loss</strong>: <span class="math inline">\(\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{DINO}} + \lambda \mathcal{L}_{\text{Gram}}\)</span></p>
+<p><strong>Result</strong>: Stable dense features throughout long training, result in a large improvement on dense vision tasks such as segmentation and depth estimation:</p>
+<ul>
+<li><strong>Classification Result:</strong> &nbsp; 88.4% ImageNet linear probe (frozen features)</li>
+<li><strong>Detection Result:</strong> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 66.1% COCO mAP (self-supervised, frozen features)</li>
+<li><strong>Segmentation Result:</strong> 63.0% ADE20K mIoU (self-supervised, frozen features)</li>
+</ul>
+<hr>
+</section>
+<section id="comparison-of-similarity-based-methods" class="level3" data-number="6.3.4">
+<h3 data-number="6.3.4" class="anchored" data-anchor-id="comparison-of-similarity-based-methods"><span class="header-section-number">6.3.4</span> Comparison of Similarity-Based Methods</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 12%">
+<col style="width: 16%">
+<col style="width: 15%">
+<col style="width: 16%">
+<col style="width: 18%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th>Negatives</th>
+<th>Momentum</th>
+<th>Asymmetry</th>
+<th>Batch Size</th>
+<th>Key Insight</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>SimCLR</strong> (2020)</td>
+<td>✓ (in-batch)</td>
+<td>✗</td>
+<td>✗</td>
+<td>4096-8192</td>
+<td>More negatives → better</td>
+</tr>
+<tr class="even">
+<td><strong>MoCo</strong> <br>(2020)</td>
+<td>✓ (queue)</td>
+<td>✓</td>
+<td>✗</td>
+<td>256</td>
+<td>Decouple dictionary from batch</td>
+</tr>
+<tr class="odd">
+<td><strong>DeepCluster</strong> (2018)</td>
+<td>✗</td>
+<td>✗</td>
+<td>Clustering</td>
+<td>Full dataset</td>
+<td>Offline k-means clustering with pseudo-labels</td>
+</tr>
+<tr class="even">
+<td><strong>SwAV</strong> <br>(2020)</td>
+<td>✗</td>
+<td>✗</td>
+<td>Clustering</td>
+<td>256</td>
+<td>Online clustering prevents collapse</td>
+</tr>
+<tr class="odd">
+<td><strong>BYO</strong> <br>(2020)</td>
+<td>✗</td>
+<td>✓</td>
+<td>✓ (predictor)</td>
+<td>4096</td>
+<td>Asymmetry sufficient</td>
+</tr>
+<tr class="even">
+<td><strong>SimSiam</strong> (2021)</td>
+<td>✗</td>
+<td>✗</td>
+<td>✓ (predictor)</td>
+<td>256</td>
+<td>Stop-gradient sufficient</td>
+</tr>
+<tr class="odd">
+<td><strong>DINO</strong> <br>(2021-2025)</td>
+<td>✗</td>
+<td>✓</td>
+<td>Centering</td>
+<td>1024</td>
+<td>Self-distillation + centering</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="redundancy-reduction-methods" class="level2" data-number="6.4">
+<h2 data-number="6.4" class="anchored" data-anchor-id="redundancy-reduction-methods"><span class="header-section-number">6.4</span> Redundancy Reduction Methods</h2>
+<p><strong>Different Approach</strong>: Prevent collapse by decorrelating feature dimensions rather than using negatives or asymmetry.</p>
+<p><strong>Core Idea</strong>: Encourage cross-correlation matrix of features to be identity: <span class="math display">\[\mathbf{C} \approx \mathbf{I}\]</span></p>
+<p>where <span class="math inline">\(C_{ij} = \text{corr}(z_i, z_j)\)</span> (correlation between feature dimensions <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> across batch).</p>
+<p><strong>Intuition</strong>:</p>
+<ul>
+<li>Diagonal = 1: Features are invariant to augmentations (same image → same features)<br>
+</li>
+<li>Off-diagonal = 0: Features are non-redundant (different dimensions encode different information)</li>
+</ul>
+<hr>
+<p><strong>Barlow Twins (2021)</strong>:</p>
+<p><strong>Loss Function</strong>: <span class="math display">\[\mathcal{L}_{\text{BT}} = \sum_i (1 - C_{ii})^2 + \lambda \sum_i \sum_{j \neq i} C_{ij}^2\]</span></p>
+<p>where:</p>
+<ul>
+<li>First term: &nbsp; &nbsp; &nbsp; &nbsp; Invariance to Augmentation (diagonal should be 1)</li>
+<li>Second term: &nbsp; Redundancy reduction (off-diagonal should be 0)</li>
+<li><span class="math inline">\(\lambda = 0.005\)</span> balances the two terms</li>
+</ul>
+<p><strong>Cross-Correlation Matrix</strong> (computed over batch): <span class="math display">\[C_{ij} = \frac{\sum_b z_{b,i}^A z_{b,j}^B}{\sqrt{\sum_b (z_{b,i}^A)^2} \sqrt{\sum_b (z_{b,j}^B)^2}}\]</span></p>
+<p>where <span class="math inline">\(z_{b}^A, z_{b}^B\)</span> are features from two augmentations, of an image <span class="math inline">\(b\)</span> in the batch.</p>
+<p><strong>Properties</strong>:</p>
+<ul>
+<li>Works with small batches (e.g.&nbsp;batch-size = 256) (unlike contrastive methods)</li>
+<li>Highly dependent on augmentations (like contrastive methods)</li>
+<li>Benefits from high-dimensional features (e.g.&nbsp;8192d projection)</li>
+</ul>
+<p><strong>Performance</strong>: ResNet-50, 73.2% ImageNet linear probe (300 epochs)</p>
+<hr>
+<p><strong>VICReg (2021) - Variance-Invariance-Covariance Regularization</strong>:</p>
+<p><strong>More Explicit Formulation</strong>: Three separate loss terms.</p>
+<p><span class="math display">\[\mathcal{L} = \lambda \mathcal{L}_{\text{inv}} + \mu \mathcal{L}_{\text{var}} + \nu \mathcal{L}_{\text{cov}}\]</span></p>
+<p><strong>1. Invariance</strong> (MSE between views): <span class="math display">\[\mathcal{L}_{\text{inv}} = \frac{1}{d} \sum_{i=1}^d \|z_i^A - z_i^B\|^2\]</span></p>
+<p><strong>2. Variance</strong> (prevent collapse to constant): <span class="math display">\[\mathcal{L}_{\text{var}} = \frac{1}{d} \sum_{i=1}^d \max(0, \gamma - \sqrt{\text{Var}(z_i) + \epsilon})\]</span></p>
+<p>Encourages variance <span class="math inline">\(\geq \gamma\)</span> (typically <span class="math inline">\(\gamma=1\)</span>) for each dimension.</p>
+<p><strong>3. Covariance</strong> (decorrelate dimensions): <span class="math display">\[\mathcal{L}_{\text{cov}} = \frac{1}{d} \sum_{i \neq j} \text{Cov}(z_i, z_j)^2\]</span></p>
+<p><strong>Typical Weights</strong>: <span class="math inline">\(\lambda=25\)</span>, <span class="math inline">\(\mu=25\)</span>, <span class="math inline">\(\nu=1\)</span></p>
+<p><strong>Advantage</strong>: More interpretable than Barlow Twins, similar performance.</p>
+<hr>
+<p><strong>Why Redundancy Reduction Works</strong>:</p>
+<ul>
+<li>Decorrelation naturally prevents collapse (can’t collapse to one dimension if off-diagonals penalized)</li>
+<li>No need for negatives, momentum, or asymmetry</li>
+<li>Elegant mathematical formulation</li>
+</ul>
+<hr>
+</section>
+<section id="reconstructive-learning" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="reconstructive-learning">Reconstructive Learning</h2>
+<p><strong>Different Paradigm</strong>: Instead of learning invariances, learn by predicting masked or corrupted input.</p>
+<p><strong>No Collapse Issue</strong>: Reconstruction target is informative (pixel values), prevents trivial solutions.</p>
+<p><strong>Challenge</strong>: Avoid low-level texture copying—want semantic features, not pixel-level memorization.</p>
+<hr>
+</section>
+<section id="masked-auto-encoding" class="level2" data-number="6.5">
+<h2 data-number="6.5" class="anchored" data-anchor-id="masked-auto-encoding"><span class="header-section-number">6.5</span> Masked Auto-Encoding</h2>
+<p><strong>MAE (2022) - Masked Auto-Encoding for Images</strong>:</p>
+<p><strong>Core Idea</strong>: Mask 75% of image patches, reconstruct from visible 25%.</p>
+<p><strong>Why 75% vs.&nbsp;BERT’s 15%?</strong></p>
+<ul>
+<li>Images more redundant than text (spatial continuity)</li>
+<li>Low masking → local texture sufficient (too easy)</li>
+<li>High masking → forces holistic understanding</li>
+</ul>
+<p><strong>Architecture</strong>:</p>
+<ol type="1">
+<li><strong>Encoder</strong> (ViT):</li>
+</ol>
+<ul>
+<li>Standard ViT transformer</li>
+<li>Input: &amp;nbsp ;&nbsp; Only visible patches (25%) → 4× speedup</li>
+<li>Output: Encoded visible features</li>
+</ul>
+<ol start="2" type="1">
+<li><strong>Decoder</strong> (Small Transformer):</li>
+</ol>
+<ul>
+<li>Smaller than encoder (8 layers vs.&nbsp;24)</li>
+<li>Input: &nbsp; &nbsp; Encoded visible + mask tokens (learned embeddings)</li>
+<li>Output: Reconstructed pixels for all patches</li>
+</ul>
+<p><strong>Loss</strong>: MSE on masked patches only <span class="math display">\[\mathcal{L} = \frac{1}{|\text{Masked}|} \sum_{p \in \text{Masked}} \|\mathbf{x}_p - \hat{\mathbf{x}}_p\|^2\]</span></p>
+<p><strong>Key Design</strong>:</p>
+<ul>
+<li>Asymmetric encoder-decoder (efficient)</li>
+<li>Mask tokens added after encoder (encoder sees only 25%)</li>
+<li>Minimal augmentation (just random crop)</li>
+</ul>
+<p><strong>ImageNet Results</strong>:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Method</th>
+<th>Linear Probe</th>
+<th>Fine-tuning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Supervised</td>
+<td>-</td>
+<td>82.8% (ViT-L)</td>
+</tr>
+<tr class="even">
+<td>MoCo v3</td>
+<td>76.7%</td>
+<td>83.2%</td>
+</tr>
+<tr class="odd">
+<td>MAE</td>
+<td>75.2%</td>
+<td><strong>83.6%</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Observations</strong>:</p>
+<ul>
+<li>Linear probe lower than contrastive (features less “linearly separable”)</li>
+<li>Fine-tuning excellent (features capture rich structure)</li>
+<li>Dense tasks benefit further (detection, segmentation)</li>
+</ul>
+<hr>
+<p><strong>VideoMAE (2022)</strong></p>
+<p><strong>Adaptation for Video</strong>:</p>
+<ul>
+<li>Mask <strong>90%</strong> of spacetime patches (higher than image)</li>
+<li>Input: Video clips (16 frames × 224×224)</li>
+<li>Patches: 3D spacetime patches (2×16×16)</li>
+</ul>
+<p><strong>Why 90%?</strong> Video has extreme redundancy:</p>
+<ul>
+<li>Temporal: Adjacent frames very similar</li>
+<li>Spatial: Image redundancy within each frame</li>
+</ul>
+<p><strong>Masking Strategies</strong>: Spacetime-agnostic masking (Random) works best. <br></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Strategy</th>
+<th>Description</th>
+<th>Performance</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Random</td>
+<td>Spacetime-agnostic</td>
+<td><strong>Best</strong></td>
+</tr>
+<tr class="even">
+<td>Tube</td>
+<td>Mask temporal tubes</td>
+<td>-1.2%</td>
+</tr>
+<tr class="odd">
+<td>Frame</td>
+<td>Mask entire frames</td>
+<td>-2.1%</td>
+</tr>
+<tr class="even">
+<td>Running cell</td>
+<td>Spatiotemporal blocks</td>
+<td>-1.5%</td>
+</tr>
+</tbody>
+</table>
+<p><br> <strong>Performance</strong>: Spacetime Masked Autoencoders are SOTA on action recognition</p>
+<ul>
+<li>Kinetics-400:           81.1% top-1 (vs.&nbsp;79.1% supervised)</li>
+<li>Something-Something v2: &nbsp; 68.7%     (temporal reasoning dataset)</li>
+</ul>
+<hr>
+<p><strong>AudioMAE (2022)</strong></p>
+<p><strong>Adaptation for Audio</strong>:</p>
+<ul>
+<li>Mask <strong>80%</strong> of Mel-spectogram patches</li>
+<li>Input: Audio waveform → Mel-spectrogram (time-frequency representation)</li>
+<li>Patches: 16×16 spectrogram patches</li>
+</ul>
+<p><strong>Data Preprocessing</strong>:</p>
+<ol type="1">
+<li>Audio → Short-Time Fourier Transform (STFT)</li>
+<li>Mel filterbank → Mel-spectrogram</li>
+<li>Divide into patches (2D grid)</li>
+<li>Flatten patches, linear projection to embeddings</li>
+</ol>
+<p><strong>Masking Strategy</strong>: Unstructured (random) beats time/frequency-aware strategies.</p>
+<p><strong>Performance</strong>:</p>
+<ul>
+<li>AudioSet: 91.0 mAP (competitive with contrastive methods)</li>
+<li>Further Benefits on dense prediction tasks (s.a. sound event detection)</li>
+</ul>
+<hr>
+<p><strong>MAE - Multimodal Extensions</strong></p>
+<p><strong>ImageBind (2023)</strong>: MAE-style pre-training across 6 modalities (image, video, audio, text, depth, IMU) with masked prediction across modalities.</p>
+<p><strong>Key Pattern</strong>: The reconstructive pre-training objective of MAE generalizes well across modalities —the same principle applies to vision, audio, text, and more.</p>
+<hr>
+</section>
+<section id="contrastive-vs.-reconstructive-trade-offs" class="level2 unnumbered unlisted">
+<h2 class="unnumbered unlisted anchored" data-anchor-id="contrastive-vs.-reconstructive-trade-offs">Contrastive vs.&nbsp;Reconstructive Trade-offs</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 39%">
+<col style="width: 43%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Aspect</th>
+<th>Contrastive (DINO)</th>
+<th>Reconstructive (MAE)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Augmentation</strong></td>
+<td>Critical (defines invariances)</td>
+<td>Minimal (masking sufficient)</td>
+</tr>
+<tr class="even">
+<td><strong>Linear probe</strong></td>
+<td>Higher (77-82%)</td>
+<td>Lower (68-75%)</td>
+</tr>
+<tr class="odd">
+<td><strong>Fine-tuning</strong></td>
+<td>~83-84%</td>
+<td>~83-84%</td>
+</tr>
+<tr class="even">
+<td><strong>Dense tasks</strong></td>
+<td>Excellent</td>
+<td>Excellent</td>
+</tr>
+<tr class="odd">
+<td><strong>Compute</strong></td>
+<td>Large batches or queue</td>
+<td>Efficient (25% encoder input)</td>
+</tr>
+<tr class="even">
+<td><strong>Best for</strong></td>
+<td>Transfer, retrieval, few-shot</td>
+<td>Dense prediction, scaling</td>
+</tr>
+</tbody>
+</table>
+<p><br> <strong>Hybrid Approaches</strong>: DINOv2 combines both (iBOT = DINO + masked prediction) → SOTA.</p>
+<hr>
+</section>
+<section id="evaluation-and-transfer-learning" class="level2" data-number="6.6">
+<h2 data-number="6.6" class="anchored" data-anchor-id="evaluation-and-transfer-learning"><span class="header-section-number">6.6</span> Evaluation and Transfer Learning</h2>
+</section>
+<section id="linear-probing" class="level2 unnumbered unlisted">
+<h2 class="unnumbered unlisted anchored" data-anchor-id="linear-probing">Linear Probing</h2>
+<p><strong>Protocol</strong>: Freeze pre-trained encoder, train linear classifier on top.</p>
+<p><strong>What it Measures</strong>:</p>
+<ul>
+<li>Feature quality: Are learned representations linearly separable by class?</li>
+<li>Out-of-the-box usability: How useful are frozen features?</li>
+</ul>
+<p><strong>Results</strong> (ImageNet top-1):</p>
+<ul>
+<li>Supervised ResNet-50: 76.5%</li>
+<li>MoCo v2 ResNet-50: 71.1%</li>
+<li>DINO ViT-S: 77.0%</li>
+<li>MAE ViT-L: 75.2%</li>
+<li><strong>DINOv2 ViT-L: 82.1%</strong></li>
+</ul>
+<p><strong>Key Insight</strong>: DINOv2 surpasses supervised pre-training without using ImageNet labels!</p>
+<hr>
+</section>
+<section id="dense-prediction-tasks" class="level2 unnumbered unlisted">
+<h2 class="unnumbered unlisted anchored" data-anchor-id="dense-prediction-tasks">Dense Prediction Tasks</h2>
+<p>Plain ViTs output single-scale features, but dense tasks (detection, segmentation) require multi-scale feature pyramids.</p>
+<p>Two frameworks are typically used to transfer the ViT features to dense tasks:</p>
+<p><strong>Feature Pyramid - ViT-Adapter (2023)</strong>: - Augments ViT with lightweight conv + cross-attention adapters - Fuses intermediate ViT features into feature pyramid (FPN-like) - Provides scale-aware features for detecting small and large objects</p>
+<p><strong>Segmentation Head - Mask2Former (2022)</strong>: Universal architecture with three components:</p>
+<ol type="1">
+<li><strong>Backbone</strong>: SSL pre-trained ViT (frozen or fine-tuned)</li>
+<li><strong>Pixel Decoder</strong>: Upsamples ViT features to high resolution (interpolation + convs)</li>
+<li><strong>Transformer Decoder</strong>: DETR-style queries predict class + mask
+<ul>
+<li>At each layer: predicted masks → attention masks for next layer</li>
+<li>Iteratively refines object boundaries</li>
+</ul></li>
+</ol>
+<p><strong>Typical Dense Tasks Transfer Learning Pipeline</strong>:</p>
+<p>Feature Extraction ViT-L → ViT-Adapter (multi-scale features) → Mask2Former → masks + classes</p>
+<p><strong>Semantic Segmentation</strong> (ADE20K):</p>
+<ul>
+<li>DINOv2 ViT-L backbone + ViT-Adapter + Mask2Former segmentation head.</li>
+<li>59.3 Fine-tuned mIoU (Outperforms supervised pre-training mIoU 53.1)</li>
+</ul>
+<p><strong>Object Detection</strong> (COCO):</p>
+<ul>
+<li>DINOv2 ViT-L backbone + ViT-Adapter + Mask R-CNN: 58.4 box AP (Outperforms supervised pre-training box AP 55.0)</li>
+<li>SSL features excel at dense tasks</li>
+</ul>
+<p><strong>Video</strong>: DINOv2 features track across frames via k-NN (no temporal training needed).</p>
+<hr>
+</section>
+<section id="summary-and-interview-preparation" class="level2" data-number="6.7">
+<h2 data-number="6.7" class="anchored" data-anchor-id="summary-and-interview-preparation"><span class="header-section-number">6.7</span> Summary and Interview Preparation</h2>
+<section id="core-concepts-checklist" class="level3" data-number="6.7.1">
+<h3 data-number="6.7.1" class="anchored" data-anchor-id="core-concepts-checklist"><span class="header-section-number">6.7.1</span> Core Concepts Checklist</h3>
+<p><strong>Paradigms</strong>:</p>
+<ul class="task-list">
+<li><label><input type="checkbox">Invariance-based: Learn features invariant to augmentations</label></li>
+<li><label><input type="checkbox">Reconstructive: Predict masked/corrupted input</label></li>
+<li><label><input type="checkbox">Collapse problem and prevention strategies</label></li>
+</ul>
+<p><strong>Similarity-Based Methods</strong>:</p>
+<ul class="task-list">
+<li><label><input type="checkbox">Contrastive: Negatives prevent collapse (SimCLR, MoCo)</label></li>
+<li><label><input type="checkbox">Clustering: Discrete assignments prevent collapse (DeepCluster, SwAV)</label></li>
+<li><label><input type="checkbox">Self-Distillation: Asymmetry prevents collapse (BYOL, DINO)</label></li>
+</ul>
+<p><strong>Redundancy Reduction</strong>:</p>
+<ul class="task-list">
+<li><label><input type="checkbox">Decorrelate features: Cross-correlation → identity (Barlow Twins, VICReg)</label></li>
+</ul>
+<p><strong>Reconstructive</strong>:</p>
+<ul class="task-list">
+<li><label><input type="checkbox">MAE: 75% masking, asymmetric encoder-decoder</label></li>
+<li><label><input type="checkbox">Why high mask ratio for images vs.&nbsp;BERT</label></li>
+</ul>
+</section>
+<section id="common-interview-questions" class="level3" data-number="6.7.2">
+<h3 data-number="6.7.2" class="anchored" data-anchor-id="common-interview-questions"><span class="header-section-number">6.7.2</span> Common Interview Questions</h3>
+<ol type="1">
+<li><strong>“Compare contrastive learning approaches—SimCLR vs.&nbsp;MoCo.”</strong>
+<ul>
+<li>SimCLR: In-batch negatives, needs large batches (4096-8192)</li>
+<li>MoCo: Queue + momentum encoder, works with small batches (256)</li>
+<li>Both ~70-71% linear probe, MoCo more memory-efficient</li>
+</ul></li>
+<li><strong>“How does BYOL work without negatives?”</strong>
+<ul>
+<li>Asymmetry: Predictor only in online network</li>
+<li>Stop-gradient on target network (fixed targets)</li>
+<li>Momentum update stabilizes target</li>
+<li>SimSiam shows even momentum not strictly necessary</li>
+</ul></li>
+<li><strong>“Explain DINO’s centering mechanism.”</strong>
+<ul>
+<li>Prevents dimensional collapse (one feature dominating)</li>
+<li>Subtract running mean of teacher outputs</li>
+<li>Combined with sharp temperature (0.04) → confident pseudo-labels</li>
+</ul></li>
+<li><strong>“Barlow Twins vs.&nbsp;contrastive learning?”</strong>
+<ul>
+<li>Barlow: Decorrelate features (cross-correlation → identity)</li>
+<li>Contrastive: Explicit negatives</li>
+<li>Barlow: No negatives needed, works small batches, needs high-dim features</li>
+</ul></li>
+<li><strong>“Why does MAE use 75% masking?”</strong>
+<ul>
+<li>Images redundant (spatial continuity)</li>
+<li>Low (15%) → trivial texture matching</li>
+<li>High (75%) → forces semantic understanding</li>
+<li>90%+ too hard (information loss)</li>
+</ul></li>
+<li><strong>“When to use invariance-based vs.&nbsp;reconstructive pre-training?”</strong>
+<ul>
+<li><strong>Invariance</strong>: Better linear probe, good retrieval/few-shot</li>
+<li><strong>Reconstructive</strong>: Better dense tasks, compute-efficient, less augmentation-sensitive</li>
+<li><strong>Hybrid</strong> (DINOv2): Combines both → SOTA</li>
+</ul></li>
+</ol>
+</section>
+<section id="method-selection-guide" class="level3" data-number="6.7.3">
+<h3 data-number="6.7.3" class="anchored" data-anchor-id="method-selection-guide"><span class="header-section-number">6.7.3</span> Method Selection Guide</h3>
+<p><strong>Choose Contrastive if</strong>:</p>
+<ul>
+<li>Have compute for large batches</li>
+<li>Care about linear probe performance</li>
+<li>Need strong retrieval/similarity features</li>
+</ul>
+<p><strong>Choose Self-Distillation if</strong>:</p>
+<ul>
+<li>Want simplicity (no negative sampling)</li>
+<li>Using transformers (DINO family)</li>
+<li>Need emergent segmentation</li>
+</ul>
+<p><strong>Choose Redundancy Reduction if</strong>:</p>
+<ul>
+<li>Small batches, limited memory</li>
+<li>Want interpretable objective</li>
+<li>High-dimensional features available</li>
+</ul>
+<p><strong>Choose Reconstructive if</strong>:</p>
+<ul>
+<li>Dense prediction is primary task</li>
+<li>Limited augmentation expertise</li>
+<li>Want compute efficiency (encoder sees 25% of tokens)</li>
+</ul>
+</section>
+<section id="company-context" class="level3" data-number="6.7.4">
+<h3 data-number="6.7.4" class="anchored" data-anchor-id="company-context"><span class="header-section-number">6.7.4</span> Company Context</h3>
+<ul>
+<li><strong>Meta</strong>: DINOv2 (foundation model), MAE (LLAMA-vision backbone)</li>
+<li><strong>Google</strong>: SimCLR, ViT-MAE variants</li>
+</ul>
+</section>
+<section id="further-reading" class="level3" data-number="6.7.5">
+<h3 data-number="6.7.5" class="anchored" data-anchor-id="further-reading"><span class="header-section-number">6.7.5</span> Further Reading</h3>
+<ul>
+<li><strong>Contrastive</strong>: <a href="https://arxiv.org/abs/2002.05709">SimCLR</a>, <a href="https://arxiv.org/abs/1911.05722">MoCo</a></li>
+<li><strong>Self-Distillation</strong>: <a href="https://arxiv.org/abs/2006.07733">BYOL</a>, <a href="https://arxiv.org/abs/2104.14294">DINO</a>, <a href="https://arxiv.org/abs/2304.07193">DINOv2</a></li>
+<li><strong>Redundancy Reduction</strong>: <a href="https://arxiv.org/abs/2103.03230">Barlow Twins</a>, <a href="https://arxiv.org/abs/2105.04906">VICReg</a></li>
+<li><strong>Reconstructive</strong>: <a href="https://arxiv.org/abs/2111.06377">MAE</a></li>
+<li><strong>Survey</strong>: <a href="https://arxiv.org/abs/2304.12210">Self-Supervised Learning in Vision</a></li>
+</ul>
+<hr>
+<p>This completes Self-Supervised Learning—the paradigm enabling foundation models to learn from billions of unlabeled images, matching and exceeding supervised pre-training for transfer tasks.</p>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const callouts = document.querySelectorAll('.callout-tip');
+    callouts.forEach(function(callout) {
+      callout.style.borderLeftColor = '#2196f3'; //#616161; //'#4caf50';
+      callout.style.color = 'ffffff'; // Dark purple-gray text
+    });
+  });
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../chapters/vision/05-vision-transformers.html" class="pagination-link" aria-label="Vision Transformers">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Vision Transformers</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../chapters/vision/_intro-generative-models.html" class="pagination-link" aria-label="Generative Models">
+        <span class="nav-page-text">Generative Models</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="../../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>
