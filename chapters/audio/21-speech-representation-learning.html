@@ -1,0 +1,1663 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>27&nbsp; Speech Representation Learning and Foundation Models – deep_learning_notes</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../chapters/audio/22-automatic-speech-recognition.html" rel="next">
+<link href="../../chapters/audio/_intro_audio.html" rel="prev">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-fd0503e23dce65854c81c5baaade3bdf.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../custom.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/audio/21-speech-representation-learning.html"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Speech Representation Learning and Foundation Models</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../">deep_learning_notes</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_intro_foundations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Foundations</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/01-neural-networks-and-optimization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Neural Networks and Optimization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/02-generalization-and-learning-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Generalization and Learning Theory</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro_computer_vision.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Computer Vision</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Visual Understanding</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/03-cnns.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Convolutional Neural Networks</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/04-object-detection-and-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Detection and Segmentation</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/05-vision-transformers.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Vision Transformers</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-foundation-models-for-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Foundation Models for Segmentation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Self-Supervised Learning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Generative Modeling</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Models</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/07-vaes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/08-gans.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/09-diffusion-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_conclusion-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Conclusion</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/_intro_video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Video</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/10-video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Video Fundamentals: Motion and Spatiotemporal Architectures</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/11-video-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Video Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/12-video-temporal-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Video Temporal Segmentation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/13-video-understanding-benchmarks.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Video Understanding Benchmarks</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/14-video-generation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Video Generation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/_intro_3d.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">3D Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/11-3d-data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">3D Data Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">3D Reconstruction</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/12-3d-reconstruction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">3D Reconstruction</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/13-gaussian-splatting.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">3D Gaussian Splatting</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Human Pose Estimation</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/human_pose_estimation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Human Pose Estimation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/_intro_nlp.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Natural Language Processing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/17-text-representation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Text Representation &amp; Word Embeddings</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/18-sequence-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Sequence Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/19-large-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Large Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/20-text-embeddings-evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Text Embedding Models &amp; Evaluation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/_intro_vision_language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Vision-Language</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/16-vision-language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Vision-Language Multimodal Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/_intro_time_series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Time Series</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/14-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">Time Series Fundamentals</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/15-deep-learning-for-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Deep Learning for Time Series</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/_intro_audio.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Audio</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/21-speech-representation-learning.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Speech Representation Learning and Foundation Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/22-automatic-speech-recognition.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Automatic Speech Recognition</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/23-speaker-diarization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Speaker Diarization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/24-neural-audio-codecs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Neural Audio Codecs</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/25-speech-synthesis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">31</span>&nbsp; <span class="chapter-title">Speech Synthesis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/26-speech-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">32</span>&nbsp; <span class="chapter-title">Speech and Audio Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/27-audio-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">33</span>&nbsp; <span class="chapter-title">Audio Understanding Beyond Words</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#sec-ssl-design" id="toc-sec-ssl-design" class="nav-link active" data-scroll-target="#sec-ssl-design"><span class="header-section-number">27.1</span> Why Self-Supervision Is Hard for Speech</a></li>
+  <li><a href="#sec-contrastive" id="toc-sec-contrastive" class="nav-link" data-scroll-target="#sec-contrastive"><span class="header-section-number">27.2</span> Contrastive Objectives</a>
+  <ul class="collapse">
+  <li><a href="#sec-cpc" id="toc-sec-cpc" class="nav-link" data-scroll-target="#sec-cpc"><span class="header-section-number">27.2.1</span> Contrastive Predictive Coding</a></li>
+  <li><a href="#sec-wav2vec2" id="toc-sec-wav2vec2" class="nav-link" data-scroll-target="#sec-wav2vec2"><span class="header-section-number">27.2.2</span> wav2vec 2.0</a></li>
+  </ul></li>
+  <li><a href="#sec-masked-pred" id="toc-sec-masked-pred" class="nav-link" data-scroll-target="#sec-masked-pred"><span class="header-section-number">27.3</span> Masked Prediction with Learned Targets</a>
+  <ul class="collapse">
+  <li><a href="#sec-hubert" id="toc-sec-hubert" class="nav-link" data-scroll-target="#sec-hubert"><span class="header-section-number">27.3.1</span> HuBERT</a></li>
+  <li><a href="#sec-wavlm" id="toc-sec-wavlm" class="nav-link" data-scroll-target="#sec-wavlm"><span class="header-section-number">27.3.2</span> WavLM</a></li>
+  <li><a href="#sec-data2vec" id="toc-sec-data2vec" class="nav-link" data-scroll-target="#sec-data2vec"><span class="header-section-number">27.3.3</span> data2vec</a></li>
+  </ul></li>
+  <li><a href="#sec-rpq" id="toc-sec-rpq" class="nav-link" data-scroll-target="#sec-rpq"><span class="header-section-number">27.4</span> Random-Projection Quantisation</a>
+  <ul class="collapse">
+  <li><a href="#sec-ssl-compare" id="toc-sec-ssl-compare" class="nav-link" data-scroll-target="#sec-ssl-compare"><span class="header-section-number">27.4.1</span> Comparing the Families</a></li>
+  </ul></li>
+  <li><a href="#sec-layerwise" id="toc-sec-layerwise" class="nav-link" data-scroll-target="#sec-layerwise"><span class="header-section-number">27.5</span> What Do These Models Actually Learn?</a></li>
+  <li><a href="#sec-superb" id="toc-sec-superb" class="nav-link" data-scroll-target="#sec-superb"><span class="header-section-number">27.6</span> Evaluation: SUPERB and Its Discontents</a></li>
+  <li><a href="#sec-multilingual" id="toc-sec-multilingual" class="nav-link" data-scroll-target="#sec-multilingual"><span class="header-section-number">27.7</span> Multilingual Scaling</a></li>
+  <li><a href="#sec-foundation" id="toc-sec-foundation" class="nav-link" data-scroll-target="#sec-foundation"><span class="header-section-number">27.8</span> Foundation Encoders in Practice</a>
+  <ul class="collapse">
+  <li><a href="#sec-whisper-encoder" id="toc-sec-whisper-encoder" class="nav-link" data-scroll-target="#sec-whisper-encoder"><span class="header-section-number">27.8.1</span> Whisper as a Feature Extractor</a></li>
+  <li><a href="#sec-discrete-units" id="toc-sec-discrete-units" class="nav-link" data-scroll-target="#sec-discrete-units"><span class="header-section-number">27.8.2</span> Discrete Units as an Interface</a></li>
+  <li><a href="#efficiency" id="toc-efficiency" class="nav-link" data-scroll-target="#efficiency"><span class="header-section-number">27.8.3</span> Efficiency</a></li>
+  <li><a href="#toolkits" id="toc-toolkits" class="nav-link" data-scroll-target="#toolkits"><span class="header-section-number">27.8.4</span> Toolkits</a></li>
+  </ul></li>
+  <li><a href="#sec-ssl-open" id="toc-sec-ssl-open" class="nav-link" data-scroll-target="#sec-ssl-open"><span class="header-section-number">27.9</span> Open Problems</a></li>
+  <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary"><span class="header-section-number">27.10</span> Summary</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span id="sec-ssl" class="quarto-section-identifier"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Speech Representation Learning and Foundation Models</span></span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>The previous chapter ended with an economic problem. End-to-end ASR works, but it wants thousands of hours of transcribed audio per language, and transcription is expensive, slow, and requires literate speakers of the target language. There are roughly 7,000 living languages. Fewer than a hundred have the labelled corpora that <a href="22-automatic-speech-recognition.html#sec-e2e" class="quarto-xref"><span>Section 28.6</span></a> assumes.</p>
+<p>Unlabelled speech, by contrast, is nearly free. Radio archives, podcasts, parliamentary recordings, and video platforms supply orders of magnitude more audio than anyone has ever transcribed. <strong>Self-supervised learning</strong> is the attempt to convert that abundance into a usable prior: pre-train an encoder on raw audio with an objective that requires no transcripts, then fine-tune it on whatever small labelled set exists.</p>
+<p>This chapter is about how that is done, what the resulting representations actually contain, and how they are evaluated. It is shorter than the last chapter because the <em>conceptual</em> content is smaller — essentially one idea with three implementations — but its reach is larger. The encoders described here are the front-end of nearly every system in the rest of this book: the speaker embeddings of <a href="23-speaker-diarization.html#sec-features" class="quarto-xref"><span>Section 29.1.1</span></a>, the semantic tokens of <a href="24-neural-audio-codecs.html#sec-semantic-acoustic" class="quarto-xref"><span>Section 30.7</span></a>, the emotion and audio-captioning models of <a href="27-audio-understanding.html" class="quarto-xref"><span>Chapter 33</span></a>, and the audio inputs of speech language models all begin with a network trained by one of these objectives.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>The one-sentence summary
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The recipe that won is <strong>masked prediction of discrete units</strong>, and the three families in this chapter are three different answers to the question <em>where do the discrete targets come from?</em></p>
+</div>
+</div>
+<section id="sec-ssl-design" class="level2" data-number="27.1">
+<h2 data-number="27.1" class="anchored" data-anchor-id="sec-ssl-design"><span class="header-section-number">27.1</span> Why Self-Supervision Is Hard for Speech</h2>
+<p>Self-supervision means inventing a <em>pretext task</em>: a supervised problem whose labels are derived from the input itself. In text this is easy, because language arrives pre-discretised. BERT masks a token and asks which of 30,000 vocabulary items it was; the answer is a well-defined categorical variable, cross-entropy applies, and the model is forced to learn syntax and semantics to succeed.</p>
+<p>Speech has no vocabulary. The signal is continuous, high-rate, and — this is the crux — <strong>locally very predictable for uninteresting reasons</strong>. Given the waveform up to time <span class="math inline">\(t\)</span>, the sample at <span class="math inline">\(t+1\)</span> is almost determined by the local waveform’s smoothness. A model trained to regress the next sample, or the next spectrogram frame, under an <span class="math inline">\(L_2\)</span> loss will spend nearly all of its capacity on low-level detail: signal continuity, channel colouration, background noise level, speaker timbre. None of that is what a downstream task needs.</p>
+<p>Three design problems follow, and every model in this chapter is positioned by how it answers them.</p>
+<ol type="1">
+<li><strong>What is the prediction target?</strong> Regressing the raw signal invites the failure above. The alternative is to predict something <em>quantised</em> — to force the model to commit to categorical, phone-like distinctions rather than hedging with a conditional mean. This is the central insight of the field.</li>
+<li><strong>Where does the quantisation come from?</strong> There is no ground-truth phone inventory. The targets must be discovered, and the discovery is circular: good units require a good model, and a good model requires good units.</li>
+<li><strong>What is masked, and at what granularity?</strong> Speech is redundant over short windows. Masking a single 20 ms frame is trivially solvable by interpolation, so useful pretext tasks mask <em>spans</em> long enough that local smoothness is not enough.</li>
+</ol>
+<p><a href="#tbl-ssl-timeline" class="quarto-xref">Table&nbsp;<span>27.1</span></a> places the main answers in order.</p>
+<div id="tbl-ssl-timeline" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ssl-timeline-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;27.1: Timeline of self-supervised speech models.
+</figcaption>
+<div aria-describedby="tbl-ssl-timeline-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 19%">
+<col style="width: 22%">
+<col style="width: 25%">
+<col style="width: 32%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Year</th>
+<th style="text-align: left;">Model</th>
+<th style="text-align: left;">Family</th>
+<th style="text-align: left;">Key idea</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">2018</td>
+<td style="text-align: left;">CPC <span class="citation" data-cites="oord2018cpc">(<a href="../../references.html#ref-oord2018cpc" role="doc-biblioref">Oord et al. 2018</a>)</span></td>
+<td style="text-align: left;">Contrastive</td>
+<td style="text-align: left;">Predict the future in <em>latent</em> space with InfoNCE</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2019</td>
+<td style="text-align: left;">APC <span class="citation" data-cites="chung2019apc">(<a href="../../references.html#ref-chung2019apc" role="doc-biblioref">Chung et al. 2019</a>)</span></td>
+<td style="text-align: left;">Predictive</td>
+<td style="text-align: left;">Autoregressive prediction of future spectrogram frames</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2019</td>
+<td style="text-align: left;">wav2vec <span class="citation" data-cites="schneider2019wav2vec">(<a href="../../references.html#ref-schneider2019wav2vec" role="doc-biblioref">Schneider et al. 2019</a>)</span></td>
+<td style="text-align: left;">Contrastive</td>
+<td style="text-align: left;">CPC applied to ASR; features replace log-Mel</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2019</td>
+<td style="text-align: left;">vq-wav2vec <span class="citation" data-cites="baevski2020vqwav2vec">(<a href="../../references.html#ref-baevski2020vqwav2vec" role="doc-biblioref">Baevski, Schneider, et al. 2020</a>)</span></td>
+<td style="text-align: left;">Contrastive + VQ</td>
+<td style="text-align: left;">Discretise audio, then run a plain BERT on the tokens</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2020</td>
+<td style="text-align: left;"><strong>wav2vec 2.0</strong> <span class="citation" data-cites="baevski2020wav2vec2">(<a href="../../references.html#ref-baevski2020wav2vec2" role="doc-biblioref">Baevski, Zhou, et al. 2020</a>)</span></td>
+<td style="text-align: left;">Contrastive + VQ</td>
+<td style="text-align: left;">Mask spans, contrast against <em>jointly learned</em> quantised targets</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2021</td>
+<td style="text-align: left;"><strong>HuBERT</strong> <span class="citation" data-cites="hsu2021hubert">(<a href="../../references.html#ref-hsu2021hubert" role="doc-biblioref">Hsu et al. 2021</a>)</span></td>
+<td style="text-align: left;">Masked prediction</td>
+<td style="text-align: left;">Offline <span class="math inline">\(k\)</span>-means targets, refined iteratively</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2021</td>
+<td style="text-align: left;">w2v-BERT <span class="citation" data-cites="chung2021w2vbert">(<a href="../../references.html#ref-chung2021w2vbert" role="doc-biblioref">Chung et al. 2021</a>)</span></td>
+<td style="text-align: left;">Hybrid</td>
+<td style="text-align: left;">Contrastive module learns the inventory, MLM module models context</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2021</td>
+<td style="text-align: left;"><strong>WavLM</strong> <span class="citation" data-cites="chen2022wavlm">(<a href="../../references.html#ref-chen2022wavlm" role="doc-biblioref"><span class="nocase">Chen et al.</span> 2022</a>)</span></td>
+<td style="text-align: left;">Masked prediction</td>
+<td style="text-align: left;">HuBERT plus simulated noise and overlap; denoising</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2022</td>
+<td style="text-align: left;">data2vec <span class="citation" data-cites="baevski2022data2vec">(<a href="../../references.html#ref-baevski2022data2vec" role="doc-biblioref">Baevski et al. 2022</a>)</span></td>
+<td style="text-align: left;">Self-distillation</td>
+<td style="text-align: left;">Regress <em>contextualised</em> targets from an EMA teacher</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2022</td>
+<td style="text-align: left;"><strong>BEST-RQ</strong> <span class="citation" data-cites="chiu2022bestrq">(<a href="../../references.html#ref-chiu2022bestrq" role="doc-biblioref">Chiu et al. 2022</a>)</span></td>
+<td style="text-align: left;">Random projection</td>
+<td style="text-align: left;">Frozen random codebook; no learned quantiser at all</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</section>
+<section id="sec-contrastive" class="level2" data-number="27.2">
+<h2 data-number="27.2" class="anchored" data-anchor-id="sec-contrastive"><span class="header-section-number">27.2</span> Contrastive Objectives</h2>
+<section id="sec-cpc" class="level3" data-number="27.2.1">
+<h3 data-number="27.2.1" class="anchored" data-anchor-id="sec-cpc"><span class="header-section-number">27.2.1</span> Contrastive Predictive Coding</h3>
+<p>CPC <span class="citation" data-cites="oord2018cpc">(<a href="../../references.html#ref-oord2018cpc" role="doc-biblioref">Oord et al. 2018</a>)</span> is the ancestor. Its move is to abandon reconstruction entirely: rather than predicting the future <em>signal</em>, predict the future <em>latent</em>, and score the prediction by discrimination rather than regression.</p>
+<p>An encoder <span class="math inline">\(f\)</span> maps the input to latents <span class="math inline">\(\mathbf{z}_t = f(\mathbf{x}_t)\)</span>, and an autoregressive network <span class="math inline">\(g\)</span> summarises the past into a context <span class="math inline">\(\mathbf{c}_t = g(\mathbf{z}_{\leq t})\)</span>. For each offset <span class="math inline">\(k\)</span>, a bilinear scorer must pick the true future latent <span class="math inline">\(\mathbf{z}_{t+k}\)</span> out of a set <span class="math inline">\(\mathcal{Z}\)</span> containing one positive and <span class="math inline">\(N-1\)</span> negatives sampled from elsewhere:</p>
+<p><span id="eq-infonce"><span class="math display">\[
+\mathcal{L}_{\text{InfoNCE}}
+= -\,\mathbb{E}\left[\log \frac{\exp\!\big(\mathbf{z}_{t+k}^{\top} \mathbf{W}_k \mathbf{c}_t\big)}
+{\sum_{\tilde{\mathbf{z}} \in \mathcal{Z}} \exp\!\big(\tilde{\mathbf{z}}^{\top} \mathbf{W}_k \mathbf{c}_t\big)}\right]
+\tag{27.1}\]</span></span></p>
+<p>Two properties make this the right shape for speech. First, it is a <strong>variational lower bound on mutual information</strong>: minimising <a href="#eq-infonce" class="quarto-xref">Equation&nbsp;<span>27.1</span></a> maximises a bound <span class="math inline">\(I(\mathbf{z}_{t+k}; \mathbf{c}_t) \geq \log N - \mathcal{L}_{\text{InfoNCE}}\)</span>, so the context is pushed to retain exactly the information that is predictive of the future and free to discard everything else. Second, discrimination against negatives sidesteps the conditional-mean problem: there is no averaging, because the model never has to <em>produce</em> a signal, only to rank candidates.</p>
+<p><strong>wav2vec</strong> <span class="citation" data-cites="schneider2019wav2vec">(<a href="../../references.html#ref-schneider2019wav2vec" role="doc-biblioref">Schneider et al. 2019</a>)</span> applied this to ASR directly — a fully convolutional encoder and context network trained with a CPC-style loss on unlabelled audio, whose output replaces log-Mel features as the input to an acoustic model. It was the first clear demonstration that self-supervised pre-training <em>reduces WER</em> on standard benchmarks, which converted SSL from a representation-learning curiosity into a speech method.</p>
+<p><strong>vq-wav2vec</strong> <span class="citation" data-cites="baevski2020vqwav2vec">(<a href="../../references.html#ref-baevski2020vqwav2vec" role="doc-biblioref">Baevski, Schneider, et al. 2020</a>)</span> is the pivotal intermediate step and the best teaching device in this section. It inserts a vector quantiser so that audio becomes a sequence of <em>discrete tokens</em>, which can then be fed to an off-the-shelf BERT. Two consequences follow, one immediate and one that took three years to pay off: the two-stage pipeline worked well, and — more importantly — it established that speech could be treated as a sequence of symbols drawn from a learned vocabulary. Every discrete-token model in this book, including the neural audio codecs and the speech language models, descends from that framing.</p>
+</section>
+<section id="sec-wav2vec2" class="level3" data-number="27.2.2">
+<h3 data-number="27.2.2" class="anchored" data-anchor-id="sec-wav2vec2"><span class="header-section-number">27.2.2</span> wav2vec 2.0</h3>
+<p>wav2vec 2.0 <span class="citation" data-cites="baevski2020wav2vec2">(<a href="../../references.html#ref-baevski2020wav2vec2" role="doc-biblioref">Baevski, Zhou, et al. 2020</a>)</span> collapses vq-wav2vec’s two stages into one jointly-trained model and is, by influence, the most important paper in this chapter.</p>
+<p>The architecture has three parts. A <strong>feature encoder</strong> — a seven-layer temporal CNN with 20 ms stride — maps the raw waveform to latents <span class="math inline">\(\mathbf{z}_t\)</span>. A <strong>context network</strong>, a Transformer, maps the (partially masked) latent sequence to contextualised representations <span class="math inline">\(\mathbf{c}_t\)</span>. And a <strong>quantiser</strong> maps each <em>unmasked</em> latent to a discrete code <span class="math inline">\(\mathbf{q}_t\)</span>, which serves as the prediction target.</p>
+<p>Spans are masked in the latent sequence: a proportion of time steps are sampled as start indices and the following <span class="math inline">\(M \approx 10\)</span> steps (200 ms) are replaced with a learned mask embedding. The model must then identify the true quantised latent at each masked position, against distractors sampled from other masked positions in the same utterance:</p>
+<p><span id="eq-w2v2-contrastive"><span class="math display">\[
+\mathcal{L}_m = -\log \frac{\exp\!\big(\text{sim}(\mathbf{c}_t, \mathbf{q}_t)/\kappa\big)}
+{\sum_{\tilde{\mathbf{q}} \sim \mathbf{Q}_t} \exp\!\big(\text{sim}(\mathbf{c}_t, \tilde{\mathbf{q}})/\kappa\big)}
+\tag{27.2}\]</span></span></p>
+<p>with <span class="math inline">\(\text{sim}\)</span> the cosine similarity and <span class="math inline">\(\kappa\)</span> a temperature.</p>
+<p><strong>Product quantisation and the Gumbel trick.</strong> The quantiser uses <span class="math inline">\(G\)</span> codebooks of <span class="math inline">\(V\)</span> entries each; a latent is mapped to one entry per codebook and the <span class="math inline">\(G\)</span> selections are concatenated and projected, giving <span class="math inline">\(V^G\)</span> effective targets from only <span class="math inline">\(GV\)</span> parameters (in the original, <span class="math inline">\(G = 2\)</span>, <span class="math inline">\(V = 320\)</span>, hence 102,400 possible targets). Selection is a discrete <span class="math inline">\(\arg\max\)</span>, which has no gradient, so training uses the Gumbel-softmax with a straight-through estimator: the forward pass takes the hard <span class="math inline">\(\arg\max\)</span>, the backward pass uses</p>
+<p><span id="eq-gumbel"><span class="math display">\[
+p_{g,v} = \frac{\exp\big((l_{g,v} + n_v)/\tau\big)}{\sum_{k=1}^{V} \exp\big((l_{g,k} + n_k)/\tau\big)},
+\qquad n_v = -\log(-\log u_v), \; u_v \sim \mathcal{U}(0,1)
+\tag{27.3}\]</span></span></p>
+<p>with the temperature <span class="math inline">\(\tau\)</span> annealed from 2 to 0.5 over training, moving the relaxation gradually toward the hard discrete behaviour it approximates.</p>
+<p><strong>Codebook collapse and the diversity loss.</strong> Left alone, a learned quantiser degenerates: a handful of entries absorb all the probability mass, the effective vocabulary shrinks, and the contrastive task becomes trivial because the distractors are usually the same code as the positive. The fix is an auxiliary term that maximises the entropy of <em>average</em> codebook usage across a batch,</p>
+<p><span id="eq-diversity"><span class="math display">\[
+\mathcal{L}_d = \frac{1}{GV}\sum_{g=1}^{G}\Big(-H(\bar{p}_g)\Big)
+= \frac{1}{GV}\sum_{g=1}^{G}\sum_{v=1}^{V} \bar{p}_{g,v} \log \bar{p}_{g,v}
+\tag{27.4}\]</span></span></p>
+<p>where <span class="math inline">\(\bar{p}_{g,v}\)</span> is the mean softmax probability of entry <span class="math inline">\(v\)</span> in codebook <span class="math inline">\(g\)</span> over the batch. The total objective is <span class="math inline">\(\mathcal{L} = \mathcal{L}_m + \alpha \mathcal{L}_d\)</span>. Codebook collapse recurs throughout this book — it is the same failure that afflicts the neural audio codecs of <a href="24-neural-audio-codecs.html#sec-collapse" class="quarto-xref"><span>Section 30.4</span></a> — and <a href="#eq-diversity" class="quarto-xref">Equation&nbsp;<span>27.4</span></a> is the first of several answers to it.</p>
+<p><strong>Why it mattered.</strong> The headline result reframed the economics of ASR: competitive word error rates from <strong>ten minutes</strong> of labelled speech, and 4.8/8.2% on LibriSpeech <code>test-clean</code>/<code>test-other</code> using only that, after pre-training on the 53k unlabelled hours of Libri-Light <span class="citation" data-cites="kahn2020librilight">(<a href="../../references.html#ref-kahn2020librilight" role="doc-biblioref">Kahn et al. 2020</a>)</span>. Fine-tuning is simply a CTC head (<a href="22-automatic-speech-recognition.html#sec-ctc" class="quarto-xref"><span>Section 28.6.1</span></a>) on top of the context network. For the thousands of languages with no transcribed corpora, this was the unlock, and it is the reason the multilingual programme of <a href="#sec-multilingual" class="quarto-xref"><span>Section 27.7</span></a> became thinkable.</p>
+</section>
+</section>
+<section id="sec-masked-pred" class="level2" data-number="27.3">
+<h2 data-number="27.3" class="anchored" data-anchor-id="sec-masked-pred"><span class="header-section-number">27.3</span> Masked Prediction with Learned Targets</h2>
+<section id="sec-hubert" class="level3" data-number="27.3.1">
+<h3 data-number="27.3.1" class="anchored" data-anchor-id="sec-hubert"><span class="header-section-number">27.3.1</span> HuBERT</h3>
+<p>wav2vec 2.0 trains the quantiser and the context model against each other, which works but is delicate — the target distribution moves while it is being predicted. HuBERT <span class="citation" data-cites="hsu2021hubert">(<a href="../../references.html#ref-hsu2021hubert" role="doc-biblioref">Hsu et al. 2021</a>)</span> sidesteps the instability with a deliberately low-tech alternative: <strong>compute the targets offline, then treat the problem as ordinary masked classification.</strong></p>
+<p>The procedure is a loop:</p>
+<ol type="1">
+<li>Run <span class="math inline">\(k\)</span>-means on 39-dimensional MFCCs of the training audio. The resulting cluster assignments <span class="math inline">\(z_t \in \{1, \ldots, C\}\)</span> are noisy pseudo-labels — but they are <em>categorical</em>, which is all the objective needs.</li>
+<li>Mask spans of the input and train a Transformer to predict the cluster label at masked positions, with a cross-entropy over a learned code embedding <span class="math inline">\(\mathbf{e}_c\)</span>:</li>
+</ol>
+<p><span id="eq-hubert"><span class="math display">\[
+\mathcal{L} = -\sum_{t \in M} \log p(z_t \mid \tilde{\mathbf{X}}, t),
+\qquad
+p(c \mid \tilde{\mathbf{X}}, t) = \frac{\exp\big(\text{sim}(\mathbf{A}\mathbf{o}_t, \mathbf{e}_c)/\tau\big)}
+{\sum_{c'=1}^{C} \exp\big(\text{sim}(\mathbf{A}\mathbf{o}_t, \mathbf{e}_{c'})/\tau\big)}
+\tag{27.5}\]</span></span></p>
+<p>where <span class="math inline">\(\mathbf{o}_t\)</span> is the Transformer output, <span class="math inline">\(\mathbf{A}\)</span> a projection, and <span class="math inline">\(M\)</span> the masked index set. 3. Re-run <span class="math inline">\(k\)</span>-means, now on the <em>hidden representations of the model just trained</em>, to obtain better labels. Return to step 2.</p>
+<p><strong>Two details carry most of the weight.</strong> First, the loss is computed <strong>only at masked positions</strong>. Scoring unmasked frames as well lets the model solve the task by copying the local input through, which is exactly the trivial solution of <a href="#sec-ssl-design" class="quarto-xref"><span>Section 27.1</span></a>; restricting to masked spans forces it to use context. This single choice is worth a large accuracy difference and is the clearest demonstration in the chapter that <em>what you do not train on</em> matters as much as what you do.</p>
+<p>Second, the iterative refinement genuinely bootstraps. MFCC clusters are barely better than chance at separating phones. But a model trained to predict them must learn contextual structure to do so, and its hidden layers therefore organise phonetically; clustering <em>those</em> yields substantially cleaner units, and the next iteration is better again. Measured phone purity climbs at each round. The circularity identified in <a href="#sec-ssl-design" class="quarto-xref"><span>Section 27.1</span></a> is resolved not by solving it but by iterating through it — the same trick as the forced-alignment loop of the classical ASR pipeline, and worth pointing out as such.</p>
+<p>HuBERT’s discrete units became the field’s default “semantic tokens”, and that is arguably its largest downstream consequence. When <a href="24-neural-audio-codecs.html#sec-semantic-acoustic" class="quarto-xref"><span>Section 30.7</span></a> describes a codec whose first residual codebook is distilled to match WavLM features, or a speech language model operating over discrete units, the lineage runs through <a href="#eq-hubert" class="quarto-xref">Equation&nbsp;<span>27.5</span></a>.</p>
+</section>
+<section id="sec-wavlm" class="level3" data-number="27.3.2">
+<h3 data-number="27.3.2" class="anchored" data-anchor-id="sec-wavlm"><span class="header-section-number">27.3.2</span> WavLM</h3>
+<p>WavLM <span class="citation" data-cites="chen2022wavlm">(<a href="../../references.html#ref-chen2022wavlm" role="doc-biblioref"><span class="nocase">Chen et al.</span> 2022</a>)</span> keeps HuBERT’s objective and changes the <em>data</em>. During pre-training, utterances are augmented by mixing in noise and — crucially — <strong>overlapping speech from other utterances</strong>, while the prediction target remains the units of the <em>original</em> clean primary speaker. The masked-prediction task therefore becomes a masked <em>denoising</em> task: the model must reconstruct what the target speaker said while ignoring an interfering one.</p>
+<p>The consequences are exactly what that objective would predict. WavLM is the strongest general-purpose speech encoder of its generation on tasks that require holding onto speaker identity under adverse conditions: speaker verification, diarization (<a href="23-speaker-diarization.html#sec-features" class="quarto-xref"><span>Section 29.1.1</span></a>), and separation. Its lesson generalises well beyond speech — <strong>robustness is a property you train for, not a property you bolt on</strong> — and it explains why WavLM, rather than a newer or larger model, is still the standard backbone for speaker similarity scoring, including the speaker similarity metric used to evaluate zero-shot speech synthesis (<a href="25-speech-synthesis.html#sec-tts-objective" class="quarto-xref"><span>Section 31.12.2</span></a>).</p>
+</section>
+<section id="sec-data2vec" class="level3" data-number="27.3.3">
+<h3 data-number="27.3.3" class="anchored" data-anchor-id="sec-data2vec"><span class="header-section-number">27.3.3</span> data2vec</h3>
+<p>data2vec <span class="citation" data-cites="baevski2022data2vec">(<a href="../../references.html#ref-baevski2022data2vec" role="doc-biblioref">Baevski et al. 2022</a>)</span> asks whether the targets need to be discrete at all. It replaces them with <strong>contextualised latent targets produced by an exponential-moving-average teacher</strong> — the same network, at a lagged parameter average:</p>
+<p><span id="eq-data2vec"><span class="math display">\[
+\mathcal{L} = \sum_{t \in M} \big\| f_\theta(\tilde{\mathbf{X}})_t - \mathbf{y}_t \big\|^2,
+\qquad
+\mathbf{y}_t = \frac{1}{K}\sum_{l = L-K+1}^{L} \hat{\mathbf{a}}_t^{(l)},
+\qquad
+\Delta \leftarrow \tau\Delta + (1-\tau)\theta
+\tag{27.6}\]</span></span></p>
+<p>where <span class="math inline">\(\hat{\mathbf{a}}_t^{(l)}\)</span> are normalised activations of the teacher’s top <span class="math inline">\(K\)</span> layers and <span class="math inline">\(\Delta\)</span> are the teacher parameters. Because the teacher sees the <em>unmasked</em> input, its representation at a masked position is contextual rather than local, which avoids the trivial-solution problem without needing quantisation.</p>
+<p>Its significance is partly methodological: the identical algorithm, with only the input encoder changed, works for speech, vision, and text. It is the modality-agnostic pole of the design space, and a useful counterweight to the claim that discretisation is essential.</p>
+</section>
+</section>
+<section id="sec-rpq" class="level2" data-number="27.4">
+<h2 data-number="27.4" class="anchored" data-anchor-id="sec-rpq"><span class="header-section-number">27.4</span> Random-Projection Quantisation</h2>
+<p>The last family is the simplest and, measured by citations alone, the most underrated in this chapter.</p>
+<p>BEST-RQ <span class="citation" data-cites="chiu2022bestrq">(<a href="../../references.html#ref-chiu2022bestrq" role="doc-biblioref">Chiu et al. 2022</a>)</span> observes that if the point of quantisation is merely to produce <em>consistent categorical targets</em>, the quantiser does not have to be learned, or even good. It uses a projection matrix <span class="math inline">\(\mathbf{A}\)</span> and a codebook <span class="math inline">\(\mathbf{C} = [\mathbf{c}_1, \ldots, \mathbf{c}_V]\)</span> that are <strong>randomly initialised and then frozen forever</strong>:</p>
+<p><span id="eq-bestrq"><span class="math display">\[
+y_t = \arg\min_{v \in \{1,\ldots,V\}} \big\| \, \text{norm}(\mathbf{A}\mathbf{x}_t) - \mathbf{c}_v \, \big\|_2
+\tag{27.7}\]</span></span></p>
+<p>with training a plain cross-entropy on masked positions against these labels. There is no codebook learning, no diversity loss, no clustering loop, no EMA teacher, and no moving target.</p>
+<p>That this works at all is the interesting part, and the reason is worth stating. A random projection is, with high probability, approximately distance-preserving (the Johnson–Lindenstrauss property), so acoustically similar frames land near each other in the projected space and therefore receive the same label. The labels are not <em>phonetic</em>, but they are <em>consistent</em>: the same sound gets the same symbol. Consistency, it turns out, is the only property the masked-prediction objective actually requires — the phonetic organisation is something the model builds for itself in order to predict those labels from context.</p>
+<p><strong>Why it is under-cited relative to its influence.</strong> BEST-RQ was adopted primarily inside industry rather than reproduced in academia. It is the pre-training objective of Google’s USM <span class="citation" data-cites="zhang2023usm">(<a href="../../references.html#ref-zhang2023usm" role="doc-biblioref"><span class="nocase">Zhang et al.</span> 2023</a>)</span> and hence of production ASR across 100+ languages, and it has propagated into subsequent large-scale audio systems. Its citation count sits an order of magnitude below wav2vec 2.0’s while its deployed footprint is comparable. It belongs in any teaching treatment as the <strong>third canonical objective</strong>, alongside contrastive learning and offline-cluster masked prediction.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Reading citation counts
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>BEST-RQ is a good calibration case for the impact heuristics used elsewhere in this book. Papers whose contribution ships inside a product rather than a checkpoint are systematically under-cited, because the citations accrue to the system, not the method. Treat a low count on an industrial-lab paper as weak evidence, not as a verdict.</p>
+</div>
+</div>
+<section id="sec-ssl-compare" class="level3" data-number="27.4.1">
+<h3 data-number="27.4.1" class="anchored" data-anchor-id="sec-ssl-compare"><span class="header-section-number">27.4.1</span> Comparing the Families</h3>
+<div id="tbl-ssl-families" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ssl-families-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;27.2: Self-supervised objectives compared.
+</figcaption>
+<div aria-describedby="tbl-ssl-families-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;"></th>
+<th style="text-align: left;"><strong>Contrastive</strong> (wav2vec 2.0)</th>
+<th style="text-align: left;"><strong>Offline cluster</strong> (HuBERT, WavLM)</th>
+<th style="text-align: left;"><strong>Random projection</strong> (BEST-RQ)</th>
+<th style="text-align: left;"><strong>Self-distillation</strong> (data2vec)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Target</td>
+<td style="text-align: left;">Jointly learned VQ codes</td>
+<td style="text-align: left;"><span class="math inline">\(k\)</span>-means labels, refined offline</td>
+<td style="text-align: left;">Frozen random codes</td>
+<td style="text-align: left;">EMA-teacher latents</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Target discrete?</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;"><strong>No</strong></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Target moves during training?</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">Only between iterations</td>
+<td style="text-align: left;"><strong>Never</strong></td>
+<td style="text-align: left;">Yes (slowly)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Loss</td>
+<td style="text-align: left;">Contrastive (InfoNCE)</td>
+<td style="text-align: left;">Cross-entropy</td>
+<td style="text-align: left;">Cross-entropy</td>
+<td style="text-align: left;"><span class="math inline">\(L_2\)</span> regression</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Extra machinery</td>
+<td style="text-align: left;">Gumbel-softmax, diversity loss</td>
+<td style="text-align: left;">Clustering loop (multiple passes)</td>
+<td style="text-align: left;"><strong>None</strong></td>
+<td style="text-align: left;">EMA teacher</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Main failure mode</td>
+<td style="text-align: left;">Codebook collapse</td>
+<td style="text-align: left;">Poor initial units</td>
+<td style="text-align: left;">Poor codebook luck (rare)</td>
+<td style="text-align: left;">Teacher–student collapse</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Scales cleanly?</td>
+<td style="text-align: left;">Moderately</td>
+<td style="text-align: left;">Awkward (clustering is a bottleneck)</td>
+<td style="text-align: left;"><strong>Yes</strong></td>
+<td style="text-align: left;">Yes</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>The trajectory across the table is toward <em>simplicity</em>: each family removes machinery from the previous one while matching or beating it. That is usually a sign that the field has identified which part of the original method was doing the work — here, masked prediction against consistent categorical targets — and is discarding the scaffolding that surrounded it.</p>
+<p><strong>w2v-BERT</strong> <span class="citation" data-cites="chung2021w2vbert">(<a href="../../references.html#ref-chung2021w2vbert" role="doc-biblioref">Chung et al. 2021</a>)</span> is the notable hybrid, combining a contrastive module (whose job is to <em>learn</em> the discrete inventory) with a masked-LM module (whose job is to model context over it) in a single end-to-end model. It is the speech encoder of SeamlessM4T and, by inheritance, of a considerable amount of multilingual speech infrastructure.</p>
+</section>
+</section>
+<section id="sec-layerwise" class="level2" data-number="27.5">
+<h2 data-number="27.5" class="anchored" data-anchor-id="sec-layerwise"><span class="header-section-number">27.5</span> What Do These Models Actually Learn?</h2>
+<p>This section contains the single most useful empirical fact in the chapter, and it is the one that connects it to every other chapter in the book.</p>
+<p>Self-supervised speech encoders are not uniform. Probing each Transformer layer with a light classifier reveals a consistent <strong>layer-wise division of labour</strong> <span class="citation" data-cites="pasad2021layerwise">(<a href="../../references.html#ref-pasad2021layerwise" role="doc-biblioref">Pasad et al. 2021</a>)</span>:</p>
+<div id="tbl-layerwise" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-layerwise-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;27.3: Layer-wise organisation of self-supervised speech encoders.
+</figcaption>
+<div aria-describedby="tbl-layerwise-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 31%">
+<col style="width: 51%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Depth</th>
+<th style="text-align: left;">Information</th>
+<th style="text-align: left;">Best downstream use</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Lowest layers (and the CNN front-end)</td>
+<td style="text-align: left;">Local acoustics, channel, <strong>speaker identity</strong></td>
+<td style="text-align: left;">Speaker verification, diarization</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Lower-middle</td>
+<td style="text-align: left;">Phonetic categories, articulatory features</td>
+<td style="text-align: left;">Phone recognition</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Upper-middle</td>
+<td style="text-align: left;">Word identity, lexical content</td>
+<td style="text-align: left;">ASR</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Top layers (large models)</td>
+<td style="text-align: left;"><strong>Reverts toward the pre-training target</strong></td>
+<td style="text-align: left;">— often <em>worse</em> than the middle</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>The last row is the counter-intuitive one and deserves an explanation. In large wav2vec 2.0 models the topmost layers move measurably <em>back</em> toward the local, quantised input features they were trained to predict, producing an autoencoder-like curve in which representational quality for phonetic and lexical content peaks in the middle of the network and then declines. The practical implication is direct: <strong>the final layer is usually the wrong choice</strong>, which is the opposite of the convention inherited from vision and text models.</p>
+<p>Two further consequences run through this book:</p>
+<ul>
+<li><strong>ASR and speaker tasks want opposite ends of the same network.</strong> Recognition benefits from suppressing speaker identity, so it draws on upper-middle layers; diarization and verification need speaker identity preserved, so they draw on the lowest layers (<a href="23-speaker-diarization.html#sec-features" class="quarto-xref"><span>Section 29.1.1</span></a>). One encoder serves both only because it happens to keep the two kinds of information at different depths.</li>
+<li><strong>The standard remedy is to learn the mixture.</strong> Rather than committing to a layer, downstream heads take a weighted sum over all <span class="math inline">\(L{+}1\)</span> layer outputs with learnable weights,</li>
+</ul>
+<p><span id="eq-layersum"><span class="math display">\[
+\mathbf{h}_t = \sum_{l=0}^{L} w_l \, \mathbf{h}_t^{(l)},
+\qquad \mathbf{w} = \operatorname{softmax}(\boldsymbol{\alpha})
+\tag{27.8}\]</span></span></p>
+<p>where only <span class="math inline">\(\boldsymbol{\alpha} \in \mathbb{R}^{L+1}\)</span> is trained alongside the head. Inspecting the learned <span class="math inline">\(\mathbf{w}\)</span> afterwards is itself a diagnostic: the weight profile tells you where in the encoder your task’s information lives.</p>
+</section>
+<section id="sec-superb" class="level2" data-number="27.6">
+<h2 data-number="27.6" class="anchored" data-anchor-id="sec-superb"><span class="header-section-number">27.6</span> Evaluation: SUPERB and Its Discontents</h2>
+<p>Comparing self-supervised encoders is harder than comparing ASR systems, because an encoder is not a system. Fine-tune it aggressively enough and any sufficiently large model looks good, which measures the fine-tuning budget rather than the representation.</p>
+<p><strong>SUPERB</strong> <span class="citation" data-cites="yang2021superb">(<a href="../../references.html#ref-yang2021superb" role="doc-biblioref">Yang et al. 2021</a>)</span> resolved this with a protocol as important as its leaderboard: <strong>freeze the encoder, train only a lightweight task-specific head, and use the learnable layer weighting of <a href="#eq-layersum" class="quarto-xref">Equation&nbsp;<span>27.8</span></a>.</strong> Because the encoder cannot adapt, the benchmark measures representation quality directly. The suite spans ten tasks chosen to cover four distinct kinds of information:</p>
+<div id="tbl-superb" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-superb-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;27.4: The SUPERB task suite.
+</figcaption>
+<div aria-describedby="tbl-superb-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 58%">
+<col style="width: 41%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Category</th>
+<th style="text-align: left;">Tasks</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Content</td>
+<td style="text-align: left;">Phoneme Recognition, ASR, Keyword Spotting, Query-by-Example</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Speaker</td>
+<td style="text-align: left;">Speaker Identification, Automatic Speaker Verification, Speaker Diarization</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Semantics</td>
+<td style="text-align: left;">Intent Classification, Slot Filling</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Paralinguistics</td>
+<td style="text-align: left;">Emotion Recognition</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>That grouping is itself a claim worth noticing: it asserts that a good speech representation must serve speaker, content, semantic, and paralinguistic purposes simultaneously — which is precisely what <a href="#sec-layerwise" class="quarto-xref"><span>Section 27.5</span></a> says a single encoder can only do by stratifying them across depth.</p>
+<p><strong>ML-SUPERB</strong> <span class="citation" data-cites="shi2023mlsuperb">(<a href="../../references.html#ref-shi2023mlsuperb" role="doc-biblioref">Shi et al. 2023</a>)</span> extends the protocol to 143 languages with ASR and language identification, and remains the main multilingual representation benchmark.</p>
+<p><strong>Known weaknesses</strong>, which should be stated whenever SUPERB numbers are quoted:</p>
+<ul>
+<li>The frozen-encoder, light-head protocol does not necessarily predict performance under full fine-tuning, and almost certainly does not predict performance when the encoder is attached to an LLM decoder (<a href="22-automatic-speech-recognition.html#sec-llm-asr" class="quarto-xref"><span>Section 28.8.2</span></a>) — the dominant deployment pattern today.</li>
+<li>Scores are near-saturated on several tasks, so ranking differences are within noise.</li>
+<li>The head architecture and optimisation budget, though standardised, still advantage some representation geometries over others.</li>
+</ul>
+</section>
+<section id="sec-multilingual" class="level2" data-number="27.7">
+<h2 data-number="27.7" class="anchored" data-anchor-id="sec-multilingual"><span class="header-section-number">27.7</span> Multilingual Scaling</h2>
+<p>Self-supervision’s most consequential application is the long tail of languages. Because pre-training needs no transcripts, a single model can absorb audio from hundreds of languages at once and transfer to any of them.</p>
+<div id="tbl-multilingual" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-multilingual-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;27.5: Multilingual self-supervised speech models.
+</figcaption>
+<div aria-describedby="tbl-multilingual-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 15%">
+<col style="width: 24%">
+<col style="width: 44%">
+<col style="width: 15%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Model</th>
+<th style="text-align: right;">Languages</th>
+<th style="text-align: right;">Pre-training audio</th>
+<th style="text-align: left;">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">XLSR / XLS-R <span class="citation" data-cites="babu2022xlsr">(<a href="../../references.html#ref-babu2022xlsr" role="doc-biblioref">Babu et al. 2022</a>)</span></td>
+<td style="text-align: right;">128</td>
+<td style="text-align: right;">436k h</td>
+<td style="text-align: left;">Established that one shared multilingual encoder beats per-language training, especially in the low-resource tail</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">MMS <span class="citation" data-cites="pratap2024mms">(<a href="../../references.html#ref-pratap2024mms" role="doc-biblioref">Pratap et al. 2024</a>)</span></td>
+<td style="text-align: right;">1,400+</td>
+<td style="text-align: right;">~55k h labelled + unlabelled</td>
+<td style="text-align: left;">ASR for 1,100+ languages; see the data caveat below</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">USM <span class="citation" data-cites="zhang2023usm">(<a href="../../references.html#ref-zhang2023usm" role="doc-biblioref"><span class="nocase">Zhang et al.</span> 2023</a>)</span></td>
+<td style="text-align: right;">100–300+</td>
+<td style="text-align: right;">12M h</td>
+<td style="text-align: left;">BEST-RQ pre-training at industrial scale</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">XEUS <span class="citation" data-cites="chen2024xeus">(<a href="../../references.html#ref-chen2024xeus" role="doc-biblioref">Chen et al. 2024</a>)</span></td>
+<td style="text-align: right;">4,000+</td>
+<td style="text-align: right;">~1M h</td>
+<td style="text-align: left;">Adds a dereverberation objective for robustness</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>The central empirical finding is <strong>positive cross-lingual transfer</strong>: a model pre-trained on many languages outperforms a monolingual model on the <em>same</em> low-resource target, because phonetic and articulatory structure is largely shared even when lexicons are not. The effect is strongest exactly where it is needed most, for languages with a few hours of data or fewer.</p>
+<p>It is bounded, however, by the <strong>curse of multilinguality</strong>: at fixed capacity, adding languages eventually degrades per-language quality, as the model trades specialisation for coverage. This is the representation-learning counterpart of the coverage tax measured on ASR leaderboards (<a href="22-automatic-speech-recognition.html#sec-leaderboard" class="quarto-xref"><span>Section 28.11.6</span></a>), and it is why the largest multilingual models are also the largest models.</p>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>A data caveat worth teaching
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>MMS reached 1,000+ languages by using recordings of <strong>religious texts</strong> — chiefly New Testament translations — because that is the only broadly parallel multilingual speech corpus in existence. It is a genuinely clever piece of data sourcing, and it also means the training distribution is a single register (read, formal, liturgical), typically one or few speakers per language, with a lexicon skewed toward a specific domain. Reported coverage of a language should not be read as usable ASR for that language’s everyday speech.</p>
+</div>
+</div>
+</section>
+<section id="sec-foundation" class="level2" data-number="27.8">
+<h2 data-number="27.8" class="anchored" data-anchor-id="sec-foundation"><span class="header-section-number">27.8</span> Foundation Encoders in Practice</h2>
+<section id="sec-whisper-encoder" class="level3" data-number="27.8.1">
+<h3 data-number="27.8.1" class="anchored" data-anchor-id="sec-whisper-encoder"><span class="header-section-number">27.8.1</span> Whisper as a Feature Extractor</h3>
+<p>A pattern worth flagging because it now dominates deployment: the encoder from a large <em>supervised</em> model is often used exactly as a self-supervised one would be. Whisper’s encoder (<a href="22-automatic-speech-recognition.html#sec-whisper" class="quarto-xref"><span>Section 28.8.1</span></a>), trained on 680k hours of weakly-labelled data, produces representations that transfer well and are the input to a large share of current audio language models, usually via a projector into an LLM’s embedding space.</p>
+<p>The comparison to genuinely self-supervised encoders is instructive rather than one-sided. Whisper’s encoder is trained toward <em>transcription</em>, so it actively suppresses information that is nuisance for that task — speaker identity, emotion, background acoustics. This makes it an excellent front-end for content-oriented tasks and a measurably poorer one for paralinguistic tasks, a weakness that resurfaces in <a href="26-speech-language-models.html#sec-modality-gap" class="quarto-xref"><span>Section 32.5</span></a> as one mechanism behind audio language models’ difficulty with emotion and speaker attributes. WavLM remains the better choice when the downstream task is about <em>who</em> is speaking or <em>how</em> rather than <em>what</em>.</p>
+</section>
+<section id="sec-discrete-units" class="level3" data-number="27.8.2">
+<h3 data-number="27.8.2" class="anchored" data-anchor-id="sec-discrete-units"><span class="header-section-number">27.8.2</span> Discrete Units as an Interface</h3>
+<p>Running <span class="math inline">\(k\)</span>-means over the middle layers of HuBERT or WavLM and keeping the cluster indices yields a sequence of discrete symbols at roughly 50 Hz. These are the <strong>semantic tokens</strong> referred to throughout the generative chapters of this book. They capture phonetic and linguistic content while discarding speaker identity and acoustic detail — which is to say, they are <em>not</em> invertible to audio, and that is precisely why they are paired with acoustic tokens from a neural codec in later architectures.</p>
+<p>The interface matters more than any particular model: once speech is a sequence of integers from a finite vocabulary, the entire language-modelling toolkit applies unchanged. That observation is what the codec and speech-language-model chapters are built on, and it originates here.</p>
+</section>
+<section id="efficiency" class="level3" data-number="27.8.3">
+<h3 data-number="27.8.3" class="anchored" data-anchor-id="efficiency"><span class="header-section-number">27.8.3</span> Efficiency</h3>
+<p>Full-size encoders are expensive: wav2vec 2.0 Large and WavLM Large are around 300M parameters and were pre-trained on hundreds of GPU-days. Two responses are standard. <strong>Distillation</strong> compresses a large encoder into a much smaller student that retains most of the SUPERB performance — DistilHuBERT <span class="citation" data-cites="chang2022distilhubert">(<a href="../../references.html#ref-chang2022distilhubert" role="doc-biblioref">Chang et al. 2022</a>)</span> predicts multiple teacher layers from a shared shallow student, a design that follows directly from <a href="#sec-layerwise" class="quarto-xref"><span>Section 27.5</span></a>, since different layers carry different information and must be preserved separately. <strong>Partial fine-tuning</strong> freezes the encoder and trains only adapters or the layer weights of <a href="#eq-layersum" class="quarto-xref">Equation&nbsp;<span>27.8</span></a>, which is often within noise of full fine-tuning at a fraction of the cost.</p>
+</section>
+<section id="toolkits" class="level3" data-number="27.8.4">
+<h3 data-number="27.8.4" class="anchored" data-anchor-id="toolkits"><span class="header-section-number">27.8.4</span> Toolkits</h3>
+<div id="tbl-ssl-toolkits" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ssl-toolkits-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;27.6: Toolkits for self-supervised speech representations.
+</figcaption>
+<div aria-describedby="tbl-ssl-toolkits-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Toolkit</th>
+<th style="text-align: left;">Role</th>
+<th style="text-align: left;">Repository</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>S3PRL</strong></td>
+<td style="text-align: left;">Reference implementation of SUPERB; frozen-encoder benchmarking across many upstream models</td>
+<td style="text-align: left;"><a href="https://github.com/s3prl/s3prl">s3prl/s3prl</a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>fairseq</strong></td>
+<td style="text-align: left;">Original wav2vec 2.0, HuBERT, data2vec, XLS-R, MMS implementations</td>
+<td style="text-align: left;"><a href="https://github.com/facebookresearch/fairseq">facebookresearch/fairseq</a></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Transformers</strong></td>
+<td style="text-align: left;">Inference and fine-tuning for most published encoders</td>
+<td style="text-align: left;"><a href="https://github.com/huggingface/transformers">huggingface/transformers</a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>SpeechBrain</strong></td>
+<td style="text-align: left;">Recipes wrapping SSL encoders for downstream tasks</td>
+<td style="text-align: left;"><a href="https://github.com/speechbrain/speechbrain">speechbrain/speechbrain</a></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>ESPnet</strong></td>
+<td style="text-align: left;">SSL front-ends inside full ASR/ST pipelines; XEUS</td>
+<td style="text-align: left;"><a href="https://github.com/espnet/espnet">espnet/espnet</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Extracting layer-wise features is a few lines:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> AutoModel, AutoFeatureExtractor</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>name <span class="op">=</span> <span class="st">"microsoft/wavlm-large"</span>          <span class="co"># strongest general-purpose encoder</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>fe <span class="op">=</span> AutoFeatureExtractor.from_pretrained(name)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> AutoModel.from_pretrained(name, output_hidden_states<span class="op">=</span><span class="va">True</span>).<span class="bu">eval</span>()</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>inputs <span class="op">=</span> fe(waveform, sampling_rate<span class="op">=</span><span class="dv">16_000</span>, return_tensors<span class="op">=</span><span class="st">"pt"</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> torch.no_grad():</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    hidden <span class="op">=</span> model(<span class="op">**</span>inputs).hidden_states   <span class="co"># tuple of (L+1) tensors</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Weighted layer sum; alpha is learned jointly with the downstream head</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>alpha <span class="op">=</span> torch.zeros(<span class="bu">len</span>(hidden), requires_grad<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>features <span class="op">=</span> torch.einsum(<span class="st">"l,lbtd-&gt;btd"</span>, alpha.softmax(<span class="dv">0</span>), torch.stack(hidden))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</section>
+<section id="sec-ssl-open" class="level2" data-number="27.9">
+<h2 data-number="27.9" class="anchored" data-anchor-id="sec-ssl-open"><span class="header-section-number">27.9</span> Open Problems</h2>
+<ol type="1">
+<li><strong>What the units mean.</strong> Discovered units correlate with phones but are not phones: they are context-dependent, split by speaker and channel, and vary in granularity with <span class="math inline">\(k\)</span>. There is no principled account of what inventory a given objective and cluster count will produce, and no way to choose <span class="math inline">\(k\)</span> other than by downstream trial.</li>
+<li><strong>Scaling laws are poorly characterised.</strong> For text, the relationship between compute, data, parameters, and loss is well mapped. For speech self-supervision it is not, and the pre-training loss is a weak predictor of downstream quality — a model with lower masked-prediction loss is not reliably a better encoder.</li>
+<li><strong>The low-resource tail is still poor.</strong> Coverage claims of 1,000+ languages are real, but quality at the tail is weak, the training data is often a single narrow register, and evaluation data barely exists — which means the tail is simultaneously the least good and the least measurable.</li>
+<li><strong>Evaluation has outgrown SUPERB.</strong> The frozen-encoder protocol was the right answer for 2021 and does not predict behaviour under the dominant current pattern of attaching an encoder to an LLM decoder. There is no widely accepted successor.</li>
+<li><strong>Continuous or discrete?</strong> This chapter’s dominant recipe quantises the <em>target</em>, and downstream generative work quantises the <em>representation</em>. But data2vec works without quantisation, continuous features still beat discrete tokens on most discriminative downstream tasks, and the generative side has an active continuous-latent counter-movement. The question is genuinely open, and it recurs in <a href="24-neural-audio-codecs.html#sec-continuous-alt" class="quarto-xref"><span>Section 30.11</span></a>.</li>
+<li><strong>Robustness and fairness.</strong> Encoders inherit the demographic and acoustic composition of their unlabelled pre-training data. Because that data is unlabelled, its composition is typically <em>unknown</em>, which makes the resulting biases harder to audit than the labelled-data disparities of <a href="22-automatic-speech-recognition.html#sec-asr-failures" class="quarto-xref"><span>Section 28.11.7</span></a> rather than easier.</li>
+<li><strong>Paralinguistics are under-served.</strong> Objectives reward predicting <em>what</em> was said. Prosody, emotion, and speaking style are largely incidental to that, and the resulting representational weakness propagates into every downstream paralinguistic task in this book.</li>
+</ol>
+</section>
+<section id="summary" class="level2" data-number="27.10">
+<h2 data-number="27.10" class="anchored" data-anchor-id="summary"><span class="header-section-number">27.10</span> Summary</h2>
+<p>Self-supervised pre-training is the field’s answer to the fact that unlabelled speech outnumbers transcribed speech by orders of magnitude. The difficulty is that speech is continuous and locally predictable, so a naive reconstruction objective learns signal smoothness rather than linguistic structure. The resolution the field converged on is <strong>masked prediction against consistent discrete targets</strong>, and the three canonical objectives differ only in where those targets come from: jointly-learned vector quantisation trained contrastively (wav2vec 2.0), offline <span class="math inline">\(k\)</span>-means labels refined by iterating the model against its own representations (HuBERT, plus WavLM’s denoising augmentation), and a frozen random-projection codebook that is never learned at all (BEST-RQ). The progression is toward removing machinery, which is the usual signature of a field discovering which component was actually load-bearing.</p>
+<p>The practical payoff is threefold. Usable ASR from minutes rather than thousands of hours of labelled audio; a single encoder that transfers across hundreds of languages through shared phonetic structure; and a general-purpose front-end that serves speaker, content, and semantic tasks at once — though only because, as <a href="#sec-layerwise" class="quarto-xref"><span>Section 27.5</span></a> shows, it stratifies those kinds of information across depth, which is why the final layer is usually the wrong one to use and why ASR and diarization draw from opposite ends of the same network.</p>
+<p>Two threads leave this chapter for elsewhere in the book. Discrete units obtained by clustering these encoders are the <strong>semantic tokens</strong> that the codec and speech-language-model chapters depend on, and the pattern of projecting a frozen encoder into a language model’s embedding space — whether that encoder is WavLM or Whisper’s — is the architecture of essentially every audio LLM.</p>
+<p>The next chapter turns to the task that these representations were most immediately useful for beyond recognition: determining not what was said, but who said it, and when.</p>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-babu2022xlsr" class="csl-entry" role="listitem">
+Babu, Arun, Changhan Wang, Andros Tjandra, et al. 2022. <span>“<span>XLS-R</span>: Self-Supervised Cross-Lingual Speech Representation Learning at Scale.”</span> <em>Interspeech</em>.
+</div>
+<div id="ref-baevski2022data2vec" class="csl-entry" role="listitem">
+Baevski, Alexei, Wei-Ning Hsu, Qiantong Xu, Arun Babu, Jiatao Gu, and Michael Auli. 2022. <span>“Data2vec: A General Framework for Self-Supervised Learning in Speech, Vision and Language.”</span> <em>International Conference on Machine Learning (ICML)</em>.
+</div>
+<div id="ref-baevski2020vqwav2vec" class="csl-entry" role="listitem">
+Baevski, Alexei, Steffen Schneider, and Michael Auli. 2020. <span>“Vq-Wav2vec: Self-Supervised Learning of Discrete Speech Representations.”</span> <em>International Conference on Learning Representations (ICLR)</em>.
+</div>
+<div id="ref-baevski2020wav2vec2" class="csl-entry" role="listitem">
+Baevski, Alexei, Yuhao Zhou, Abdelrahman Mohamed, and Michael Auli. 2020. <span>“Wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations.”</span> <em>Advances in Neural Information Processing Systems (NeurIPS)</em> 33: 12449–60.
+</div>
+<div id="ref-chang2022distilhubert" class="csl-entry" role="listitem">
+Chang, Heng-Jui, Shu-wen Yang, and Hung-yi Lee. 2022. <span>“<span>DistilHuBERT</span>: Speech Representation Learning by Layer-Wise Distillation of Hidden-Unit <span>BERT</span>.”</span> <em>IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)</em>.
+</div>
+<div id="ref-chen2022wavlm" class="csl-entry" role="listitem">
+<span class="nocase">Chen, Sanyuan, Chengyi Wang, Zhengyang Chen, et al.</span> 2022. <span>“WavLM: Large-Scale Self-Supervised Pre-Training for Full Stack Speech Processing.”</span> <em>IEEE Journal of Selected Topics in Signal Processing</em> 16 (6): 1505–18.
+</div>
+<div id="ref-chen2024xeus" class="csl-entry" role="listitem">
+Chen, William, Wangyou Zhang, Yifan Peng, et al. 2024. <span>“Towards Robust Speech Representation Learning for Thousands of Languages.”</span> <em>Conference on Empirical Methods in Natural Language Processing (EMNLP)</em>.
+</div>
+<div id="ref-chiu2022bestrq" class="csl-entry" role="listitem">
+Chiu, Chung-Cheng, James Qin, Yu Zhang, Jiahui Yu, and Yonghui Wu. 2022. <span>“Self-Supervised Learning with Random-Projection Quantizer for Speech Recognition.”</span> <em>International Conference on Machine Learning (ICML)</em>.
+</div>
+<div id="ref-chung2019apc" class="csl-entry" role="listitem">
+Chung, Yu-An, Wei-Ning Hsu, Hao Tang, and James Glass. 2019. <span>“An Unsupervised Autoregressive Model for Speech Representation Learning.”</span> <em>Interspeech</em>.
+</div>
+<div id="ref-chung2021w2vbert" class="csl-entry" role="listitem">
+Chung, Yu-An, Yu Zhang, Wei Han, et al. 2021. <span>“<span class="nocase">w2v-BERT</span>: Combining Contrastive Learning and Masked Language Modeling for Self-Supervised Speech Pre-Training.”</span> <em>IEEE Automatic Speech Recognition and Understanding Workshop (ASRU)</em>.
+</div>
+<div id="ref-hsu2021hubert" class="csl-entry" role="listitem">
+Hsu, Wei-Ning, Benjamin Bolte, Yao-Hung Hubert Tsai, Kushal Lakhotia, Ruslan Salakhutdinov, and Abdelrahman Mohamed. 2021. <span>“HuBERT: Self-Supervised Speech Representation Learning by Masked Prediction of Hidden Units.”</span> <em>IEEE/ACM Transactions on Audio, Speech, and Language Processing</em> 29: 3451–60.
+</div>
+<div id="ref-kahn2020librilight" class="csl-entry" role="listitem">
+Kahn, Jacob, Morgane Rivière, Weiyi Zheng, et al. 2020. <span>“Libri-Light: A Benchmark for <span>ASR</span> with Limited or No Supervision.”</span> <em>IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)</em>, 7669–73.
+</div>
+<div id="ref-oord2018cpc" class="csl-entry" role="listitem">
+Oord, Aäron van den, Yazhe Li, and Oriol Vinyals. 2018. <span>“Representation Learning with Contrastive Predictive Coding.”</span> <em>arXiv Preprint arXiv:1807.03748</em>.
+</div>
+<div id="ref-pasad2021layerwise" class="csl-entry" role="listitem">
+Pasad, Ankita, Ju-Chieh Chou, and Karen Livescu. 2021. <span>“Layer-Wise Analysis of a Self-Supervised Speech Representation Model.”</span> <em>IEEE Automatic Speech Recognition and Understanding Workshop (ASRU)</em>.
+</div>
+<div id="ref-pratap2024mms" class="csl-entry" role="listitem">
+Pratap, Vineel, Andros Tjandra, Bowen Shi, et al. 2024. <span>“Scaling Speech Technology to 1,000+ Languages.”</span> <em>Journal of Machine Learning Research (JMLR)</em> 25.
+</div>
+<div id="ref-schneider2019wav2vec" class="csl-entry" role="listitem">
+Schneider, Steffen, Alexei Baevski, Ronan Collobert, and Michael Auli. 2019. <span>“Wav2vec: Unsupervised Pre-Training for Speech Recognition.”</span> <em>Interspeech</em>.
+</div>
+<div id="ref-shi2023mlsuperb" class="csl-entry" role="listitem">
+Shi, Jiatong, Dan Berrebbi, William Chen, et al. 2023. <span>“<span>ML-SUPERB</span>: Multilingual Speech Universal PERformance Benchmark.”</span> <em>Interspeech</em>.
+</div>
+<div id="ref-yang2021superb" class="csl-entry" role="listitem">
+Yang, Shu-wen, Po-Han Chi, Yung-Sung Chuang, et al. 2021. <span>“<span>SUPERB</span>: Speech Processing Universal PERformance Benchmark.”</span> <em>Interspeech</em>.
+</div>
+<div id="ref-zhang2023usm" class="csl-entry" role="listitem">
+<span class="nocase">Zhang, Yu, Wei Han, James Qin, et al.</span> 2023. <span>“Google <span>USM</span>: Scaling Automatic Speech Recognition Beyond 100 Languages.”</span> <em>arXiv Preprint arXiv:2303.01037</em>.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const callouts = document.querySelectorAll('.callout-tip');
+    callouts.forEach(function(callout) {
+      callout.style.borderLeftColor = '#2196f3'; //#616161; //'#4caf50';
+      callout.style.color = 'ffffff'; // Dark purple-gray text
+    });
+  });
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../chapters/audio/_intro_audio.html" class="pagination-link" aria-label="Audio">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Audio</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../chapters/audio/22-automatic-speech-recognition.html" class="pagination-link" aria-label="Automatic Speech Recognition">
+        <span class="nav-page-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Automatic Speech Recognition</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="../../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

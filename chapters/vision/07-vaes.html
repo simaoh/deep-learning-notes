@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>7&nbsp; Variational Autoencoders (VAEs) – deep_learning_notes</title>
+<title>8&nbsp; Variational Autoencoders (VAEs) – deep_learning_notes</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -173,7 +173,7 @@ window.Quarto = {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/_intro-generative-models.html">Part IV: Generative Modeling</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/07-vaes.html"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/_intro-generative-models.html">Part IV: Generative Modeling</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/07-vaes.html"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -204,29 +204,24 @@ window.Quarto = {
  <span class="menu-text">Preface</span></a>
   </div>
 </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
- <span class="menu-text">Part I: Foundations</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_intro_foundations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Foundations</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/01-neural-networks-and-optimization.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Neural Networks and Optimization</span></span></a>
   </div>
 </li>
-          <li class="sidebar-item">
+        <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/02-generalization-and-learning-theory.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Generalization and Learning Theory</span></span></a>
   </div>
 </li>
-      </ul>
-  </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/_intro_computer_vision.html" class="sidebar-item-text sidebar-link">
@@ -235,13 +230,13 @@ window.Quarto = {
 </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
  <span class="menu-text">Part II: Visual Understanding</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/03-cnns.html" class="sidebar-item-text sidebar-link">
@@ -260,34 +255,40 @@ window.Quarto = {
  <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Vision Transformers</span></span></a>
   </div>
 </li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
- <span class="menu-text">Part III: Self-Supervised Learning</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  <a href="../../chapters/vision/06-foundation-models-for-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Foundation Models for Segmentation</span></span></a>
   </div>
 </li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
- <span class="menu-text">Part IV: Generative Modeling</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Self-Supervised Learning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Generative Modeling</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/_intro-generative-models.html" class="sidebar-item-text sidebar-link">
@@ -297,19 +298,19 @@ window.Quarto = {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/07-vaes.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/08-gans.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/09-diffusion-models.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -322,14 +323,198 @@ window.Quarto = {
   </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../intro.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Introduction</span></span></a>
+  <a href="../../chapters/video/_intro_video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Video</span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../summary.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Summary</span></span></a>
+  <a href="../../chapters/video/10-video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Video Fundamentals: Motion and Spatiotemporal Architectures</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/11-video-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Video Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/12-video-temporal-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Video Temporal Segmentation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/13-video-understanding-benchmarks.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Video Understanding Benchmarks</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/14-video-generation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Video Generation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/_intro_3d.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">3D Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/11-3d-data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">3D Data Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">3D Reconstruction</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/12-3d-reconstruction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">3D Reconstruction</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/13-gaussian-splatting.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">3D Gaussian Splatting</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Human Pose Estimation</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/human_pose_estimation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Human Pose Estimation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/_intro_nlp.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Natural Language Processing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/17-text-representation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Text Representation &amp; Word Embeddings</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/18-sequence-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Sequence Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/19-large-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Large Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/20-text-embeddings-evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Text Embedding Models &amp; Evaluation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/_intro_vision_language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Vision-Language</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/16-vision-language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Vision-Language Multimodal Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/_intro_time_series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Time Series</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/14-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">Time Series Fundamentals</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/15-deep-learning-for-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Deep Learning for Time Series</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/_intro_audio.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Audio</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/21-speech-representation-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Speech Representation Learning and Foundation Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/22-automatic-speech-recognition.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Automatic Speech Recognition</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/23-speaker-diarization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Speaker Diarization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/24-neural-audio-codecs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Neural Audio Codecs</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/25-speech-synthesis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">31</span>&nbsp; <span class="chapter-title">Speech Synthesis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/26-speech-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">32</span>&nbsp; <span class="chapter-title">Speech and Audio Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/27-audio-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">33</span>&nbsp; <span class="chapter-title">Audio Understanding Beyond Words</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
@@ -348,23 +533,23 @@ window.Quarto = {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#from-dimensionality-reduction-to-generative-models" id="toc-from-dimensionality-reduction-to-generative-models" class="nav-link active" data-scroll-target="#from-dimensionality-reduction-to-generative-models"><span class="header-section-number">7.1</span> From Dimensionality Reduction to Generative Models</a></li>
-  <li><a href="#probabilistic-formulation" id="toc-probabilistic-formulation" class="nav-link" data-scroll-target="#probabilistic-formulation"><span class="header-section-number">7.2</span> Probabilistic Formulation</a></li>
-  <li><a href="#architecture-and-training" id="toc-architecture-and-training" class="nav-link" data-scroll-target="#architecture-and-training"><span class="header-section-number">7.3</span> Architecture and Training</a></li>
-  <li><a href="#variants-and-extensions" id="toc-variants-and-extensions" class="nav-link" data-scroll-target="#variants-and-extensions"><span class="header-section-number">7.4</span> Variants and Extensions</a></li>
-  <li><a href="#vq-vae-vector-quantized-vae" id="toc-vq-vae-vector-quantized-vae" class="nav-link" data-scroll-target="#vq-vae-vector-quantized-vae"><span class="header-section-number">7.5</span> VQ-VAE: Vector Quantized VAE</a></li>
-  <li><a href="#vq-vae-2-hierarchical-discrete-latents" id="toc-vq-vae-2-hierarchical-discrete-latents" class="nav-link" data-scroll-target="#vq-vae-2-hierarchical-discrete-latents"><span class="header-section-number">7.6</span> VQ-VAE-2: Hierarchical Discrete Latents</a></li>
-  <li><a href="#practical-considerations" id="toc-practical-considerations" class="nav-link" data-scroll-target="#practical-considerations"><span class="header-section-number">7.7</span> Practical Considerations</a></li>
-  <li><a href="#summary-and-interview-preparation" id="toc-summary-and-interview-preparation" class="nav-link" data-scroll-target="#summary-and-interview-preparation"><span class="header-section-number">7.8</span> Summary and Interview Preparation</a></li>
+  <li><a href="#from-dimensionality-reduction-to-generative-models" id="toc-from-dimensionality-reduction-to-generative-models" class="nav-link active" data-scroll-target="#from-dimensionality-reduction-to-generative-models"><span class="header-section-number">8.1</span> From Dimensionality Reduction to Generative Models</a></li>
+  <li><a href="#probabilistic-formulation" id="toc-probabilistic-formulation" class="nav-link" data-scroll-target="#probabilistic-formulation"><span class="header-section-number">8.2</span> Probabilistic Formulation</a></li>
+  <li><a href="#architecture-and-training" id="toc-architecture-and-training" class="nav-link" data-scroll-target="#architecture-and-training"><span class="header-section-number">8.3</span> Architecture and Training</a></li>
+  <li><a href="#variants-and-extensions" id="toc-variants-and-extensions" class="nav-link" data-scroll-target="#variants-and-extensions"><span class="header-section-number">8.4</span> Variants and Extensions</a></li>
+  <li><a href="#vq-vae-vector-quantized-vae" id="toc-vq-vae-vector-quantized-vae" class="nav-link" data-scroll-target="#vq-vae-vector-quantized-vae"><span class="header-section-number">8.5</span> VQ-VAE: Vector Quantized VAE</a></li>
+  <li><a href="#vq-vae-2-hierarchical-discrete-latents" id="toc-vq-vae-2-hierarchical-discrete-latents" class="nav-link" data-scroll-target="#vq-vae-2-hierarchical-discrete-latents"><span class="header-section-number">8.6</span> VQ-VAE-2: Hierarchical Discrete Latents</a></li>
+  <li><a href="#practical-considerations" id="toc-practical-considerations" class="nav-link" data-scroll-target="#practical-considerations"><span class="header-section-number">8.7</span> Practical Considerations</a></li>
+  <li><a href="#summary-and-interview-preparation" id="toc-summary-and-interview-preparation" class="nav-link" data-scroll-target="#summary-and-interview-preparation"><span class="header-section-number">8.8</span> Summary and Interview Preparation</a></li>
   </ul>
 </nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/_intro-generative-models.html">Part IV: Generative Modeling</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/07-vaes.html"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/_intro-generative-models.html">Part IV: Generative Modeling</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/07-vaes.html"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></h1>
+<h1 class="title"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></h1>
 </div>
 
 
@@ -384,8 +569,8 @@ window.Quarto = {
 <blockquote class="blockquote">
 <p>Many of the ideas and illustrations in this section are adapted from Joseph Rocca’s excellent Medium article, <a href="https://medium.com/data-science/understanding-variational-autoencoders-vaes-f70510919f73">Understanding Variational Autoencoders (VAEs)</a> <span class="citation" data-cites="rocca2021vae">(<a href="../../references.html#ref-rocca2021vae" role="doc-biblioref">Rocca 2021</a>)</span>.</p>
 </blockquote>
-<section id="from-dimensionality-reduction-to-generative-models" class="level2" data-number="7.1">
-<h2 data-number="7.1" class="anchored" data-anchor-id="from-dimensionality-reduction-to-generative-models"><span class="header-section-number">7.1</span> From Dimensionality Reduction to Generative Models</h2>
+<section id="from-dimensionality-reduction-to-generative-models" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="from-dimensionality-reduction-to-generative-models"><span class="header-section-number">8.1</span> From Dimensionality Reduction to Generative Models</h2>
 <p><strong>The Autoencoder Foundation</strong></p>
 <p><strong>Dimensionality Reduction</strong> seeks encoder <span class="math inline">\(e: \mathbb{R}^D \to \mathbb{R}^d\)</span> and decoder <span class="math inline">\(d: \mathbb{R}^d \to \mathbb{R}^D\)</span> (with <span class="math inline">\(d \ll D\)</span>) that minimize reconstruction error:</p>
 <p><span class="math display">\[(e^*, d^*) = \arg\min_{(e,d) \in \mathcal{E} \times \mathcal{D}} \sum_{x_i \in \mathcal{D}} \|x_i - d(e(x_i))\|^2\]</span></p>
@@ -415,10 +600,10 @@ window.Quarto = {
 <div id="fig-_autoencoder_loss" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-_autoencoder_loss-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../../images/07_autoencoder_loss.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:85.0%">
+<img src="../../images/vaes/autoencoder_loss.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:85.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-_autoencoder_loss-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;7.1: Autoencoder Architecture: The encoder (<span class="math inline">\(\mathbf{e}\)</span>) and decoder (<span class="math inline">\(\mathbf{d}\)</span>) create a dimension bottleneck by compressing the input <span class="math inline">\(\mathbf{x}\)</span> into a latent representation <span class="math inline">\(\mathbf{z}\)</span>. The model is trained to minimize the reconstruction error (typically MSE or <span class="math inline">\(\ell_2\)</span>-norm) between <span class="math inline">\(\mathbf{x}\)</span> and the reconstructed output <span class="math inline">\(\hat{\mathbf{x}}\)</span>. <em>Adapted from Rocca <span class="citation" data-cites="rocca2021vae">(<a href="../../references.html#ref-rocca2021vae" role="doc-biblioref">Rocca 2021</a>)</span>.</em>
+Figure&nbsp;8.1: Autoencoder Architecture: The encoder (<span class="math inline">\(\mathbf{e}\)</span>) and decoder (<span class="math inline">\(\mathbf{d}\)</span>) create a dimension bottleneck by compressing the input <span class="math inline">\(\mathbf{x}\)</span> into a latent representation <span class="math inline">\(\mathbf{z}\)</span>. The model is trained to minimize the reconstruction error (typically MSE or <span class="math inline">\(\ell_2\)</span>-norm) between <span class="math inline">\(\mathbf{x}\)</span> and the reconstructed output <span class="math inline">\(\hat{\mathbf{x}}\)</span>. <em>Adapted from Rocca <span class="citation" data-cites="rocca2021vae">(<a href="../../references.html#ref-rocca2021vae" role="doc-biblioref">Rocca 2021</a>)</span>.</em>
 </figcaption>
 </figure>
 </div>
@@ -441,21 +626,21 @@ Figure&nbsp;7.1: Autoencoder Architecture: The encoder (<span class="math inline
 <div aria-describedby="fig-vae-latent-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <div class="columns">
 <div class="column" style="width:50%;">
-<p><img src="../../images/vae_latent_space_1.png" class="img-fluid figure-img" style="width:100.0%"></p>
+<p><img src="../../images/vaes/vae_latent_space_1.png" class="img-fluid figure-img" style="width:100.0%"></p>
 </div><div class="column" style="width:50%;">
-<p><img src="../../images/vae_latent_space_2.png" class="img-fluid figure-img" style="width:78.0%"></p>
+<p><img src="../../images/vaes/vae_latent_space_2.png" class="img-fluid figure-img" style="width:78.0%"></p>
 </div>
 </div>
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-vae-latent-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;7.2: Regular vs.&nbsp;Irregular Variational Autoencoder latent spaces. The VAE’s regularization produces a <em>continuous</em> latent manifold where all points decode to plausible samples. <em>Adapted from Rocca <span class="citation" data-cites="rocca2021vae">(<a href="../../references.html#ref-rocca2021vae" role="doc-biblioref">Rocca 2021</a>)</span>.</em>
+Figure&nbsp;8.2: Regular vs.&nbsp;Irregular Variational Autoencoder latent spaces. The VAE’s regularization produces a <em>continuous</em> latent manifold where all points decode to plausible samples. <em>Adapted from Rocca <span class="citation" data-cites="rocca2021vae">(<a href="../../references.html#ref-rocca2021vae" role="doc-biblioref">Rocca 2021</a>)</span>.</em>
 </figcaption>
 </figure>
 </div>
 <p><strong>Variational Autoencoders Solution</strong>: Regularize latent space during training to enforce these properties.</p>
 </section>
-<section id="probabilistic-formulation" class="level2" data-number="7.2">
-<h2 data-number="7.2" class="anchored" data-anchor-id="probabilistic-formulation"><span class="header-section-number">7.2</span> Probabilistic Formulation</h2>
+<section id="probabilistic-formulation" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="probabilistic-formulation"><span class="header-section-number">8.2</span> Probabilistic Formulation</h2>
 <p><strong>Generative Model</strong>:</p>
 <ol type="1">
 <li>Sample latent: <span class="math inline">\(z \sim p(z) = \mathcal{N}(0, I)\)</span></li>
@@ -500,8 +685,8 @@ Figure&nbsp;7.2: Regular vs.&nbsp;Irregular Variational Autoencoder latent space
 (\text{ KL} \geq 0)\)</span>, <br> a good encoder (small KL) makes <strong>maximizing ELBO ≈ maximizing likelihood</strong></p>
 <hr>
 </section>
-<section id="architecture-and-training" class="level2" data-number="7.3">
-<h2 data-number="7.3" class="anchored" data-anchor-id="architecture-and-training"><span class="header-section-number">7.3</span> Architecture and Training</h2>
+<section id="architecture-and-training" class="level2" data-number="8.3">
+<h2 data-number="8.3" class="anchored" data-anchor-id="architecture-and-training"><span class="header-section-number">8.3</span> Architecture and Training</h2>
 <p><strong>Network Architecture</strong>:</p>
 <ul>
 <li><strong>Encoder</strong> <span class="math inline">\(q_\phi(z|x)\)</span> outputs distribution parameters <span class="math inline">\(\mu\)</span> and <span class="math inline">\(\sigma\)</span> (not a single point): <span class="math display">\[x \;\rightarrow\; \text{CNN} \;\rightarrow\; \text{Flatten} \;\rightarrow\; \text{FC} \;\rightarrow\; [\mu(x), \log \sigma^2(x)] \in \mathbb{R}^d\]</span></li>
@@ -518,14 +703,14 @@ Decoder is modeled as a Gaussian with fixed variance, making its reconstruction 
 <p><strong>Loss Function</strong>:</p>
 <p>Minimize negative ELBO: <span class="math display">\[\mathcal{L}_{\text{VAE}} = \underbrace{\|x - \hat{x}\|^2}_{\text{Reconstruction}} + \underbrace{\frac{1}{2}\sum_{j=1}^d \left(\mu_j^2 + \sigma_j^2 - \log \sigma_j^2 - 1\right)}_{\text{KL regularization}}\]</span></p>
 <p>The regularization term is the <strong>closed-form for KL-divergence of two gaussians</strong> <span class="math inline">\(\text{KL}(\mathcal{N}(\mu, \sigma^2) \| \mathcal{N}(0, I))\)</span></p>
-<p>The overall structure of the VAE—encoder, sampling, and decoder—and the loss components are illustrated in <a href="#fig-vae-loss" class="quarto-xref">Figure&nbsp;<span>7.3</span></a> .</p>
+<p>The overall structure of the VAE—encoder, sampling, and decoder—and the loss components are illustrated in <a href="#fig-vae-loss" class="quarto-xref">Figure&nbsp;<span>8.3</span></a> .</p>
 <div id="fig-vae-loss" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-vae-loss-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../../images/07_vae_loss.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:85.0%">
+<img src="../../images/vaes/vae_loss.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:85.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-vae-loss-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;7.3: VAE architecture and loss. The encoder outputs a Gaussian <span class="math inline">\(( \mu, \sigma )\)</span>, from which <span class="math inline">\(z\)</span> is sampled and decoded to reconstruct <span class="math inline">\(\hat{x}\)</span>. The loss balances reconstruction fidelity and latent regularization via KL divergence. <em>Adapted from Rocca <span class="citation" data-cites="rocca2021vae">(<a href="../../references.html#ref-rocca2021vae" role="doc-biblioref">Rocca 2021</a>)</span>.</em>
+Figure&nbsp;8.3: VAE architecture and loss. The encoder outputs a Gaussian <span class="math inline">\(( \mu, \sigma )\)</span>, from which <span class="math inline">\(z\)</span> is sampled and decoded to reconstruct <span class="math inline">\(\hat{x}\)</span>. The loss balances reconstruction fidelity and latent regularization via KL divergence. <em>Adapted from Rocca <span class="citation" data-cites="rocca2021vae">(<a href="../../references.html#ref-rocca2021vae" role="doc-biblioref">Rocca 2021</a>)</span>.</em>
 </figcaption>
 </figure>
 </div>
@@ -540,10 +725,10 @@ Figure&nbsp;7.3: VAE architecture and loss. The encoder outputs a Gaussian <span
 <div id="fig-reparam" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-reparam-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../../images/07_reparametrization_trick.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:100.0%">
+<img src="../../images/vaes/reparametrization_trick.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:100.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-reparam-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;7.4: Reparameterization trick. <strong>Left</strong>: Sampling directly from <span class="math inline">\(\mathcal{N}(\mu, \sigma^2)\)</span> blocks gradients.<br>
+Figure&nbsp;8.4: Reparameterization trick. <strong>Left</strong>: Sampling directly from <span class="math inline">\(\mathcal{N}(\mu, \sigma^2)\)</span> blocks gradients.<br>
 <strong>Right</strong>: Reparameterization moves sampling to fixed <span class="math inline">\(\epsilon\)</span>, allowing gradients to flow through <span class="math inline">\(\mu\)</span> and <span class="math inline">\(\sigma\)</span>. <em>Adapted from Rocca <span class="citation" data-cites="rocca2021vae">(<a href="../../references.html#ref-rocca2021vae" role="doc-biblioref">Rocca 2021</a>)</span>.</em>
 </figcaption>
 </figure>
@@ -579,8 +764,8 @@ Figure&nbsp;7.4: Reparameterization trick. <strong>Left</strong>: Sampling direc
 <p>No encoder needed at generation time!</p>
 <hr>
 </section>
-<section id="variants-and-extensions" class="level2" data-number="7.4">
-<h2 data-number="7.4" class="anchored" data-anchor-id="variants-and-extensions"><span class="header-section-number">7.4</span> Variants and Extensions</h2>
+<section id="variants-and-extensions" class="level2" data-number="8.4">
+<h2 data-number="8.4" class="anchored" data-anchor-id="variants-and-extensions"><span class="header-section-number">8.4</span> Variants and Extensions</h2>
 <p><strong>Conditional VAE (CVAE, 2015)</strong></p>
 <p><strong>Idea</strong>: Condition generation on class label <span class="math inline">\(y\)</span>.</p>
 <p><strong>Modification</strong>:</p>
@@ -608,18 +793,18 @@ Figure&nbsp;7.4: Reparameterization trick. <strong>Left</strong>: Sampling direc
 <p><strong>Applications</strong>: Interpretable latent factors (e.g., face attributes: pose, lighting, identity separated).</p>
 <hr>
 </section>
-<section id="vq-vae-vector-quantized-vae" class="level2" data-number="7.5">
-<h2 data-number="7.5" class="anchored" data-anchor-id="vq-vae-vector-quantized-vae"><span class="header-section-number">7.5</span> VQ-VAE: Vector Quantized VAE</h2>
+<section id="vq-vae-vector-quantized-vae" class="level2" data-number="8.5">
+<h2 data-number="8.5" class="anchored" data-anchor-id="vq-vae-vector-quantized-vae"><span class="header-section-number">8.5</span> VQ-VAE: Vector Quantized VAE</h2>
 <p><strong>Motivation</strong>: Standard VAE uses continuous latent space. VQ-VAE uses <strong>discrete</strong> latent codes (like words in language).</p>
 <p><strong>Key Idea</strong>: Replace continuous <span class="math inline">\(z \in \mathbb{R}^d\)</span> with discrete codebook indices.</p>
 <p><strong>Architecture</strong>:</p>
 <div id="fig-vqvae-architecture" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-vqvae-architecture-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../../images/07_vq_vae.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:85.0%">
+<img src="../../images/vaes/vq_vae.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:85.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-vqvae-architecture-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;7.5: The architecture of a Vector Quantized Variational Autoencoder (VQ-VAE). An encoder E(x) maps the input x to a continuous latent space. The Quantization step then maps the latent vectors to the nearest vector from a discrete, learned Codebook of embeddings, forming the discrete latent code z_q(x). This discrete code is then passed to the decoder D(z_q(x)) to reconstruct the image. The diagram on the right illustrates the nearest-neighbor lookup in the embedding space.
+Figure&nbsp;8.5: The architecture of a Vector Quantized Variational Autoencoder (VQ-VAE). An encoder E(x) maps the input x to a continuous latent space. The Quantization step then maps the latent vectors to the nearest vector from a discrete, learned Codebook of embeddings, forming the discrete latent code z_q(x). This discrete code is then passed to the decoder D(z_q(x)) to reconstruct the image. The diagram on the right illustrates the nearest-neighbor lookup in the embedding space.
 </figcaption>
 </figure>
 </div>
@@ -666,8 +851,8 @@ Figure&nbsp;7.5: The architecture of a Vector Quantized Variational Autoencoder 
 </ol>
 <hr>
 </section>
-<section id="vq-vae-2-hierarchical-discrete-latents" class="level2" data-number="7.6">
-<h2 data-number="7.6" class="anchored" data-anchor-id="vq-vae-2-hierarchical-discrete-latents"><span class="header-section-number">7.6</span> VQ-VAE-2: Hierarchical Discrete Latents</h2>
+<section id="vq-vae-2-hierarchical-discrete-latents" class="level2" data-number="8.6">
+<h2 data-number="8.6" class="anchored" data-anchor-id="vq-vae-2-hierarchical-discrete-latents"><span class="header-section-number">8.6</span> VQ-VAE-2: Hierarchical Discrete Latents</h2>
 <p><strong>Motivation</strong>: Single-scale VQ-VAE struggles with both global structure and fine details.</p>
 <p><strong>Solution</strong>: Hierarchical latent codes at multiple resolutions.</p>
 <p><strong>Architecture</strong>:</p>
@@ -745,8 +930,8 @@ Trains <strong>autoregressive models</strong> over the discrete latent variables
 </ul>
 <hr>
 </section>
-<section id="practical-considerations" class="level2" data-number="7.7">
-<h2 data-number="7.7" class="anchored" data-anchor-id="practical-considerations"><span class="header-section-number">7.7</span> Practical Considerations</h2>
+<section id="practical-considerations" class="level2" data-number="8.7">
+<h2 data-number="8.7" class="anchored" data-anchor-id="practical-considerations"><span class="header-section-number">8.7</span> Practical Considerations</h2>
 <p><strong>Architecture Choices:</strong></p>
 <ul>
 <li><strong>Encoder/Decoder Depth</strong>: Deeper networks → better features, harder to train
@@ -790,8 +975,8 @@ Trains <strong>autoregressive models</strong> over the discrete latent variables
 <p>VAEs use <strong>continuous latent spaces</strong>, allowing smooth interpolation and controllable generation: <span class="math display">\[z_{\text{interp}} = (1-\alpha) z_1 + \alpha z_2, \quad \alpha \in [0,1],\]</span> where interpolating between latent codes <span class="math inline">\(z_1\)</span> and <span class="math inline">\(z_2\)</span> produces meaningful intermediate output images.</p>
 <hr>
 </section>
-<section id="summary-and-interview-preparation" class="level2" data-number="7.8">
-<h2 data-number="7.8" class="anchored" data-anchor-id="summary-and-interview-preparation"><span class="header-section-number">7.8</span> Summary and Interview Preparation</h2>
+<section id="summary-and-interview-preparation" class="level2" data-number="8.8">
+<h2 data-number="8.8" class="anchored" data-anchor-id="summary-and-interview-preparation"><span class="header-section-number">8.8</span> Summary and Interview Preparation</h2>
 <p><strong>Core Concepts Checklist</strong>:</p>
 <p><strong>Mathematical Foundation</strong>:</p>
 <ul class="task-list">
@@ -1355,7 +1540,7 @@ Rocca, Joseph. 2021. <span>“Understanding Variational Autoencoders (VAEs).”<
   </div>
   <div class="nav-page nav-page-next">
       <a href="../../chapters/vision/08-gans.html" class="pagination-link" aria-label="Generative Adversarial Networks (GANs)">
-        <span class="nav-page-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span> <i class="bi bi-arrow-right-short"></i>
+        <span class="nav-page-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

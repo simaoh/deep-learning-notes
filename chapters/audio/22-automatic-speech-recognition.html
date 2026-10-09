@@ -1,0 +1,2286 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>28&nbsp; Automatic Speech Recognition – deep_learning_notes</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../chapters/audio/23-speaker-diarization.html" rel="next">
+<link href="../../chapters/audio/21-speech-representation-learning.html" rel="prev">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-fd0503e23dce65854c81c5baaade3bdf.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../custom.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/audio/22-automatic-speech-recognition.html"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Automatic Speech Recognition</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../">deep_learning_notes</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_intro_foundations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Foundations</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/01-neural-networks-and-optimization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Neural Networks and Optimization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/02-generalization-and-learning-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Generalization and Learning Theory</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro_computer_vision.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Computer Vision</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Visual Understanding</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/03-cnns.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Convolutional Neural Networks</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/04-object-detection-and-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Detection and Segmentation</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/05-vision-transformers.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Vision Transformers</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-foundation-models-for-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Foundation Models for Segmentation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Self-Supervised Learning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Generative Modeling</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Models</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/07-vaes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/08-gans.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/09-diffusion-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_conclusion-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Conclusion</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/_intro_video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Video</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/10-video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Video Fundamentals: Motion and Spatiotemporal Architectures</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/11-video-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Video Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/12-video-temporal-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Video Temporal Segmentation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/13-video-understanding-benchmarks.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Video Understanding Benchmarks</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/14-video-generation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Video Generation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/_intro_3d.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">3D Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/11-3d-data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">3D Data Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">3D Reconstruction</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/12-3d-reconstruction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">3D Reconstruction</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/13-gaussian-splatting.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">3D Gaussian Splatting</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Human Pose Estimation</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/human_pose_estimation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Human Pose Estimation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/_intro_nlp.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Natural Language Processing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/17-text-representation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Text Representation &amp; Word Embeddings</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/18-sequence-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Sequence Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/19-large-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Large Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/20-text-embeddings-evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Text Embedding Models &amp; Evaluation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/_intro_vision_language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Vision-Language</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/16-vision-language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Vision-Language Multimodal Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/_intro_time_series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Time Series</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/14-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">Time Series Fundamentals</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/15-deep-learning-for-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Deep Learning for Time Series</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/_intro_audio.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Audio</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/21-speech-representation-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Speech Representation Learning and Foundation Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/22-automatic-speech-recognition.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Automatic Speech Recognition</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/23-speaker-diarization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Speaker Diarization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/24-neural-audio-codecs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Neural Audio Codecs</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/25-speech-synthesis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">31</span>&nbsp; <span class="chapter-title">Speech Synthesis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/26-speech-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">32</span>&nbsp; <span class="chapter-title">Speech and Audio Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/27-audio-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">33</span>&nbsp; <span class="chapter-title">Audio Understanding Beyond Words</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#sec-asr-notation" id="toc-sec-asr-notation" class="nav-link active" data-scroll-target="#sec-asr-notation"><span class="header-section-number">28.1</span> Notation and Key Concepts</a>
+  <ul class="collapse">
+  <li><a href="#sec-asr-features" id="toc-sec-asr-features" class="nav-link" data-scroll-target="#sec-asr-features"><span class="header-section-number">28.1.1</span> Audio Representations</a></li>
+  <li><a href="#asr-terminology" id="toc-asr-terminology" class="nav-link" data-scroll-target="#asr-terminology"><span class="header-section-number">28.1.2</span> ASR Terminology</a></li>
+  <li><a href="#evaluation-terminology" id="toc-evaluation-terminology" class="nav-link" data-scroll-target="#evaluation-terminology"><span class="header-section-number">28.1.3</span> Evaluation Terminology</a></li>
+  </ul></li>
+  <li><a href="#sec-alignment" id="toc-sec-alignment" class="nav-link" data-scroll-target="#sec-alignment"><span class="header-section-number">28.2</span> The Alignment Problem</a></li>
+  <li><a href="#sec-asr-history" id="toc-sec-asr-history" class="nav-link" data-scroll-target="#sec-asr-history"><span class="header-section-number">28.3</span> Historical Overview</a></li>
+  <li><a href="#sec-classical" id="toc-sec-classical" class="nav-link" data-scroll-target="#sec-classical"><span class="header-section-number">28.4</span> Before Deep Learning: The Noisy Channel Pipeline</a></li>
+  <li><a href="#sec-hybrid-dnn" id="toc-sec-hybrid-dnn" class="nav-link" data-scroll-target="#sec-hybrid-dnn"><span class="header-section-number">28.5</span> The Hybrid Era: One Box Replaced</a></li>
+  <li><a href="#sec-e2e" id="toc-sec-e2e" class="nav-link" data-scroll-target="#sec-e2e"><span class="header-section-number">28.6</span> End-to-End ASR</a>
+  <ul class="collapse">
+  <li><a href="#sec-ctc" id="toc-sec-ctc" class="nav-link" data-scroll-target="#sec-ctc"><span class="header-section-number">28.6.1</span> Connectionist Temporal Classification</a></li>
+  <li><a href="#sec-rnnt" id="toc-sec-rnnt" class="nav-link" data-scroll-target="#sec-rnnt"><span class="header-section-number">28.6.2</span> Recurrent Neural Network Transducer</a></li>
+  <li><a href="#sec-aed" id="toc-sec-aed" class="nav-link" data-scroll-target="#sec-aed"><span class="header-section-number">28.6.3</span> Attention-Based Encoder-Decoder</a></li>
+  <li><a href="#sec-e2e-comparison" id="toc-sec-e2e-comparison" class="nav-link" data-scroll-target="#sec-e2e-comparison"><span class="header-section-number">28.6.4</span> Comparing the Three Families</a></li>
+  </ul></li>
+  <li><a href="#sec-arch" id="toc-sec-arch" class="nav-link" data-scroll-target="#sec-arch"><span class="header-section-number">28.7</span> Architectures</a>
+  <ul class="collapse">
+  <li><a href="#sec-conformer" id="toc-sec-conformer" class="nav-link" data-scroll-target="#sec-conformer"><span class="header-section-number">28.7.1</span> Conformer</a></li>
+  <li><a href="#sec-specaugment" id="toc-sec-specaugment" class="nav-link" data-scroll-target="#sec-specaugment"><span class="header-section-number">28.7.2</span> SpecAugment</a></li>
+  <li><a href="#sec-longform" id="toc-sec-longform" class="nav-link" data-scroll-target="#sec-longform"><span class="header-section-number">28.7.3</span> Long-Form and Streaming</a></li>
+  </ul></li>
+  <li><a href="#sec-scale" id="toc-sec-scale" class="nav-link" data-scroll-target="#sec-scale"><span class="header-section-number">28.8</span> Scale: Weak Supervision and Foundation Models</a>
+  <ul class="collapse">
+  <li><a href="#sec-whisper" id="toc-sec-whisper" class="nav-link" data-scroll-target="#sec-whisper"><span class="header-section-number">28.8.1</span> Whisper</a></li>
+  <li><a href="#sec-llm-asr" id="toc-sec-llm-asr" class="nav-link" data-scroll-target="#sec-llm-asr"><span class="header-section-number">28.8.2</span> LLM Decoders</a></li>
+  </ul></li>
+  <li><a href="#sec-beyond" id="toc-sec-beyond" class="nav-link" data-scroll-target="#sec-beyond"><span class="header-section-number">28.9</span> Beyond Transcription</a>
+  <ul class="collapse">
+  <li><a href="#sec-biasing" id="toc-sec-biasing" class="nav-link" data-scroll-target="#sec-biasing"><span class="header-section-number">28.9.1</span> Contextual Biasing</a></li>
+  <li><a href="#sec-lm-fusion" id="toc-sec-lm-fusion" class="nav-link" data-scroll-target="#sec-lm-fusion"><span class="header-section-number">28.9.2</span> External Language Models and Internal LM Estimation</a></li>
+  <li><a href="#sec-ger" id="toc-sec-ger" class="nav-link" data-scroll-target="#sec-ger"><span class="header-section-number">28.9.3</span> Generative Error Correction</a></li>
+  <li><a href="#sec-st" id="toc-sec-st" class="nav-link" data-scroll-target="#sec-st"><span class="header-section-number">28.9.4</span> Speech Translation</a></li>
+  </ul></li>
+  <li><a href="#sec-asr-opensource" id="toc-sec-asr-opensource" class="nav-link" data-scroll-target="#sec-asr-opensource"><span class="header-section-number">28.10</span> Open-Source Landscape</a></li>
+  <li><a href="#sec-asr-eval" id="toc-sec-asr-eval" class="nav-link" data-scroll-target="#sec-asr-eval"><span class="header-section-number">28.11</span> Evaluation</a>
+  <ul class="collapse">
+  <li><a href="#sec-wer" id="toc-sec-wer" class="nav-link" data-scroll-target="#sec-wer"><span class="header-section-number">28.11.1</span> Word Error Rate</a></li>
+  <li><a href="#sec-normalisation" id="toc-sec-normalisation" class="nav-link" data-scroll-target="#sec-normalisation"><span class="header-section-number">28.11.2</span> Text Normalisation</a></li>
+  <li><a href="#sec-rtfx" id="toc-sec-rtfx" class="nav-link" data-scroll-target="#sec-rtfx"><span class="header-section-number">28.11.3</span> Speed, and Why It Must Be Co-Reported</a></li>
+  <li><a href="#sec-cpwer-asr" id="toc-sec-cpwer-asr" class="nav-link" data-scroll-target="#sec-cpwer-asr"><span class="header-section-number">28.11.4</span> Multi-Speaker Metrics</a></li>
+  <li><a href="#sec-asr-datasets" id="toc-sec-asr-datasets" class="nav-link" data-scroll-target="#sec-asr-datasets"><span class="header-section-number">28.11.5</span> Datasets</a></li>
+  <li><a href="#sec-leaderboard" id="toc-sec-leaderboard" class="nav-link" data-scroll-target="#sec-leaderboard"><span class="header-section-number">28.11.6</span> The Open ASR Leaderboard</a></li>
+  <li><a href="#sec-asr-failures" id="toc-sec-asr-failures" class="nav-link" data-scroll-target="#sec-asr-failures"><span class="header-section-number">28.11.7</span> Failure Modes</a></li>
+  </ul></li>
+  <li><a href="#sec-asr-open" id="toc-sec-asr-open" class="nav-link" data-scroll-target="#sec-asr-open"><span class="header-section-number">28.12</span> Open Problems</a></li>
+  <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary"><span class="header-section-number">28.13</span> Summary</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span id="sec-asr" class="quarto-section-identifier"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Automatic Speech Recognition</span></span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>Automatic Speech Recognition (ASR) maps a spoken utterance to its written transcript. Given a discrete-time audio signal <span class="math inline">\(\mathbf{x} = (x_1, \ldots, x_T) \in \mathbb{R}^{T}\)</span>, the task is to produce a token sequence <span class="math inline">\(\mathbf{y} = (y_1, \ldots, y_U)\)</span> with <span class="math inline">\(y_u \in \mathcal{V}\)</span>, where <span class="math inline">\(\mathcal{V}\)</span> is a finite output vocabulary (characters, subword units, or words).</p>
+<p>Written as a probabilistic inference problem this is simply</p>
+<p><span id="eq-asr-argmax"><span class="math display">\[
+\hat{\mathbf{y}} = \arg\max_{\mathbf{y} \in \mathcal{V}^{*}} P(\mathbf{y} \mid \mathbf{x})
+\tag{28.1}\]</span></span></p>
+<p>which looks unremarkable until one notices the shapes involved. A ten-second utterance at <span class="math inline">\(f_s = 16\,000\)</span> Hz gives <span class="math inline">\(T = 160\,000\)</span> samples, or <span class="math inline">\(T_{\text{frames}} = 1000\)</span> spectrogram frames; the corresponding transcript is perhaps <span class="math inline">\(U = 25\)</span> tokens. The input is longer than the output by roughly two orders of magnitude, the ratio varies with speaking rate, and — crucially — <strong>the training data does not tell us which input frames produced which output token</strong>. Transcripts are unaligned.</p>
+<p>Almost every architectural decision in the history of ASR is a different answer to that one difficulty. This chapter follows the field from the noisy-channel pipeline that dominated until roughly 2012, through the hybrid DNN-HMM era, into the three end-to-end model families that replaced it, and finally to today’s large weakly-supervised and LLM-decoder systems. It closes with evaluation, which turns out to be more contested than the modelling.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Reading order
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This is the first audio chapter in the book, and <a href="#sec-asr-features" class="quarto-xref"><span>Section 28.1.1</span></a> introduces the signal representations used throughout the remaining audio chapters. The alignment machinery developed in <a href="#sec-e2e" class="quarto-xref"><span>Section 28.6</span></a> (CTC in particular) reappears in speaker diarization (<a href="23-speaker-diarization.html" class="quarto-xref"><span>Chapter 29</span></a>), speech translation (<a href="#sec-st" class="quarto-xref"><span>Section 28.9.4</span></a>), and speech synthesis (<a href="25-speech-synthesis.html" class="quarto-xref"><span>Chapter 31</span></a>), so it is worth reading carefully even if ASR itself is not your target application.</p>
+</div>
+</div>
+<section id="sec-asr-notation" class="level2" data-number="28.1">
+<h2 data-number="28.1" class="anchored" data-anchor-id="sec-asr-notation"><span class="header-section-number">28.1</span> Notation and Key Concepts</h2>
+<section id="sec-asr-features" class="level3" data-number="28.1.1">
+<h3 data-number="28.1.1" class="anchored" data-anchor-id="sec-asr-features"><span class="header-section-number">28.1.1</span> Audio Representations</h3>
+<p>A digital audio waveform is obtained by sampling a continuous pressure signal at a fixed <em>sample rate</em> <span class="math inline">\(f_s\)</span> — conventionally 16 kHz for speech, since the phonetically relevant energy lies below the 8 kHz Nyquist limit. Each <span class="math inline">\(x_t \in \mathbb{R}\)</span> is an amplitude at discrete time index <span class="math inline">\(t\)</span>.</p>
+<p>Raw waveforms are rarely fed directly to a model. The signal is quasi-stationary only over short windows (10–30 ms), and its most salient perceptual structure is spectral rather than temporal. The standard front-end therefore converts <span class="math inline">\(\mathbf{x}\)</span> into a sequence of spectral feature vectors.</p>
+<div id="tbl-asr-audio-repr" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-asr-audio-repr-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;28.1: Audio representation terminology.
+</figcaption>
+<div aria-describedby="tbl-asr-audio-repr-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 29%">
+<col style="width: 32%">
+<col style="width: 38%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Concept</th>
+<th style="text-align: left;">Notation</th>
+<th style="text-align: left;">Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Raw waveform</strong></td>
+<td style="text-align: left;"><span class="math inline">\(\mathbf{x} \in \mathbb{R}^{T}\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(T\)</span> amplitude samples at rate <span class="math inline">\(f_s\)</span>.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Mel spectrogram</strong></td>
+<td style="text-align: left;"><span class="math inline">\(\mathbf{M} \in \mathbb{R}^{F \times T_{\text{frames}}}\)</span></td>
+<td style="text-align: left;">Time–frequency representation with the frequency axis warped to the Mel scale (<span class="math inline">\(F\)</span> bands, typically 80).</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Log-Mel frame</strong></td>
+<td style="text-align: left;"><span class="math inline">\(\mathbf{x}_t \in \mathbb{R}^{F}\)</span></td>
+<td style="text-align: left;">One column of <span class="math inline">\(\log \mathbf{M}\)</span>: the log-energy in <span class="math inline">\(F\)</span> Mel bands at frame <span class="math inline">\(t\)</span>. With a 25 ms window and 10 ms hop, <span class="math inline">\(T_{\text{frames}} \approx 100 \times \text{duration (s)}\)</span>.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Encoder output</strong></td>
+<td style="text-align: left;"><span class="math inline">\(\mathbf{h}_t \in \mathbb{R}^{d}\)</span></td>
+<td style="text-align: left;">Contextualised acoustic representation at encoder frame <span class="math inline">\(t\)</span>, after subsampling.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Frame rate</strong></td>
+<td style="text-align: left;">—</td>
+<td style="text-align: left;">Encoder output resolution. Classical systems: 10 ms. Conformer: 40 ms. Fast Conformer: 80 ms.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p><strong>From waveform to log-Mel features.</strong> The pipeline is:</p>
+<ol type="1">
+<li><strong>Framing and windowing.</strong> Slice <span class="math inline">\(\mathbf{x}\)</span> into overlapping frames ($$25 ms, 10 ms hop) and apply a Hann or Hamming window to suppress spectral leakage at the frame edges.</li>
+<li><strong>Short-Time Fourier Transform.</strong> Take the magnitude spectrum of each frame, producing a linear-frequency spectrogram. Phase is discarded.</li>
+<li><strong>Mel filterbank.</strong> Project onto <span class="math inline">\(F\)</span> triangular filters spaced on the Mel scale, <span id="eq-mel"><span class="math display">\[
+\text{Mel}(f) = 2595 \log_{10}\!\left(1 + \frac{f}{700}\right),
+\tag{28.2}\]</span></span> an approximation of the cochlea’s roughly logarithmic frequency resolution.</li>
+<li><strong>Logarithm.</strong> Compress the dynamic range, yielding <span class="math inline">\(\log \mathbf{M}\)</span>. This also turns multiplicative channel effects (microphone response, room colouration) into additive offsets, which downstream models can normalise away.</li>
+</ol>
+<p>Historically this was followed by a Discrete Cosine Transform to produce <strong>MFCCs</strong> <span class="citation" data-cites="davis1980mfcc">(<a href="../../references.html#ref-davis1980mfcc" role="doc-biblioref">Davis and Mermelstein 1980</a>)</span>, decorrelating the filterbank outputs so that Gaussian mixtures with diagonal covariance remained tractable. Neural networks have no such constraint, so modern systems feed log-Mel filterbanks directly and the DCT has been quietly dropped. It is a small but instructive example of a feature-engineering step that existed only to serve a modelling assumption that no longer holds.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Mel filterbank features have survived every architectural revolution since 1980. Whisper, Conformer, and wav2vec 2.0’s convolutional front-end all consume either log-Mel input or a learned analogue of it. Attempts to learn the front-end from raw waveform (SincNet, LEAF, and the convolutional stacks in self-supervised models) work, but the gains over a well-tuned filterbank are consistently small.</p>
+</div>
+</div>
+</section>
+<section id="asr-terminology" class="level3" data-number="28.1.2">
+<h3 data-number="28.1.2" class="anchored" data-anchor-id="asr-terminology"><span class="header-section-number">28.1.2</span> ASR Terminology</h3>
+<div id="tbl-asr-notation" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-asr-notation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;28.2: ASR terminology.
+</figcaption>
+<div aria-describedby="tbl-asr-notation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 31%">
+<col style="width: 27%">
+<col style="width: 41%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Concept</th>
+<th style="text-align: left;">Symbol</th>
+<th style="text-align: left;">Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Output vocabulary</strong></td>
+<td style="text-align: left;"><span class="math inline">\(\mathcal{V}\)</span></td>
+<td style="text-align: left;">Characters, subword units (BPE/wordpiece), or whole words. Modern systems almost always use subwords, typically 256–1024 units.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Blank symbol</strong></td>
+<td style="text-align: left;"><span class="math inline">\(\varnothing\)</span></td>
+<td style="text-align: left;">Special output meaning “emit nothing at this frame”. Central to CTC and RNN-T.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Alignment / path</strong></td>
+<td style="text-align: left;"><span class="math inline">\(\boldsymbol{\pi} \in (\mathcal{V} \cup \{\varnothing\})^{T}\)</span></td>
+<td style="text-align: left;">A frame-level label sequence that collapses to <span class="math inline">\(\mathbf{y}\)</span>.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Acoustic model</strong></td>
+<td style="text-align: left;"><span class="math inline">\(P(\mathbf{x} \mid \mathbf{y})\)</span></td>
+<td style="text-align: left;">Classical component scoring how well audio matches a hypothesised transcript.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Language model</strong></td>
+<td style="text-align: left;"><span class="math inline">\(P(\mathbf{y})\)</span></td>
+<td style="text-align: left;">Prior over token sequences, trained on text alone.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Internal LM</strong></td>
+<td style="text-align: left;"><span class="math inline">\(P_{\text{ILM}}(\mathbf{y})\)</span></td>
+<td style="text-align: left;">The text prior an end-to-end model learns implicitly from its paired training data.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Streaming</strong></td>
+<td style="text-align: left;">—</td>
+<td style="text-align: left;">Emitting tokens from a causal encoder with bounded latency, before the utterance ends.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</section>
+<section id="evaluation-terminology" class="level3" data-number="28.1.3">
+<h3 data-number="28.1.3" class="anchored" data-anchor-id="evaluation-terminology"><span class="header-section-number">28.1.3</span> Evaluation Terminology</h3>
+<div id="tbl-asr-eval-notation" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-asr-eval-notation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;28.3: Evaluation terminology.
+</figcaption>
+<div aria-describedby="tbl-asr-eval-notation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 42%">
+<col style="width: 57%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Concept</th>
+<th style="text-align: left;">Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>WER</strong></td>
+<td style="text-align: left;">Word Error Rate: <span class="math inline">\((S + D + I)/N_{\text{ref}}\)</span> over the optimal Levenshtein alignment (see <a href="#sec-wer" class="quarto-xref"><span>Section 28.11.1</span></a>).</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>CER</strong></td>
+<td style="text-align: left;">Character Error Rate. Used for languages without orthographic word boundaries (Mandarin, Japanese, Thai).</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>RTFx</strong></td>
+<td style="text-align: left;">Inverse real-time factor: seconds of audio processed per second of compute. Higher is faster.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>B-WER / U-WER</strong></td>
+<td style="text-align: left;">WER restricted to words that are (respectively, are not) in a supplied bias list. See <a href="#sec-biasing" class="quarto-xref"><span>Section 28.9.1</span></a>.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>cpWER</strong></td>
+<td style="text-align: left;">Concatenated minimum-permutation WER for multi-speaker audio (see <a href="23-speaker-diarization.html#sec-cpwer" class="quarto-xref"><span>Section 29.4.6</span></a>).</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Text normalisation</strong></td>
+<td style="text-align: left;">The transformation applied to references and hypotheses before scoring — casing, punctuation, numbers, contractions. Not a detail; see <a href="#sec-normalisation" class="quarto-xref"><span>Section 28.11.2</span></a>.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</section>
+</section>
+<section id="sec-alignment" class="level2" data-number="28.2">
+<h2 data-number="28.2" class="anchored" data-anchor-id="sec-alignment"><span class="header-section-number">28.2</span> The Alignment Problem</h2>
+<p>Before any architecture, it is worth stating precisely what makes ASR harder than a typical sequence-classification problem.</p>
+<p>We want <span class="math inline">\(P(\mathbf{y} \mid \mathbf{x})\)</span> where <span class="math inline">\(|\mathbf{x}| \gg |\mathbf{y}|\)</span> and the correspondence between them is unobserved. Three properties of speech constrain the space of solutions:</p>
+<ol type="1">
+<li><strong>Monotonicity.</strong> Audio and transcript proceed in the same order. If token <span class="math inline">\(y_u\)</span> is produced by frames around <span class="math inline">\(t\)</span>, then <span class="math inline">\(y_{u+1}\)</span> is produced by frames at or after <span class="math inline">\(t\)</span>. Unlike machine translation, there is no reordering.</li>
+<li><strong>Surjectivity.</strong> Every token must be produced by at least one frame; no token may be skipped, and none may be invented.</li>
+<li><strong>Variable rate.</strong> The number of frames per token varies by an order of magnitude with speaking rate, phone identity, and emphasis.</li>
+</ol>
+<p>A model may either <strong>marginalise over alignments</strong> (treat the alignment as a latent variable and sum it out), or <strong>learn a soft alignment</strong> (attention), or <strong>predict the alignment explicitly</strong> (durations). The classical pipeline chose the first via HMMs; CTC and RNN-T also chose the first, but differentiably; attention encoder-decoders chose the second. Speech synthesis mostly chose the third (<a href="25-speech-synthesis.html#sec-duration" class="quarto-xref"><span>Section 31.7</span></a>). These are the only three options, and the entire field is organised around the trade-offs between them.</p>
+</section>
+<section id="sec-asr-history" class="level2" data-number="28.3">
+<h2 data-number="28.3" class="anchored" data-anchor-id="sec-asr-history"><span class="header-section-number">28.3</span> Historical Overview</h2>
+<div id="tbl-asr-timeline" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-asr-timeline-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;28.4: Timeline of ASR research.
+</figcaption>
+<div aria-describedby="tbl-asr-timeline-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 11%">
+<col style="width: 15%">
+<col style="width: 24%">
+<col style="width: 48%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Era</th>
+<th style="text-align: left;">Years</th>
+<th style="text-align: left;">Key Ideas</th>
+<th style="text-align: left;">Representative Works</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Noisy channel</td>
+<td style="text-align: left;">1975–2011</td>
+<td style="text-align: left;">GMM-HMM, lexicon, <span class="math inline">\(n\)</span>-gram LM, WFST decoding</td>
+<td style="text-align: left;"><span class="citation" data-cites="jelinek1976continuous">Jelinek (<a href="../../references.html#ref-jelinek1976continuous" role="doc-biblioref">1976</a>)</span>; <span class="citation" data-cites="davis1980mfcc">Davis and Mermelstein (<a href="../../references.html#ref-davis1980mfcc" role="doc-biblioref">1980</a>)</span>; <span class="citation" data-cites="mohri2002wfst">Mohri et al. (<a href="../../references.html#ref-mohri2002wfst" role="doc-biblioref">2002</a>)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Hybrid DNN-HMM</td>
+<td style="text-align: left;">2011–2016</td>
+<td style="text-align: left;">DNN replaces GMM emission model; senone targets</td>
+<td style="text-align: left;"><span class="citation" data-cites="dahl2012cddnnhmm">Dahl et al. (<a href="../../references.html#ref-dahl2012cddnnhmm" role="doc-biblioref">2012</a>)</span>; <span class="citation" data-cites="hinton2012dnn">Hinton et al. (<a href="../../references.html#ref-hinton2012dnn" role="doc-biblioref">2012</a>)</span>; <span class="citation" data-cites="povey2016lfmmi">Povey et al. (<a href="../../references.html#ref-povey2016lfmmi" role="doc-biblioref">2016</a>)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">End-to-end</td>
+<td style="text-align: left;">2014–2020</td>
+<td style="text-align: left;">CTC, RNN-T, attention encoder-decoder; lexicon-free</td>
+<td style="text-align: left;"><span class="citation" data-cites="graves2006ctc">Graves et al. (<a href="../../references.html#ref-graves2006ctc" role="doc-biblioref">2006</a>)</span>; <span class="citation" data-cites="graves2012rnnt">Graves (<a href="../../references.html#ref-graves2012rnnt" role="doc-biblioref">2012</a>)</span>; <span class="citation" data-cites="chan2016las">Chan et al. (<a href="../../references.html#ref-chan2016las" role="doc-biblioref">2016</a>)</span>; <span class="citation" data-cites="amodei2016deepspeech2"><span class="nocase">Amodei et al.</span> (<a href="../../references.html#ref-amodei2016deepspeech2" role="doc-biblioref">2016</a>)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Architecture consolidation</td>
+<td style="text-align: left;">2019–2022</td>
+<td style="text-align: left;">SpecAugment, Conformer, self-supervised pre-training</td>
+<td style="text-align: left;"><span class="citation" data-cites="park2019specaugment">Park et al. (<a href="../../references.html#ref-park2019specaugment" role="doc-biblioref">2019</a>)</span>; <span class="citation" data-cites="gulati2020conformer">Gulati et al. (<a href="../../references.html#ref-gulati2020conformer" role="doc-biblioref">2020</a>)</span>; <span class="citation" data-cites="baevski2020wav2vec2">Baevski et al. (<a href="../../references.html#ref-baevski2020wav2vec2" role="doc-biblioref">2020</a>)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Weak supervision at scale</td>
+<td style="text-align: left;">2022–present</td>
+<td style="text-align: left;">680k h noisy web data, multitask decoding, zero-shot robustness</td>
+<td style="text-align: left;"><span class="citation" data-cites="radford2023whisper">Radford et al. (<a href="../../references.html#ref-radford2023whisper" role="doc-biblioref">2023</a>)</span>; <span class="citation" data-cites="zhang2023usm"><span class="nocase">Zhang et al.</span> (<a href="../../references.html#ref-zhang2023usm" role="doc-biblioref">2023</a>)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">LLM decoders</td>
+<td style="text-align: left;">2023–present</td>
+<td style="text-align: left;">Speech encoder + adapter + language-model decoder</td>
+<td style="text-align: left;"><span class="citation" data-cites="chen2024salm">Chen et al. (<a href="../../references.html#ref-chen2024salm" role="doc-biblioref">2024</a>)</span>; <span class="citation" data-cites="chu2024qwen2audio">Chu et al. (<a href="../../references.html#ref-chu2024qwen2audio" role="doc-biblioref">2024</a>)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</section>
+<section id="sec-classical" class="level2" data-number="28.4">
+<h2 data-number="28.4" class="anchored" data-anchor-id="sec-classical"><span class="header-section-number">28.4</span> Before Deep Learning: The Noisy Channel Pipeline</h2>
+<p>The pre-2012 formulation, due to Jelinek and colleagues at IBM <span class="citation" data-cites="jelinek1976continuous">(<a href="../../references.html#ref-jelinek1976continuous" role="doc-biblioref">Jelinek 1976</a>)</span>, treats speech as text corrupted by a noisy channel and inverts it with Bayes’ rule:</p>
+<p><span id="eq-noisy-channel"><span class="math display">\[
+\hat{\mathbf{y}}
+= \arg\max_{\mathbf{y}} P(\mathbf{y} \mid \mathbf{x})
+= \arg\max_{\mathbf{y}} \underbrace{P(\mathbf{x} \mid \mathbf{y})}_{\text{acoustic model}} \cdot \underbrace{P(\mathbf{y})}_{\text{language model}}
+\tag{28.3}\]</span></span></p>
+<p>since <span class="math inline">\(P(\mathbf{x})\)</span> is constant across hypotheses. In practice one adds a language-model scale <span class="math inline">\(\alpha\)</span> and a word insertion penalty <span class="math inline">\(\beta\)</span>,</p>
+<p><span id="eq-lm-scale"><span class="math display">\[
+\hat{\mathbf{y}} = \arg\max_{\mathbf{y}} \; \log P(\mathbf{x} \mid \mathbf{y}) + \alpha \log P(\mathbf{y}) + \beta |\mathbf{y}|,
+\tag{28.4}\]</span></span></p>
+<p>because the two models are trained separately on different objectives and their log-probabilities are not on comparable scales. That tuning hack is the first symptom of the deeper problem with this decomposition.</p>
+<p>The acoustic model is factorised further through a <strong>pronunciation lexicon</strong>:</p>
+<p><span id="eq-lexicon"><span class="math display">\[
+P(\mathbf{x} \mid \mathbf{y}) = \sum_{\mathbf{q}} P(\mathbf{x} \mid \mathbf{q}) \, P(\mathbf{q} \mid \mathbf{y})
+\tag{28.5}\]</span></span></p>
+<p>where <span class="math inline">\(\mathbf{q}\)</span> is a phone sequence, <span class="math inline">\(P(\mathbf{q} \mid \mathbf{y})\)</span> is a hand-built grapheme-to-phoneme map, and <span class="math inline">\(P(\mathbf{x} \mid \mathbf{q})\)</span> is a Hidden Markov Model whose states emit acoustic frames under Gaussian mixture densities. Alignment is handled by the HMM: the forward algorithm marginalises over all state sequences, and Viterbi decoding recovers the best one.</p>
+<p><strong>The five components you had to build.</strong></p>
+<div id="tbl-classical" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-classical-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;28.5: The classical ASR pipeline.
+</figcaption>
+<div aria-describedby="tbl-classical-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 47%">
+<col style="width: 26%">
+<col style="width: 26%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Component</th>
+<th style="text-align: left;">Role</th>
+<th style="text-align: left;">Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">MFCC front-end</td>
+<td style="text-align: left;">Hand-designed spectral features</td>
+<td style="text-align: left;">DCT existed only to permit diagonal-covariance Gaussians</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">GMM-HMM acoustic model</td>
+<td style="text-align: left;">Emission densities per HMM state</td>
+<td style="text-align: left;">Generative, low capacity, trained by EM then discriminatively (MMI/MPE)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Triphone decision tree</td>
+<td style="text-align: left;">Context-dependent phones clustered into a few thousand tied states (“senones”)</td>
+<td style="text-align: left;">A learned artifact requiring its own alignment pass</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Pronunciation lexicon</td>
+<td style="text-align: left;">Grapheme-to-phoneme mapping</td>
+<td style="text-align: left;">Requires a linguist per language; out-of-vocabulary words are unrecognisable in principle</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><span class="math inline">\(n\)</span>-gram LM + WFST decoder</td>
+<td style="text-align: left;">Search over the composed graph <span class="math inline">\(H \circ C \circ L \circ G\)</span></td>
+<td style="text-align: left;">Gigabytes of static graph; contextual changes require recompilation</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>The intellectual high point of this era is the <strong>weighted finite-state transducer</strong> formulation <span class="citation" data-cites="mohri2002wfst">(<a href="../../references.html#ref-mohri2002wfst" role="doc-biblioref">Mohri et al. 2002</a>)</span>, which represents the HMM topology <span class="math inline">\(H\)</span>, context-dependency <span class="math inline">\(C\)</span>, lexicon <span class="math inline">\(L\)</span>, and grammar <span class="math inline">\(G\)</span> each as a WFST, then composes and optimises them into a single static graph over which decoding is a shortest-path search. Five heterogeneous knowledge sources become one algebraic object with provably correct determinisation and minimisation. It is genuinely elegant, and its descendants persist: <code>k2</code>/<code>icefall</code> performs differentiable FST operations, and both CTC and RNN-T lattices are recognisably FST constructions.</p>
+<p><strong>Why the pipeline was so complex.</strong> Four reasons, each of which the end-to-end programme was a direct reaction to:</p>
+<ul>
+<li><strong>Bootstrapping circularity.</strong> Training the acoustic model requires frame-level state labels; producing those labels requires an acoustic model. The resolution — <em>forced alignment</em> — is an iterative loop: train a flat-start monophone model, align, retrain, build a decision tree, realign, train triphones, realign, add speaker adaptation, realign again. Kaldi recipes <span class="citation" data-cites="povey2011kaldi">(<a href="../../references.html#ref-povey2011kaldi" role="doc-biblioref">Povey et al. 2011</a>)</span> are literally dozens of sequential stages.</li>
+<li><strong>Objective mismatch.</strong> Components are trained on maximum likelihood, perplexity, and nothing respectively, then evaluated jointly on WER.</li>
+<li><strong>Frame independence.</strong> The HMM assumes <span class="math inline">\(x_t\)</span> depends only on the current state, which is false; delta and delta-delta features are a hack to smuggle in local context.</li>
+<li><strong>The lexicon is a hard bottleneck.</strong> No lexicon, no ASR. This is precisely why the field served roughly a hundred languages rather than a thousand.</li>
+</ul>
+</section>
+<section id="sec-hybrid-dnn" class="level2" data-number="28.5">
+<h2 data-number="28.5" class="anchored" data-anchor-id="sec-hybrid-dnn"><span class="header-section-number">28.5</span> The Hybrid Era: One Box Replaced</h2>
+<p>The first deep learning wave in speech did not dismantle the pipeline. It replaced exactly one component. The GMM computing <span class="math inline">\(P(\mathbf{x}_t \mid s)\)</span> was swapped for a DNN computing the posterior <span class="math inline">\(P(s \mid \mathbf{x}_t)\)</span>, converted back to a scaled likelihood by dividing out the state prior:</p>
+<p><span id="eq-pseudo-likelihood"><span class="math display">\[
+P(\mathbf{x}_t \mid s) \;\propto\; \frac{P(s \mid \mathbf{x}_t)}{P(s)}
+\tag{28.6}\]</span></span></p>
+<p>Everything else survived: the HMM topology, the senone decision tree, the lexicon, the <span class="math inline">\(n\)</span>-gram LM, the WFST decoder, and the forced-alignment loop that generated the DNN’s frame-level training targets. This is why the era is called <em>hybrid</em>.</p>
+<p>Two 2012 papers mark the transition. <span class="citation" data-cites="dahl2012cddnnhmm">Dahl et al. (<a href="../../references.html#ref-dahl2012cddnnhmm" role="doc-biblioref">2012</a>)</span> gave the concrete architecture — pre-train a deep belief network, fine-tune it as a frame classifier over <em>context-dependent</em> senones rather than monophones, and use it as the HMM emission model. The context-dependency was the specific insight; earlier neural-HMM hybrids had used monophone targets and underperformed. <span class="citation" data-cites="hinton2012dnn">Hinton et al. (<a href="../../references.html#ref-hinton2012dnn" role="doc-biblioref">2012</a>)</span> is the consensus document: four independent industrial labs reporting the same 20–30% relative WER reduction across different tasks. The credibility of four-lab convergence moved the entire industry within about eighteen months, and it is arguably the first large-scale commercial deployment of deep learning anywhere.</p>
+<p>Two later refinements are worth naming because their ideas outlived the architecture. The <strong>time-delay neural network</strong> <span class="citation" data-cites="peddinti2015tdnn">(<a href="../../references.html#ref-peddinti2015tdnn" role="doc-biblioref">Peddinti et al. 2015</a>)</span> used a subsampled dilated 1-D convolutional stack to reach a wide temporal context at modest compute — the direct ancestor of the convolutional subsampling front-end in every modern speech encoder, and of the x-vector speaker embeddings used in diarization (<a href="23-speaker-diarization.html#sec-xvector" class="quarto-xref"><span>Section 29.2.1</span></a>). <strong>Lattice-free MMI</strong> <span class="citation" data-cites="povey2016lfmmi">(<a href="../../references.html#ref-povey2016lfmmi" role="doc-biblioref">Povey et al. 2016</a>)</span> trained with a sequence-discriminative objective computed without a separate lattice generation stage, on subsampled frames. It is the conceptual bridge to what came next: LF-MMI and CTC are both sequence-level objectives that marginalise over alignments, arrived at from opposite directions.</p>
+<p>The hybrid era produced large accuracy gains with almost no change to infrastructure, which is exactly why it was transitional. The complexity was untouched.</p>
+</section>
+<section id="sec-e2e" class="level2" data-number="28.6">
+<h2 data-number="28.6" class="anchored" data-anchor-id="sec-e2e"><span class="header-section-number">28.6</span> End-to-End ASR</h2>
+<p>End-to-end models map audio directly to characters or subwords, discarding the lexicon, the senone tree, the forced-alignment loop, and optionally the external LM. The three families differ in how they handle alignment, and that single choice propagates into streaming ability, language-model behaviour, hallucination profile, and timestamp quality.</p>
+<section id="sec-ctc" class="level3" data-number="28.6.1">
+<h3 data-number="28.6.1" class="anchored" data-anchor-id="sec-ctc"><span class="header-section-number">28.6.1</span> Connectionist Temporal Classification</h3>
+<p>CTC <span class="citation" data-cites="graves2006ctc">(<a href="../../references.html#ref-graves2006ctc" role="doc-biblioref">Graves et al. 2006</a>)</span> introduces a <strong>blank</strong> symbol <span class="math inline">\(\varnothing\)</span> and a many-to-one collapsing map <span class="math inline">\(\mathcal{B}\)</span> that removes blanks and merges consecutive repeated labels. For example, with <span class="math inline">\(\mathcal{V} = \{a, b\}\)</span>:</p>
+<p><span class="math display">\[
+\mathcal{B}(a\,\varnothing\,a\,b\,b) = aab, \qquad
+\mathcal{B}(\varnothing\,a\,a\,\varnothing\,b) = ab
+\]</span></p>
+<p>Training maximises the total probability of <em>all</em> frame-level paths that collapse to the reference:</p>
+<p><span id="eq-ctc"><span class="math display">\[
+P(\mathbf{y} \mid \mathbf{x}) = \sum_{\boldsymbol{\pi} \in \mathcal{B}^{-1}(\mathbf{y})} \prod_{t=1}^{T} P(\pi_t \mid \mathbf{x})
+\tag{28.7}\]</span></span></p>
+<p>The sum has exponentially many terms but factorises into a dynamic program. Define the extended label sequence <span class="math inline">\(\mathbf{y}' = (\varnothing, y_1, \varnothing, y_2, \ldots, y_U, \varnothing)\)</span> of length <span class="math inline">\(2U+1\)</span>, and let <span class="math inline">\(\alpha_t(u)\)</span> be the total probability of all paths consuming the first <span class="math inline">\(t\)</span> frames and ending at position <span class="math inline">\(u\)</span> of <span class="math inline">\(\mathbf{y}'\)</span>. Then</p>
+<p><span id="eq-ctc-forward"><span class="math display">\[
+\alpha_t(u) = P(y'_u \mid \mathbf{x}_t) \Big[ \alpha_{t-1}(u) + \alpha_{t-1}(u-1) + \mathbb{1}\big[y'_u \neq \varnothing \;\wedge\; y'_u \neq y'_{u-2}\big]\, \alpha_{t-1}(u-2) \Big]
+\tag{28.8}\]</span></span></p>
+<p>with <span class="math inline">\(P(\mathbf{y} \mid \mathbf{x}) = \alpha_T(2U+1) + \alpha_T(2U)\)</span>. The three terms correspond to staying on the current symbol, advancing one position, and skipping a blank; the indicator forbids the skip when it would merge two identical labels. Cost is <span class="math inline">\(O(TU)\)</span>, and the whole thing is differentiable. <strong>No alignment supervision is required</strong> — the alignment has become a latent variable that is summed out.</p>
+<p><strong>The conditional independence assumption is the crux.</strong> The product <span class="math inline">\(\prod_t P(\pi_t \mid \mathbf{x})\)</span> asserts that outputs at different frames are independent <em>given the audio</em>. Three consequences follow, and they should be taught together:</p>
+<ul>
+<li>CTC has essentially <strong>no internal language model</strong>. It gains a great deal from an external LM and degrades badly without one.</li>
+<li>It cannot model output dependencies, producing characteristic errors on homophones and inflectional morphology.</li>
+<li>But its posteriors are <strong>peaky and time-localised</strong>, which makes CTC the best of the three families for forced alignment and timestamps — a fact exploited by essentially every modern alignment tool.</li>
+</ul>
+<p><strong>Deep Speech</strong> <span class="citation" data-cites="hannun2014deepspeech">(<a href="../../references.html#ref-hannun2014deepspeech" role="doc-biblioref">Hannun et al. 2014</a>)</span> and <strong>Deep Speech 2</strong> <span class="citation" data-cites="amodei2016deepspeech2">(<a href="../../references.html#ref-amodei2016deepspeech2" role="doc-biblioref"><span class="nocase">Amodei et al.</span> 2016</a>)</span> were the decisive demonstrations: a large recurrent network trained with CTC straight to characters, no phonemes, no lexicon, no HMM, with an <span class="math inline">\(n\)</span>-gram LM applied only at decode time. Deep Speech 2 trained the same architecture on English and Mandarin with only a vocabulary change, establishing that the pipeline’s language-specific machinery was dispensable.</p>
+</section>
+<section id="sec-rnnt" class="level3" data-number="28.6.2">
+<h3 data-number="28.6.2" class="anchored" data-anchor-id="sec-rnnt"><span class="header-section-number">28.6.2</span> Recurrent Neural Network Transducer</h3>
+<p>The RNN-T <span class="citation" data-cites="graves2012rnnt">(<a href="../../references.html#ref-graves2012rnnt" role="doc-biblioref">Graves 2012</a>)</span> repairs CTC’s conditional independence by adding a <strong>prediction network</strong> that autoregressively encodes the tokens emitted so far, and a <strong>joint network</strong> that combines it with the encoder:</p>
+<p><span id="eq-rnnt-joint"><span class="math display">\[
+\mathbf{h}_t = \text{Encoder}(\mathbf{x}_{1:t}), \qquad
+\mathbf{g}_u = \text{Prediction}(\mathbf{y}_{1:u-1}), \qquad
+\mathbf{z}_{t,u} = \text{Joint}(\mathbf{h}_t, \mathbf{g}_u)
+\tag{28.9}\]</span></span></p>
+<p>with <span class="math inline">\(P(k \mid t, u) = \text{softmax}(\mathbf{z}_{t,u})\)</span> over <span class="math inline">\(\mathcal{V} \cup \{\varnothing\}\)</span>. The alignment lattice is now two-dimensional over <span class="math inline">\((t, u)\)</span>: at each cell the model either emits a token (advance <span class="math inline">\(u\)</span>) or emits blank (advance <span class="math inline">\(t\)</span>). The forward recursion is</p>
+<p><span id="eq-rnnt-forward"><span class="math display">\[
+\alpha(t, u) = \alpha(t-1, u)\, P(\varnothing \mid t-1, u) \;+\; \alpha(t, u-1)\, P(y_u \mid t, u-1)
+\tag{28.10}\]</span></span></p>
+<p>Alignment is still marginalised and still strictly monotonic, but output tokens are now conditioned on output history.</p>
+<p><strong>Why RNN-T became the dominant streaming architecture.</strong> Four reasons, worth being precise about:</p>
+<ol type="1">
+<li><strong>Monotonic, frame-synchronous alignment.</strong> The model consumes audio left-to-right and can emit as soon as evidence arrives. There is no mechanism by which it could need the end of the utterance to produce the first word.</li>
+<li><strong>No conditional independence.</strong> The prediction network <em>is</em> an internal language model, so RNN-T is strong without external LM fusion — essential when you cannot ship a large LM to a phone.</li>
+<li><strong>Bounded latency.</strong> Combined with causal or limited-lookahead encoders, emission delay is controllable and can be explicitly regularised.</li>
+<li><strong>It fits the product.</strong> On-device assistants need streaming, low latency, no server round-trip, and a small footprint.</li>
+</ol>
+<p><span class="citation" data-cites="he2019streaming"><span class="nocase">He et al.</span> (<a href="../../references.html#ref-he2019streaming" role="doc-biblioref">2019</a>)</span> is the deployment landmark: an RNN-T with quantised LSTMs and wordpiece outputs running entirely on a phone at roughly 80 MB, <em>faster than real time and more accurate</em> than the server-side CTC system it replaced. It ended the question of whether end-to-end ASR was production-ready.</p>
+<p>Two modern variants matter. The <strong>Hybrid Autoregressive Transducer</strong> <span class="citation" data-cites="variani2020hat">(<a href="../../references.html#ref-variani2020hat" role="doc-biblioref">Variani et al. 2020</a>)</span> factorises blank prediction from label prediction so that the internal LM score becomes explicitly computable — and therefore subtractable, which we return to in <a href="#sec-lm-fusion" class="quarto-xref"><span>Section 28.9.2</span></a>. The <strong>Token-and-Duration Transducer</strong> <span class="citation" data-cites="xu2023tdt">(<a href="../../references.html#ref-xu2023tdt" role="doc-biblioref">Xu et al. 2023</a>)</span> predicts both the token and its <strong>duration</strong> in frames at each step, then skips ahead by that duration instead of advancing one frame at a time. TDT is the single reason current NVIDIA Parakeet models run roughly an order of magnitude faster than comparable-accuracy alternatives, and it yields model-native word timestamps as a side effect. Its citation count is modest; its practical footprint is enormous.</p>
+</section>
+<section id="sec-aed" class="level3" data-number="28.6.3">
+<h3 data-number="28.6.3" class="anchored" data-anchor-id="sec-aed"><span class="header-section-number">28.6.3</span> Attention-Based Encoder-Decoder</h3>
+<p>Listen, Attend and Spell <span class="citation" data-cites="chan2016las">(<a href="../../references.html#ref-chan2016las" role="doc-biblioref">Chan et al. 2016</a>)</span> discards blanks and alignment marginalisation entirely. An encoder produces <span class="math inline">\(\mathbf{h}_{1:T'}\)</span>; a decoder autoregressively emits tokens, at each step attending over <em>all</em> encoder frames:</p>
+<p><span id="eq-aed"><span class="math display">\[
+P(\mathbf{y} \mid \mathbf{x}) = \prod_{u=1}^{U} P(y_u \mid y_{&lt;u}, \mathbf{x}),
+\qquad
+\mathbf{c}_u = \sum_{t} a_{u,t}\, \mathbf{h}_t,
+\qquad
+a_{u,t} = \frac{\exp e(\mathbf{s}_u, \mathbf{h}_t)}{\sum_{t'} \exp e(\mathbf{s}_u, \mathbf{h}_{t'})}
+\tag{28.11}\]</span></span></p>
+<p>This is conceptually the cleanest formulation — a direct model of <span class="math inline">\(P(\mathbf{y} \mid \mathbf{x})\)</span> with a strong internal LM — and it is the architecture of Whisper, modulo replacing LSTMs with Transformers <span class="citation" data-cites="vaswani2017attention dong2018speechtransformer">(<a href="../../references.html#ref-vaswani2017attention" role="doc-biblioref">Vaswani et al. 2017</a>; <a href="../../references.html#ref-dong2018speechtransformer" role="doc-biblioref">Dong et al. 2018</a>)</span>. But nothing constrains the attention to be monotonic or surjective, so the model must <em>learn</em> a property it could simply have been given. The failure modes are the price: deletions, looping repetition, early or absent termination, and fluent output with no acoustic support.</p>
+<p>The standard fix is <strong>hybrid CTC/attention training</strong> <span class="citation" data-cites="kim2017joint">(<a href="../../references.html#ref-kim2017joint" role="doc-biblioref">Kim et al. 2017</a>)</span>, which shares one encoder between a CTC head and an attention decoder:</p>
+<p><span id="eq-hybrid-ctc-att"><span class="math display">\[
+\mathcal{L} = \lambda\, \mathcal{L}_{\text{CTC}} + (1 - \lambda)\, \mathcal{L}_{\text{AED}}, \qquad \lambda \in [0, 1]
+\tag{28.12}\]</span></span></p>
+<p>typically with <span class="math inline">\(\lambda \approx 0.3\)</span>. CTC’s monotonicity regularises the attention during training, and CTC prefix scores constrain the beam at decode time, suppressing deletions and loops. This is the default recipe in ESPnet <span class="citation" data-cites="watanabe2018espnet">(<a href="../../references.html#ref-watanabe2018espnet" role="doc-biblioref">Watanabe et al. 2018</a>)</span> and is used by OWSM and Canary. If a reader takes one training trick from this section, it should be this one: <strong>constrain a flexible model with a rigid auxiliary loss.</strong></p>
+</section>
+<section id="sec-e2e-comparison" class="level3" data-number="28.6.4">
+<h3 data-number="28.6.4" class="anchored" data-anchor-id="sec-e2e-comparison"><span class="header-section-number">28.6.4</span> Comparing the Three Families</h3>
+<div id="tbl-e2e-comparison" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-e2e-comparison-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;28.6: End-to-end ASR families compared.
+</figcaption>
+<div aria-describedby="tbl-e2e-comparison-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 15%">
+<col style="width: 28%">
+<col style="width: 40%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Property</th>
+<th style="text-align: left;"><strong>CTC</strong></th>
+<th style="text-align: left;"><strong>RNN-T / TDT</strong></th>
+<th style="text-align: left;"><strong>AED (LAS, Whisper)</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Alignment</td>
+<td style="text-align: left;">Marginalised, 1-D lattice</td>
+<td style="text-align: left;">Marginalised, 2-D lattice</td>
+<td style="text-align: left;">Soft attention, unconstrained</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Output dependencies</td>
+<td style="text-align: left;">None (conditional independence)</td>
+<td style="text-align: left;">Full, via prediction network</td>
+<td style="text-align: left;">Full, via autoregressive decoder</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Internal LM</td>
+<td style="text-align: left;">Essentially none</td>
+<td style="text-align: left;">Yes; explicitly computable in HAT</td>
+<td style="text-align: left;">Strong — and it dominates behaviour</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Streaming</td>
+<td style="text-align: left;">Trivial</td>
+<td style="text-align: left;">Natural; the production default</td>
+<td style="text-align: left;">Requires surgery (chunked or triggered attention)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">External LM fusion</td>
+<td style="text-align: left;">Largest gains, nearly mandatory</td>
+<td style="text-align: left;">Moderate; needs ILM subtraction</td>
+<td style="text-align: left;">Smallest gains, hardest to do correctly</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Hallucination</td>
+<td style="text-align: left;">Very low; failures are deletions</td>
+<td style="text-align: left;">Low; blank gives a principled “nothing here”</td>
+<td style="text-align: left;"><strong>High</strong>; decoder can free-run without acoustic support</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Timestamps</td>
+<td style="text-align: left;"><strong>Best</strong> — peaky, frame-localised</td>
+<td style="text-align: left;">Good; TDT gives explicit durations</td>
+<td style="text-align: left;">Worst; attention is diffuse and non-monotonic</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Accuracy (short-form)</td>
+<td style="text-align: left;">Weakest</td>
+<td style="text-align: left;">Middle</td>
+<td style="text-align: left;"><strong>Best</strong></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Throughput</td>
+<td style="text-align: left;"><strong>Fastest</strong></td>
+<td style="text-align: left;">Near-fastest</td>
+<td style="text-align: left;">Slowest</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>The trade-off is unusually clean, and the numbers in <a href="#sec-leaderboard" class="quarto-xref"><span>Section 28.11.6</span></a> make it concrete: <strong>AED buys accuracy with latency and hallucination risk; CTC buys speed and acoustic honesty with accuracy; RNN-T and TDT occupy the streaming-viable middle.</strong></p>
+<p>One structural observation deserves emphasis before moving on. End-to-end models fused the acoustic model, lexicon, and language model into a single network — and the field has spent the years since <strong>re-introducing the pieces it lost</strong>. External LM fusion, contextual biasing for rare words, and LLM decoders are all, in effect, attempts to recover the modularity that <a href="#eq-noisy-channel" class="quarto-xref">Equation&nbsp;<span>28.3</span></a> had for free. Keeping that framing in mind turns an otherwise scattered literature into a single argument.</p>
+</section>
+</section>
+<section id="sec-arch" class="level2" data-number="28.7">
+<h2 data-number="28.7" class="anchored" data-anchor-id="sec-arch"><span class="header-section-number">28.7</span> Architectures</h2>
+<section id="sec-conformer" class="level3" data-number="28.7.1">
+<h3 data-number="28.7.1" class="anchored" data-anchor-id="sec-conformer"><span class="header-section-number">28.7.1</span> Conformer</h3>
+<p>Speech has structure at two very different scales. Formant transitions and phone boundaries live on a 10–50 ms scale and are strongly local; speaker identity, prosody, and semantic context are global. Pure convolutional encoders capture the former and cannot integrate globally; pure Transformers do the reverse and measurably underfit local detail.</p>
+<p>The <strong>Conformer</strong> <span class="citation" data-cites="gulati2020conformer">(<a href="../../references.html#ref-gulati2020conformer" role="doc-biblioref">Gulati et al. 2020</a>)</span> interleaves both inside every block, in a “macaron” sandwich of two half-step feed-forward layers:</p>
+<p><span id="eq-conformer"><span class="math display">\[
+\begin{aligned}
+\tilde{\mathbf{h}} &amp;= \mathbf{h} + \tfrac{1}{2}\,\text{FFN}(\mathbf{h}) \\
+\mathbf{h}' &amp;= \tilde{\mathbf{h}} + \text{MHSA}(\tilde{\mathbf{h}}) \\
+\mathbf{h}'' &amp;= \mathbf{h}' + \text{Conv}(\mathbf{h}') \\
+\mathbf{h}''' &amp;= \text{LayerNorm}\!\left(\mathbf{h}'' + \tfrac{1}{2}\,\text{FFN}(\mathbf{h}'')\right)
+\end{aligned}
+\tag{28.13}\]</span></span></p>
+<p>where <span class="math inline">\(\text{Conv}\)</span> is a depthwise-separable convolution module with gated linear units, and <span class="math inline">\(\text{MHSA}\)</span> uses relative positional encoding so the model generalises across utterance lengths.</p>
+<p>This is the architecture that got the inductive bias right, and it did so at every model scale. Six years on it remains the most common encoder family in open ASR systems, and every top-ranked model that is not Whisper-derived uses a Conformer or a descendant of one.</p>
+<p><strong>Successors.</strong> Four are worth naming, though none has displaced the original outright. <em>Squeezeformer</em> <span class="citation" data-cites="kim2022squeezeformer">(<a href="../../references.html#ref-kim2022squeezeformer" role="doc-biblioref">Kim et al. 2022</a>)</span> adds U-Net-style temporal downsampling inside the encoder, answering “do we need full resolution throughout?” in the negative. <em>Branchformer</em> and E-Branchformer <span class="citation" data-cites="peng2022branchformer">(<a href="../../references.html#ref-peng2022branchformer" role="doc-biblioref">Peng et al. 2022</a>)</span> replace Conformer’s <em>sequential</em> attention-then- convolution with <strong>parallel branches</strong> merged by learned weights; the merge weights are interpretable, revealing which layers rely on local versus global context, and E-Branchformer became the ESPnet default. <em>Zipformer</em> <span class="citation" data-cites="yao2024zipformer">(<a href="../../references.html#ref-yao2024zipformer" role="doc-biblioref">Yao et al. 2024</a>)</span> operates at multiple frame rates simultaneously with block reuse and a reworked normalisation and optimiser, achieving better accuracy at fewer FLOPs — evidence that architecture search in speech was far from exhausted.</p>
+<p><strong>Fast Conformer</strong> <span class="citation" data-cites="rekesh2023fastconformer">(<a href="../../references.html#ref-rekesh2023fastconformer" role="doc-biblioref">Rekesh et al. 2023</a>)</span> is the most practically consequential. It increases convolutional subsampling to an <strong>80 ms frame rate</strong> (8× downsampling, versus Conformer’s 40 ms) using depthwise-separable convolutions in the subsampling stack, giving roughly 2.8× speedup at equal or better accuracy — and, because the sequence is four times shorter, the ability to transcribe hours-long audio in a single pass. It is the encoder in Parakeet, Canary, and much of the current speed frontier.</p>
+</section>
+<section id="sec-specaugment" class="level3" data-number="28.7.2">
+<h3 data-number="28.7.2" class="anchored" data-anchor-id="sec-specaugment"><span class="header-section-number">28.7.2</span> SpecAugment</h3>
+<p><strong>SpecAugment</strong> <span class="citation" data-cites="park2019specaugment">(<a href="../../references.html#ref-park2019specaugment" role="doc-biblioref">Park et al. 2019</a>)</span> augments directly on the log-Mel spectrogram with three operations: time warping, <strong>frequency masking</strong> (zero out <span class="math inline">\(f\)</span> consecutive Mel channels, <span class="math inline">\(f \sim \mathcal{U}(0, F_{\max})\)</span>), and <strong>time masking</strong> (zero out <span class="math inline">\(t\)</span> consecutive frames). No extra audio, no vocoder, no additional forward pass — roughly twenty lines of code.</p>
+<p>It works because it attacks precisely the invariances ASR needs: frequency masking simulates channel and speaker variation and forces the model to use redundant spectral cues rather than latching onto a narrow band; time masking simulates disfluency and packet loss and prevents the model from over-relying on any single frame. In effect it converts an over-parameterised encoder’s tendency to memorise into pressure to generalise, which is why it also permits far longer training schedules without overfitting.</p>
+<p>SpecAugment turned end-to-end ASR from data-hungry into data-efficient and is now on by default in every major toolkit. It has the highest ratio of impact to implementation complexity of anything in this chapter.</p>
+</section>
+<section id="sec-longform" class="level3" data-number="28.7.3">
+<h3 data-number="28.7.3" class="anchored" data-anchor-id="sec-longform"><span class="header-section-number">28.7.3</span> Long-Form and Streaming</h3>
+<p>Self-attention is <span class="math inline">\(O(T^2)\)</span>, and speech at 10 ms frames gives <span class="math inline">\(T = 6000\)</span> for a single minute. Three families of response:</p>
+<ol type="1">
+<li><strong>Reduce <span class="math inline">\(T\)</span>.</strong> Convolutional subsampling to 40 or 80 ms <span class="citation" data-cites="rekesh2023fastconformer">(<a href="../../references.html#ref-rekesh2023fastconformer" role="doc-biblioref">Rekesh et al. 2023</a>)</span>; TDT frame-skipping at decode time <span class="citation" data-cites="xu2023tdt">(<a href="../../references.html#ref-xu2023tdt" role="doc-biblioref">Xu et al. 2023</a>)</span>.</li>
+<li><strong>Restrict attention.</strong> Chunked or block attention with limited left context, with streaming masks applied <em>during training</em> so train and test conditions match. <strong>Cache-aware streaming</strong> <span class="citation" data-cites="noroozi2024cacheaware">(<a href="../../references.html#ref-noroozi2024cacheaware" role="doc-biblioref">Noroozi et al. 2024</a>)</span> maintains per-layer key/value caches so a single model serves multiple latency budgets without retraining; this is the current production technique.</li>
+<li><strong>Trigger or delay.</strong> <strong>Triggered attention</strong> <span class="citation" data-cites="moritz2019triggered">(<a href="../../references.html#ref-moritz2019triggered" role="doc-biblioref">Moritz et al. 2019</a>)</span> uses a CTC head to decide <em>when</em> to fire the attention decoder, converting an offline AED into a streaming model.</li>
+</ol>
+<p><strong>State-space models</strong> are the live alternative. SSMs are formally close to HMMs — a latent state evolving in time — which makes their arrival a satisfying full circle. The useful intuition, due to Gu, is that Transformers behave like a <em>database</em> (fine-grained recall over stored tokens, effective only when the tokens are already at the right level of abstraction) while SSMs behave like a <em>brain</em> (a compressive running state, strong at long range, weak at associative recall) <span class="citation" data-cites="gu2024mamba">(<a href="../../references.html#ref-gu2024mamba" role="doc-biblioref">Gu and Dao 2024</a>)</span>. Raw speech frames are emphatically <em>not</em> at the right level of abstraction — which is the same reason subsampling is mandatory — so speech is a natural SSM domain. They have not yet displaced attention for ASR.</p>
+</section>
+</section>
+<section id="sec-scale" class="level2" data-number="28.8">
+<h2 data-number="28.8" class="anchored" data-anchor-id="sec-scale"><span class="header-section-number">28.8</span> Scale: Weak Supervision and Foundation Models</h2>
+<p>By 2020 the architecture question was largely settled and the binding constraint became data. Two answers emerged, and they are complementary rather than competing.</p>
+<p>The first is <strong>self-supervised pre-training</strong>: learn representations from unlabelled audio, then fine-tune with a small labelled set. wav2vec 2.0 <span class="citation" data-cites="baevski2020wav2vec2">(<a href="../../references.html#ref-baevski2020wav2vec2" role="doc-biblioref">Baevski et al. 2020</a>)</span> reached competitive WER from <em>ten minutes</em> of labelled speech, reframing the economics of ASR for the thousands of languages with no transcribed corpora. HuBERT <span class="citation" data-cites="hsu2021hubert">(<a href="../../references.html#ref-hsu2021hubert" role="doc-biblioref">Hsu et al. 2021</a>)</span>, WavLM <span class="citation" data-cites="chen2022wavlm">(<a href="../../references.html#ref-chen2022wavlm" role="doc-biblioref"><span class="nocase">Chen et al.</span> 2022</a>)</span>, and BEST-RQ <span class="citation" data-cites="chiu2022bestrq">(<a href="../../references.html#ref-chiu2022bestrq" role="doc-biblioref">Chiu et al. 2022</a>)</span> refined the recipe. Because these representations are consumed by every downstream speech task — diarization and speaker verification as much as recognition — they are treated properly in <a href="21-speech-representation-learning.html" class="quarto-xref"><span>Chapter 27</span></a> rather than here.</p>
+<p>The second is <strong>large-scale weak supervision</strong>, and it is Whisper’s thesis.</p>
+<section id="sec-whisper" class="level3" data-number="28.8.1">
+<h3 data-number="28.8.1" class="anchored" data-anchor-id="sec-whisper"><span class="header-section-number">28.8.1</span> Whisper</h3>
+<p><span class="citation" data-cites="radford2023whisper">Radford et al. (<a href="../../references.html#ref-radford2023whisper" role="doc-biblioref">2023</a>)</span> abandoned both the SSL-then-finetune recipe and the tradition of clean curated corpora. Whisper is a plain encoder-decoder Transformer — architecturally a LAS descendant with nothing novel in it — trained on <strong>680,000 hours</strong> of weakly-supervised, noisily-labelled, internet-scraped audio-transcript pairs across 96+ languages.</p>
+<p>The design contribution is the interface. Every task is cast into one multitask token sequence that the decoder must produce:</p>
+<pre><code>&lt;|startoftranscript|&gt; &lt;|en|&gt; &lt;|transcribe|&gt; &lt;|notimestamps|&gt; text… &lt;|endoftext|&gt;</code></pre>
+<p>with <code>&lt;|translate|&gt;</code> selecting X→English speech translation, per-language tags for language identification, <code>&lt;|nospeech|&gt;</code> for voice activity detection, and timestamp tokens for segmentation. Language ID, VAD, timestamps, transcription, and translation collapse into a single decoding problem.</p>
+<p>Three things made it a turning point. It was <strong>zero-shot robust</strong> — competitive with supervised systems on datasets it had never seen, and far more robust under distribution shift, which exposed how badly LibriSpeech-tuned systems had overfit. It demonstrated that <strong>data scale beats data cleanliness</strong>, reversing a field-wide assumption. And the MIT-licensed release made strong multilingual ASR a commodity overnight.</p>
+<p><strong>Whisper’s failure modes are structural, not incidental,</strong> and follow directly from <a href="#tbl-e2e-comparison" class="quarto-xref">Table&nbsp;<span>28.6</span></a>:</p>
+<ul>
+<li><strong>Hallucination on silence and non-speech.</strong> The decoder is a strong language model that can free-run without acoustic grounding, emitting memorised training artifacts on non-speech input. <span class="citation" data-cites="koenecke2024careless">Koenecke et al. (<a href="../../references.html#ref-koenecke2024careless" role="doc-biblioref">2024</a>)</span> shows the harms are not benign: fabricated content includes invented violent and sexual material, and hallucinations fall disproportionately on speakers with aphasia.</li>
+<li><strong>Repetition loops.</strong> Standard degenerate AED decoding, mitigated by temperature fallback and compression-ratio thresholds — all heuristics.</li>
+<li><strong>A hard 30-second receptive field.</strong> Long audio requires sequential chunking with the previous transcript as text conditioning, so errors propagate: a bad timestamp shifts the next window, and a hallucination poisons the next window’s prompt.</li>
+<li><strong>Timestamps are generated tokens, not alignments,</strong> so they are approximate and can be non-monotonic. This is why <strong>WhisperX</strong> <span class="citation" data-cites="bain2023whisperx">(<a href="../../references.html#ref-bain2023whisperx" role="doc-biblioref">Bain et al. 2023</a>)</span> pairs Whisper with a <em>separate phoneme-level CTC model</em> for forced alignment — empirical vindication of <a href="#tbl-e2e-comparison" class="quarto-xref">Table&nbsp;<span>28.6</span></a>: when you need alignment, you reach for CTC.</li>
+</ul>
+<p><strong>The ecosystem.</strong> <em>Distil-Whisper</em> <span class="citation" data-cites="gandhi2023distilwhisper">(<a href="../../references.html#ref-gandhi2023distilwhisper" role="doc-biblioref">Gandhi et al. 2023</a>)</span> distils via large-scale pseudo-labelling with WER-based filtering, keeping the full encoder and shrinking the decoder to two layers: 6× faster, within about 1% WER, and — usefully — <em>less</em> prone to hallucination, because a shallow decoder is a weaker free-running LM. <em>USM</em> <span class="citation" data-cites="zhang2023usm">(<a href="../../references.html#ref-zhang2023usm" role="doc-biblioref"><span class="nocase">Zhang et al.</span> 2023</a>)</span> is the industrial-scale counterpart, BEST-RQ pre-training on 12M hours across 100+ languages. <strong>OWSM</strong> <span class="citation" data-cites="peng2023owsm">(<a href="../../references.html#ref-peng2023owsm" role="doc-biblioref"><span class="nocase">Peng et al.</span> 2023</a>)</span> reproduces Whisper’s recipe in ESPnet using only publicly available licensed data, with full transparency of data, code, and configuration; its scientific value exceeds its citation count, because it makes Whisper’s design choices ablatable in a way a closed 680k-hour corpus never can. <em>Canary</em> <span class="citation" data-cites="puvvada2024canary">(<a href="../../references.html#ref-puvvada2024canary" role="doc-biblioref">Puvvada et al. 2024</a>)</span> argues the opposite of Whisper’s thesis — its title is “Less is More” — reaching better English WER with roughly two orders of magnitude less data through careful balancing and synthetic augmentation.</p>
+</section>
+<section id="sec-llm-asr" class="level3" data-number="28.8.2">
+<h3 data-number="28.8.2" class="anchored" data-anchor-id="sec-llm-asr"><span class="header-section-number">28.8.2</span> LLM Decoders</h3>
+<p>The current frontier grafts a language model onto a speech encoder: a frozen or lightly-tuned encoder, a <strong>modality adapter</strong> (a linear or convolutional projector, often with temporal compression), and an LLM decoder adapted with LoRA, with speech embeddings injected directly into the text token space <span class="citation" data-cites="chen2024salm chu2024qwen2audio">(<a href="../../references.html#ref-chen2024salm" role="doc-biblioref">Chen et al. 2024</a>; <a href="../../references.html#ref-chu2024qwen2audio" role="doc-biblioref">Chu et al. 2024</a>)</span>. Training is typically two-stage: adapter only, then adapter plus LoRA.</p>
+<p><strong>Does it beat classical end-to-end ASR?</strong> The honest 2026 answer is <em>yes on short-form accuracy, decisively no on efficiency, and with a serious measurement caveat.</em></p>
+<ul>
+<li>On short-form English, LLM-decoder systems hold roughly half the top-ten leaderboard slots, but the margin over the best transducer is about 0.4–0.6 WER absolute.</li>
+<li>That margin costs roughly an <strong>8× throughput penalty</strong>.</li>
+<li><strong>On long-form audio the ranking inverts</strong>: the best LLM-decoder system is both less accurate <em>and</em> about 60× slower than the best TDT model. The LLM advantage is a short-form, in-context-window phenomenon.</li>
+<li><strong>Test-set contamination.</strong> <span class="citation" data-cites="tseng2025contamination">Tseng et al. (<a href="../../references.html#ref-tseng2025contamination" role="doc-biblioref">2025</a>)</span> shows LLM backbones have frequently seen the evaluation transcripts as text during pre-training. Since LibriSpeech derives from public-domain Project Gutenberg texts, this is not hypothetical, and some of the measured advantage may be memorisation.</li>
+</ul>
+<p>Where LLM decoders genuinely win is not WER at all. It is <strong>capability</strong>: promptable contextual biasing (pass the hotword list as text), instruction following, joint transcription/translation/question-answering in one model, and error correction that draws on world knowledge.</p>
+</section>
+</section>
+<section id="sec-beyond" class="level2" data-number="28.9">
+<h2 data-number="28.9" class="anchored" data-anchor-id="sec-beyond"><span class="header-section-number">28.9</span> Beyond Transcription</h2>
+<section id="sec-biasing" class="level3" data-number="28.9.1">
+<h3 data-number="28.9.1" class="anchored" data-anchor-id="sec-biasing"><span class="header-section-number">28.9.1</span> Contextual Biasing</h3>
+<p>End-to-end models are poor at rare words — proper nouns, product names, medical terminology, a user’s contact list — precisely because they fused away the lexicon and the separately-updatable LM. <strong>Contextual biasing</strong> injects a list of <span class="math inline">\(N\)</span> bias phrases at inference. Two mechanisms:</p>
+<ul>
+<li><strong>Decoder biasing</strong> modifies scores during search: shallow fusion with a class LM, prefix-tree constrained search, or dynamic vocabulary expansion. It is <em>extrinsic</em>, gives larger gains, and produces more false positives.</li>
+<li><strong>Encoder biasing</strong> modifies the representation itself. <strong>CLAS</strong> <span class="citation" data-cites="pundak2018clas">(<a href="../../references.html#ref-pundak2018clas" role="doc-biblioref">Pundak et al. 2018</a>)</span> embeds the bias phrases and attends over them <em>inside</em> the model, so biasing is learned end-to-end rather than bolted on. It is <em>intrinsic</em>, more conservative, and more robust across datasets.</li>
+</ul>
+<p>Hybrid schemes are now the default <span class="citation" data-cites="le2021trie">(<a href="../../references.html#ref-le2021trie" role="doc-biblioref">Le et al. 2021</a>)</span>. That paper also defines the field’s standard evaluation protocol, which matters as much as its method: report <strong>B-WER</strong> (words in the bias list) and <strong>U-WER</strong> (words not in it) separately, with <span class="math inline">\(N \in \{100, 500, 1000, 2000\}\)</span> distractors.</p>
+<p><strong>Scalability is the open problem.</strong> B-WER degrades steadily as <span class="math inline">\(N\)</span> grows, and attention-over-list methods break down beyond a few thousand entries. Retrieval is the current answer — nearest-neighbour search over embedded catalogue entries scales to hundreds of thousands <span class="citation" data-cites="jayanthi2023retrievecopy">(<a href="../../references.html#ref-jayanthi2023retrievecopy" role="doc-biblioref">Jayanthi et al. 2023</a>)</span> — and retrieval-augmented ASR has the additional benefit that grounding in a retrieved knowledge base measurably reduces hallucination.</p>
+</section>
+<section id="sec-lm-fusion" class="level3" data-number="28.9.2">
+<h3 data-number="28.9.2" class="anchored" data-anchor-id="sec-lm-fusion"><span class="header-section-number">28.9.2</span> External Language Models and Internal LM Estimation</h3>
+<p>An end-to-end model trained on paired data has implicitly learned a text prior <span class="math inline">\(P_{\text{ILM}}(\mathbf{y})\)</span> over its <em>training</em> domain. Naively adding an external LM double-counts it. The mathematically clean corrections are worth teaching because they make the internal-LM concept concrete.</p>
+<p><strong>Shallow fusion</strong> is the baseline, and simply adds a weighted external score:</p>
+<p><span id="eq-shallow-fusion"><span class="math display">\[
+\text{score}(\mathbf{y}) = \log P(\mathbf{y} \mid \mathbf{x}) + \lambda \log P_{\text{LM}}(\mathbf{y})
+\tag{28.14}\]</span></span></p>
+<p><strong>Cold fusion</strong> <span class="citation" data-cites="sriram2018coldfusion">(<a href="../../references.html#ref-sriram2018coldfusion" role="doc-biblioref">Sriram et al. 2018</a>)</span> instead trains the model <em>with</em> a frozen LM in the loop from the start, so it learns to defer to the LM rather than duplicate it, and the LM can be swapped at test time.</p>
+<p><strong>Density ratio</strong> <span class="citation" data-cites="mcdermott2019densityratio">(<a href="../../references.html#ref-mcdermott2019densityratio" role="doc-biblioref">McDermott et al. 2019</a>)</span> is the principled Bayesian correction for domain shift: divide out a source-domain LM before multiplying in the target-domain one,</p>
+<p><span id="eq-density-ratio"><span class="math display">\[
+\text{score}(\mathbf{y}) = \log P(\mathbf{y} \mid \mathbf{x}) + \lambda_t \log P_{\text{tgt}}(\mathbf{y}) - \lambda_s \log P_{\text{src}}(\mathbf{y})
+\tag{28.15}\]</span></span></p>
+<p><strong>Internal LM estimation</strong> <span class="citation" data-cites="meng2021ilme">(<a href="../../references.html#ref-meng2021ilme" role="doc-biblioref">Meng et al. 2021</a>)</span> improves on this by estimating the internal LM <em>directly from the model</em> rather than proxying it with a separately trained source LM — zero out the encoder contribution to the joint network and read off what remains:</p>
+<p><span id="eq-ilme"><span class="math display">\[
+\log P_{\text{ILM}}(\mathbf{y}) \approx \sum_u \log \text{softmax}\big(\text{Joint}(\mathbf{0}, \mathbf{g}_u)\big)_{y_u}
+\tag{28.16}\]</span></span></p>
+<p>HAT <span class="citation" data-cites="variani2020hat">(<a href="../../references.html#ref-variani2020hat" role="doc-biblioref">Variani et al. 2020</a>)</span> makes this exact by construction rather than approximate — the architectural solution to what ILME solves post hoc.</p>
+</section>
+<section id="sec-ger" class="level3" data-number="28.9.3">
+<h3 data-number="28.9.3" class="anchored" data-anchor-id="sec-ger"><span class="header-section-number">28.9.3</span> Generative Error Correction</h3>
+<p>Classical <span class="math inline">\(N\)</span>-best rescoring is bounded by the oracle WER of the candidate list: you can only <em>select</em>. <strong>Generative error correction</strong> hands the whole <span class="math inline">\(N\)</span>-best list to an LLM and asks it to <em>produce</em> a corrected transcript, breaking that bound. <span class="citation" data-cites="chen2023hyporadise">C. Chen et al. (<a href="../../references.html#ref-chen2023hyporadise" role="doc-biblioref">2023</a>)</span> is the benchmark that made this a research area, pairing <span class="math inline">\(N\)</span>-best hypotheses with ground truth across domains.</p>
+</section>
+<section id="sec-st" class="level3" data-number="28.9.4">
+<h3 data-number="28.9.4" class="anchored" data-anchor-id="sec-st"><span class="header-section-number">28.9.4</span> Speech Translation</h3>
+<p>Speech translation asks for a transcript in a <em>different</em> language from the speech. Historically the field debated <strong>cascaded</strong> systems (ASR then machine translation) against <strong>end-to-end</strong> models that translate directly, with the cascade criticised for compounding errors and discarding prosody, and end-to-end models limited by the scarcity of parallel speech-translation data.</p>
+<p>Since 2023 the modelling distinction has largely dissolved: Whisper, Canary, and SeamlessM4T <span class="citation" data-cites="barrault2023seamlessm4t">(<a href="../../references.html#ref-barrault2023seamlessm4t" role="doc-biblioref"><span class="nocase">Barrault et al.</span> 2023</a>)</span> all perform speech-to-text translation by conditioning the same decoder on a task token. Multitask training with ASR supplies the data that direct translation lacks.</p>
+<p>The empirical verdict is worth stating plainly, because it inverts what the founding papers predicted: <strong>cascades currently win.</strong> The 2025 IWSLT simultaneous-translation winner was offline Whisper plus a text LLM run under a streaming policy, beating purpose-built end-to-end systems by a wide margin on every language pair. End-to-end’s defensible advantages today are latency and access to paralinguistic information, not translation quality.</p>
+<p>Evaluation has moved away from BLEU. The field now reports <strong>chrF++</strong> and <strong>COMET</strong>, and increasingly <strong>BLASER 2.0</strong> <span class="citation" data-cites="chen2023blaser barrault2023seamlessm4t">(<a href="../../references.html#ref-chen2023blaser" role="doc-biblioref">M. Chen et al. 2023</a>; <a href="../../references.html#ref-barrault2023seamlessm4t" role="doc-biblioref"><span class="nocase">Barrault et al.</span> 2023</a>)</span>, which scores semantic similarity directly in a multilingual speech-and-text embedding space and therefore needs no reference transcript. For speech-to-speech translation the standard proxy is <strong>ASR-BLEU</strong> — transcribe the output and score the text — with the obvious caveat that it conflates synthesis and translation errors.</p>
+</section>
+</section>
+<section id="sec-asr-opensource" class="level2" data-number="28.10">
+<h2 data-number="28.10" class="anchored" data-anchor-id="sec-asr-opensource"><span class="header-section-number">28.10</span> Open-Source Landscape</h2>
+<div id="tbl-asr-toolkits" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-asr-toolkits-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;28.7: Major open-source ASR toolkits.
+</figcaption>
+<div aria-describedby="tbl-asr-toolkits-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Toolkit</th>
+<th style="text-align: left;">Language</th>
+<th style="text-align: left;">Key Capabilities</th>
+<th style="text-align: left;">Pretrained Models</th>
+<th style="text-align: left;">Repository</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>ESPnet</strong></td>
+<td style="text-align: left;">Python / PyTorch</td>
+<td style="text-align: left;">Hybrid CTC/attention, E-Branchformer, OWSM; the academic reference</td>
+<td style="text-align: left;">Yes (HF)</td>
+<td style="text-align: left;"><a href="https://github.com/espnet/espnet">espnet/espnet</a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>NeMo</strong></td>
+<td style="text-align: left;">Python / PyTorch</td>
+<td style="text-align: left;">Fast Conformer, TDT, Parakeet, Canary; production-oriented</td>
+<td style="text-align: left;">Yes (NGC / HF)</td>
+<td style="text-align: left;"><a href="https://github.com/NVIDIA/NeMo">NVIDIA/NeMo</a></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>k2 / icefall</strong></td>
+<td style="text-align: left;">Python / C++</td>
+<td style="text-align: left;">Differentiable FSTs, Zipformer, lattice-based decoding</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;"><a href="https://github.com/k2-fsa/icefall">k2-fsa/icefall</a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>SpeechBrain</strong></td>
+<td style="text-align: left;">Python / PyTorch</td>
+<td style="text-align: left;">Broad recipes, easy customisation, strong for teaching</td>
+<td style="text-align: left;">Yes (HF)</td>
+<td style="text-align: left;"><a href="https://github.com/speechbrain/speechbrain">speechbrain/speechbrain</a></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>WeNet</strong></td>
+<td style="text-align: left;">Python / C++</td>
+<td style="text-align: left;">Production streaming, U2/U2++ two-pass decoding</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;"><a href="https://github.com/wenet-e2e/wenet">wenet-e2e/wenet</a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Transformers</strong></td>
+<td style="text-align: left;">Python / PyTorch</td>
+<td style="text-align: left;">Whisper, wav2vec 2.0, Parakeet inference and fine-tuning</td>
+<td style="text-align: left;">Yes (HF)</td>
+<td style="text-align: left;"><a href="https://github.com/huggingface/transformers">huggingface/transformers</a></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>faster-whisper</strong></td>
+<td style="text-align: left;">Python / C++</td>
+<td style="text-align: left;">CTranslate2-backed Whisper, 4× faster inference</td>
+<td style="text-align: left;">Uses Whisper</td>
+<td style="text-align: left;"><a href="https://github.com/SYSTRAN/faster-whisper">SYSTRAN/faster-whisper</a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>WhisperX</strong></td>
+<td style="text-align: left;">Python</td>
+<td style="text-align: left;">VAD chunking + CTC forced alignment for word timestamps</td>
+<td style="text-align: left;">Uses Whisper</td>
+<td style="text-align: left;"><a href="https://github.com/m-bain/whisperX">m-bain/whisperX</a></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Kaldi</strong></td>
+<td style="text-align: left;">C++ / Bash</td>
+<td style="text-align: left;">The classical WFST pipeline; historical reference</td>
+<td style="text-align: left;">Recipe-based</td>
+<td style="text-align: left;"><a href="https://github.com/kaldi-asr/kaldi">kaldi-asr/kaldi</a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>jiwer</strong></td>
+<td style="text-align: left;">Python</td>
+<td style="text-align: left;">WER / CER computation with normalisation</td>
+<td style="text-align: left;">N/A</td>
+<td style="text-align: left;"><a href="https://github.com/jitsi/jiwer">jitsi/jiwer</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Inference with a modern system is a few lines:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> pipeline</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>asr <span class="op">=</span> pipeline(</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"automatic-speech-recognition"</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span><span class="st">"openai/whisper-large-v3"</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    chunk_length_s<span class="op">=</span><span class="dv">30</span>,          <span class="co"># required: 30 s receptive field</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    return_timestamps<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(asr(<span class="st">"meeting.wav"</span>)[<span class="st">"text"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># NeMo Parakeet: TDT decoder, ~an order of magnitude faster</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> nemo.collections.asr <span class="im">as</span> nemo_asr</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> nemo_asr.models.ASRModel.from_pretrained(<span class="st">"nvidia/parakeet-tdt-0.6b-v2"</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(model.transcribe([<span class="st">"meeting.wav"</span>], timestamps<span class="op">=</span><span class="va">True</span>)[<span class="dv">0</span>].text)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="sec-asr-eval" class="level2" data-number="28.11">
+<h2 data-number="28.11" class="anchored" data-anchor-id="sec-asr-eval"><span class="header-section-number">28.11</span> Evaluation</h2>
+<section id="sec-wer" class="level3" data-number="28.11.1">
+<h3 data-number="28.11.1" class="anchored" data-anchor-id="sec-wer"><span class="header-section-number">28.11.1</span> Word Error Rate</h3>
+<p>WER is the edit distance between hypothesis and reference under the optimal Levenshtein alignment, normalised by reference length:</p>
+<p><span id="eq-wer"><span class="math display">\[
+\text{WER} = \frac{S + D + I}{N_{\text{ref}}}
+\tag{28.17}\]</span></span></p>
+<p>with <span class="math inline">\(S\)</span>, <span class="math inline">\(D\)</span>, <span class="math inline">\(I\)</span> the substitution, deletion, and insertion counts. Note that WER is unbounded above: a hypothesis longer than the reference can exceed 100%. <strong>CER</strong> is the same quantity over characters, and is the standard for Mandarin, Japanese, and Thai, where orthographic word boundaries do not exist.</p>
+<p><strong>WER is not semantic, and the ordering it induces can be badly wrong.</strong> The following example, from the Interspeech 2025 tutorial on long-context ASR <span class="citation" data-cites="park2025beyond">(<a href="../../references.html#ref-park2025beyond" role="doc-biblioref">Park et al. 2025</a>)</span>, is the clearest demonstration. Take as reference:</p>
+<blockquote class="blockquote">
+<p><em>“Shinji Watanabe is an Associate Professor at Carnegie Mellon University, Pittsburgh, PA.”</em></p>
+</blockquote>
+<div id="tbl-wer-failure" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-wer-failure-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;28.8: WER’s failure to track semantic quality.
+</figcaption>
+<div aria-describedby="tbl-wer-failure-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 34%">
+<col style="width: 14%">
+<col style="width: 51%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Hypothesis</th>
+<th style="text-align: right;">WER</th>
+<th style="text-align: left;">Semantic quality</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">“<strong>Cindy</strong> Watanabe is an Associate Professor at Carnegie Mellon University, Pittsburgh, PA”</td>
+<td style="text-align: right;"><strong>17%</strong></td>
+<td style="text-align: left;">The person’s name is wrong — the single most important token failed</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">“…at the University of Pittsburgh, next to Carnegie Mellon, PA”</td>
+<td style="text-align: right;">58%</td>
+<td style="text-align: left;">Name right, affiliation wrong</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">“At Carnegie Mellon University in Pittsburgh, PA, Shinji Watanabe is an Associate Professor”</td>
+<td style="text-align: right;"><strong>108%</strong></td>
+<td style="text-align: left;"><strong>Semantically perfect</strong>, merely reordered</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Two lessons follow. WER should be <strong>weighted toward important tokens</strong> — hence B-WER and entity-level error rates — and it should not be <strong>order-sensitive</strong> for tasks where order is free.</p>
+</section>
+<section id="sec-normalisation" class="level3" data-number="28.11.2">
+<h3 data-number="28.11.2" class="anchored" data-anchor-id="sec-normalisation"><span class="header-section-number">28.11.2</span> Text Normalisation</h3>
+<p>WER depends heavily on how references and hypotheses are normalised before alignment: numbers (“twenty thirty” versus “2030”), contractions, spelling variants, filler words, punctuation, casing. Whisper shipped an aggressive English normaliser <em>and</em> used it to compute its own reported numbers, which critics argued flattered it relative to systems scored under stricter conventions — normalisation was doing part of the work attributed to the model.</p>
+<p>The modern response is the right one and should be stated as methodology: <strong>apply one normaliser uniformly to every system’s output.</strong> Normalisation becomes a property of the benchmark rather than of the model. Punctuation and casing, meanwhile, are usually not scored at all, despite being exactly what downstream consumers — subtitles, clinical notes, LLM inputs — actually need.</p>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Never compare WER figures across papers without checking the normalisation and the scoring tool. Differences of 1–2 points absolute can be produced by normalisation choices alone, which is larger than the gap between many “state-of-the-art” claims.</p>
+</div>
+</div>
+</section>
+<section id="sec-rtfx" class="level3" data-number="28.11.3">
+<h3 data-number="28.11.3" class="anchored" data-anchor-id="sec-rtfx"><span class="header-section-number">28.11.3</span> Speed, and Why It Must Be Co-Reported</h3>
+<p><strong>RTFx</strong> is audio duration divided by processing time — how many seconds of audio a system transcribes per second of compute, at a stated batch size and hardware. Reporting WER alone hides differences of one to two orders of magnitude in throughput, and therefore hides most of what determines whether a system is deployable. A model at 5.6% WER and 420 RTFx and a model at 6.1% WER and 3400 RTFx are not competing on the same axis.</p>
+</section>
+<section id="sec-cpwer-asr" class="level3" data-number="28.11.4">
+<h3 data-number="28.11.4" class="anchored" data-anchor-id="sec-cpwer-asr"><span class="header-section-number">28.11.4</span> Multi-Speaker Metrics</h3>
+<p>When several speakers overlap, plain WER is ill-defined. The standard metric is <strong>concatenated minimum-permutation WER</strong> (cpWER), introduced with CHiME-6 <span class="citation" data-cites="watanabe2020chime6">(<a href="../../references.html#ref-watanabe2020chime6" role="doc-biblioref"><span class="nocase">Watanabe et al.</span> 2020</a>)</span>: concatenate each speaker’s utterances in reference and hypothesis, compute WER under every speaker permutation, and report the minimum. It charges for both recognition and speaker-attribution errors. <strong>tcpWER</strong> adds a timing constraint so that a correct word at the wrong time is not free. Both are treated in detail in <a href="23-speaker-diarization.html#sec-cpwer" class="quarto-xref"><span>Section 29.4.6</span></a>.</p>
+</section>
+<section id="sec-asr-datasets" class="level3" data-number="28.11.5">
+<h3 data-number="28.11.5" class="anchored" data-anchor-id="sec-asr-datasets"><span class="header-section-number">28.11.5</span> Datasets</h3>
+<div id="tbl-asr-datasets" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-asr-datasets-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;28.9: Standard ASR datasets.
+</figcaption>
+<div aria-describedby="tbl-asr-datasets-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 22%">
+<col style="width: 19%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Dataset</th>
+<th style="text-align: left;">Domain</th>
+<th style="text-align: right;">Hours</th>
+<th style="text-align: left;">Role today</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>LibriSpeech</strong> <span class="citation" data-cites="panayotov2015librispeech">(<a href="../../references.html#ref-panayotov2015librispeech" role="doc-biblioref">Panayotov et al. 2015</a>)</span></td>
+<td style="text-align: left;">Read audiobooks</td>
+<td style="text-align: right;">1k</td>
+<td style="text-align: left;">Saturated (~1.5–2% WER); a sanity check, not a discriminator</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Common Voice</strong> <span class="citation" data-cites="ardila2020commonvoice">(<a href="../../references.html#ref-ardila2020commonvoice" role="doc-biblioref">Ardila et al. 2020</a>)</span></td>
+<td style="text-align: left;">Crowdsourced read speech</td>
+<td style="text-align: right;">30k+</td>
+<td style="text-align: left;">Multilingual, accent metadata</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>GigaSpeech</strong> <span class="citation" data-cites="chen2021gigaspeech">(<a href="../../references.html#ref-chen2021gigaspeech" role="doc-biblioref"><span class="nocase">Chen et al.</span> 2021</a>)</span></td>
+<td style="text-align: left;">Audiobook / podcast / YouTube</td>
+<td style="text-align: right;">10k</td>
+<td style="text-align: left;">Multi-domain supervised training</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>MLS</strong> <span class="citation" data-cites="pratap2020mls">(<a href="../../references.html#ref-pratap2020mls" role="doc-biblioref">Pratap et al. 2020</a>)</span></td>
+<td style="text-align: left;">Multilingual audiobooks</td>
+<td style="text-align: right;">50k</td>
+<td style="text-align: left;">8 languages</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>FLEURS</strong> <span class="citation" data-cites="conneau2023fleurs">(<a href="../../references.html#ref-conneau2023fleurs" role="doc-biblioref">Conneau et al. 2023</a>)</span></td>
+<td style="text-align: left;">Read, <span class="math inline">\(n\)</span>-way parallel</td>
+<td style="text-align: right;">~1.4k</td>
+<td style="text-align: left;">The multilingual evaluation standard (102 languages)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>VoxPopuli</strong></td>
+<td style="text-align: left;">European Parliament</td>
+<td style="text-align: right;">400k unlab.</td>
+<td style="text-align: left;">Multilingual pre-training</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>TED-LIUM 3</strong> <span class="citation" data-cites="hernandez2018tedlium3">(<a href="../../references.html#ref-hernandez2018tedlium3" role="doc-biblioref">Hernandez et al. 2018</a>)</span></td>
+<td style="text-align: left;">Oratory</td>
+<td style="text-align: right;">452</td>
+<td style="text-align: left;">Long-form; non-commercial licence limits contamination</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>SPGISpeech</strong> <span class="citation" data-cites="oneill2021spgispeech">(<a href="../../references.html#ref-oneill2021spgispeech" role="doc-biblioref">O’Neill et al. 2021</a>)</span></td>
+<td style="text-align: left;">Financial calls</td>
+<td style="text-align: right;">5k</td>
+<td style="text-align: left;"><strong>Fully formatted</strong> — punctuation and casing</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Libriheavy</strong> <span class="citation" data-cites="kang2024libriheavy">(<a href="../../references.html#ref-kang2024libriheavy" role="doc-biblioref">Kang et al. 2024</a>)</span></td>
+<td style="text-align: left;">Audiobooks</td>
+<td style="text-align: right;">50k</td>
+<td style="text-align: left;">Punctuation, casing, <em>and</em> preceding-text context</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Earnings-21/22</strong> <span class="citation" data-cites="delrio2021earnings21">(<a href="../../references.html#ref-delrio2021earnings21" role="doc-biblioref">Rio et al. 2021</a>)</span></td>
+<td style="text-align: left;">Earnings calls</td>
+<td style="text-align: right;">~160</td>
+<td style="text-align: left;">Long-form; -22 targets accents in the wild</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>AMI</strong> <span class="citation" data-cites="carletta2005ami">(<a href="../../references.html#ref-carletta2005ami" role="doc-biblioref"><span class="nocase">Carletta et al.</span> 2005</a>)</span></td>
+<td style="text-align: left;">Meetings, distant mic</td>
+<td style="text-align: right;">~100</td>
+<td style="text-align: left;">Multi-speaker, overlapping</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>CHiME-6</strong> <span class="citation" data-cites="watanabe2020chime6">(<a href="../../references.html#ref-watanabe2020chime6" role="doc-biblioref"><span class="nocase">Watanabe et al.</span> 2020</a>)</span></td>
+<td style="text-align: left;">Dinner parties, far-field</td>
+<td style="text-align: right;">~50</td>
+<td style="text-align: left;">The hardest standard benchmark</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>CORAAL</strong> <span class="citation" data-cites="kendall2023coraal">(<a href="../../references.html#ref-kendall2023coraal" role="doc-biblioref">Kendall and Farrington 2023</a>)</span></td>
+<td style="text-align: left;">African American English</td>
+<td style="text-align: right;">~130</td>
+<td style="text-align: left;">Fairness evaluation</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Libri-Light</strong> <span class="citation" data-cites="kahn2020librilight">(<a href="../../references.html#ref-kahn2020librilight" role="doc-biblioref">Kahn et al. 2020</a>)</span></td>
+<td style="text-align: left;">Unlabelled audiobooks</td>
+<td style="text-align: right;">60k</td>
+<td style="text-align: left;">Self-supervised pre-training; limited-supervision splits</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p><strong>Why LibriSpeech is saturated</strong> is worth spelling out, because the reasoning generalises to other benchmarks in this book. First, WER on <code>test-clean</code> is at or below annotation noise, so differences are not meaningfully resolvable. Second, it is <em>read</em> audiobook speech — no disfluencies, no overlap, no spontaneity, pre-segmented into short utterances. Third, its source text is public-domain Project Gutenberg, making it maximally exposed to LLM pre-training contamination <span class="citation" data-cites="tseng2025contamination">(<a href="../../references.html#ref-tseng2025contamination" role="doc-biblioref">Tseng et al. 2025</a>)</span>. Fourth, and most damning, it measurably fails to predict robustness: Whisper’s central result was that LibriSpeech-tuned systems degraded far more under distribution shift than their in-domain numbers suggested.</p>
+</section>
+<section id="sec-leaderboard" class="level3" data-number="28.11.6">
+<h3 data-number="28.11.6" class="anchored" data-anchor-id="sec-leaderboard"><span class="header-section-number">28.11.6</span> The Open ASR Leaderboard</h3>
+<p>The community’s current evaluation standard is the <strong>Open ASR Leaderboard</strong> <span class="citation" data-cites="srivastav2025openasr">(<a href="../../references.html#ref-srivastav2025openasr" role="doc-biblioref">Srivastav et al. 2025</a>)</span>, which scores open and commercial systems on a common harness across three tracks — short-form English, multilingual, and long-form English — reporting <strong>both WER and RTFx</strong> on fixed hardware, with contributions made by pull request against verified scripts.</p>
+<p>Its three design principles are the headline: <strong>there is no catch-all model, no sufficient single dataset, and no sufficient single metric.</strong> Three findings are worth carrying into any ASR project:</p>
+<ol type="1">
+<li><strong>Conformer encoder plus Transformer or LLM decoder wins accuracy; CTC and TDT win speed.</strong> The best transducer sits around tenth on WER while running roughly 8× faster than anything above it.</li>
+<li><strong>Conformer encoders are roughly 3.8× faster than Whisper encoders</strong> at matched decoder type, which explains the industrial migration away from Whisper encoders despite Whisper’s language coverage.</li>
+<li><strong>The multilingual-coverage tax is real and measurable.</strong> Extending the same architecture from 1 to 25 languages costs a few tenths of a point of English WER, and models covering 1000+ languages sit far down the English table.</li>
+</ol>
+</section>
+<section id="sec-asr-failures" class="level3" data-number="28.11.7">
+<h3 data-number="28.11.7" class="anchored" data-anchor-id="sec-asr-failures"><span class="header-section-number">28.11.7</span> Failure Modes</h3>
+<div id="tbl-asr-failures" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-asr-failures-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;28.10: Common ASR failure modes.
+</figcaption>
+<div aria-describedby="tbl-asr-failures-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 51%">
+<col style="width: 48%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Failure mode</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Accent and dialect bias</strong></td>
+<td style="text-align: left;"><span class="citation" data-cites="koenecke2020racial">Koenecke et al. (<a href="../../references.html#ref-koenecke2020racial" role="doc-biblioref">2020</a>)</span> audited five commercial systems on matched interview speech and found average WER of 0.35 for Black speakers against 0.19 for white speakers — roughly double, across <em>every</em> vendor, attributable primarily to training-data composition. It remains the field’s most important fairness result.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Hallucination</strong></td>
+<td style="text-align: left;">Structural to AED and LLM decoders (<a href="#sec-whisper" class="quarto-xref"><span>Section 28.8.1</span></a>); unevenly distributed across speaker populations <span class="citation" data-cites="koenecke2024careless">(<a href="../../references.html#ref-koenecke2024careless" role="doc-biblioref">Koenecke et al. 2024</a>)</span>.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Long-form degradation</strong></td>
+<td style="text-align: left;">Long-form WER runs roughly 1.5–2× the short-form figure for the same models.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Far-field and overlap</strong></td>
+<td style="text-align: left;">LibriSpeech sits near 2% while CHiME-6 remains in the 30–60% range — the field’s clearest open wound.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Rare words and entities</strong></td>
+<td style="text-align: left;">Motivates the whole biasing agenda (<a href="#sec-biasing" class="quarto-xref"><span>Section 28.9.1</span></a>); B-WER degrades as bias lists grow.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Code-switching</strong></td>
+<td style="text-align: left;">Within-utterance language mixing defeats language-ID-conditioned decoders, since Whisper’s per-language prompt token forces a single choice for the whole segment.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Atypical speech</strong></td>
+<td style="text-align: left;">Children, elderly, and disordered speech are acoustically distinct and severely under-represented in training data.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</section>
+</section>
+<section id="sec-asr-open" class="level2" data-number="28.12">
+<h2 data-number="28.12" class="anchored" data-anchor-id="sec-asr-open"><span class="header-section-number">28.12</span> Open Problems</h2>
+<ol type="1">
+<li><strong>Long-form and conversational ASR.</strong> The headline gap: LibriSpeech ~2%, long-form English 7–13%, far-field multi-talker 30–60%. No current architecture is natively long-form; the best long-form systems win by being fast enough to brute-force the problem, not by modelling context better.</li>
+<li><strong>The accuracy–efficiency–coverage trilemma.</strong> LLM decoders buy a few tenths of a point of WER for an 8× throughput penalty and lose outright on long-form; multilingual coverage costs measurable English accuracy. The Pareto front is real and wide, and no architecture dominates.</li>
+<li><strong>Evaluation validity.</strong> Test-set contamination in LLM backbones may invalidate a portion of recent results <span class="citation" data-cites="tseng2025contamination">(<a href="../../references.html#ref-tseng2025contamination" role="doc-biblioref">Tseng et al. 2025</a>)</span>. Private evaluation sets and non-commercially-licensed test data are partial remedies. This is a measurement crisis and should be treated as one.</li>
+<li><strong>Getting past WER.</strong> WER penalises semantically-correct paraphrase and under-penalises a wrong proper noun (<a href="#tbl-wer-failure" class="quarto-xref">Table&nbsp;<span>28.8</span></a>). Candidate replacements — B-WER, entity error rate, embedding-based scores, LLM-as-judge — each have their own failure modes. The deeper question is whether ASR should be optimised for transcript fidelity at all, or for downstream task utility: <em>does a lower WER produce a better clinical note?</em></li>
+<li><strong>Fairness that generalises.</strong> The disparities <span class="citation" data-cites="koenecke2020racial">Koenecke et al. (<a href="../../references.html#ref-koenecke2020racial" role="doc-biblioref">2020</a>)</span> measured persist, now compounded by hallucination that is itself demographically skewed. The mechanism — training-data composition — is understood but unfixed.</li>
+<li><strong>Contextual biasing at scale.</strong> B-WER degrades as bias lists grow; retrieval-based approaches reach <span class="math inline">\(10^5\)</span> entries but are immature. Whether to retrieve or simply extend the context window is unresolved.</li>
+<li><strong>Multi-speaker, speaker-attributed, and streaming, jointly.</strong> Each is solved in isolation. Together they require separate acoustic and speaker caches, permutation resolution across chunks, and speaker state persisted across minutes of silence (<a href="23-speaker-diarization.html#sec-joint-asr" class="quarto-xref"><span>Section 29.7</span></a>).</li>
+<li><strong>Alignment as a first-class output.</strong> The accuracy-leading architecture is the worst at timestamps, forcing bolt-on CTC aligners. TDT’s native durations are the one principled fix and remain under-explored.</li>
+<li><strong>Hallucination with guarantees.</strong> Every current mitigation is heuristic. No architecture offers a <em>guarantee</em> that output is acoustically grounded — though CTC and RNN-T’s blank symbol come closest, which is an argument for not abandoning them.</li>
+<li><strong>Truly low-resource ASR.</strong> Self-supervision promised usable ASR from minutes of labels, and multilingual models now claim 1000+ languages, but quality at the tail is poor and evaluation data barely exists.</li>
+</ol>
+</section>
+<section id="summary" class="level2" data-number="28.13">
+<h2 data-number="28.13" class="anchored" data-anchor-id="summary"><span class="header-section-number">28.13</span> Summary</h2>
+<p>ASR is the load-bearing task of speech processing, and its history is a single argument about alignment. The classical noisy-channel pipeline (<a href="#eq-noisy-channel" class="quarto-xref">Equation&nbsp;<span>28.3</span></a>) handled alignment with HMMs and paid for it with five separately-trained components, a hand-built lexicon, and a bootstrapping loop that made a new language a multi-person-year project. The hybrid era replaced one box in that pipeline with a DNN and won 20–30% relative, but changed nothing structural.</p>
+<p>The end-to-end era removed the lexicon and the alignment loop altogether, and split into three families that remain the field’s basic vocabulary: <strong>CTC</strong> marginalises over monotonic alignments under a conditional-independence assumption, <strong>RNN-T</strong> repairs that assumption with a prediction network and became the streaming default, and <strong>attention encoder-decoders</strong> learn the alignment freely, buying accuracy at the cost of hallucination and poor timestamps. Conformer settled the encoder question by combining convolution and self-attention; SpecAugment made training data-efficient; Whisper showed that 680k hours of noisy web audio buys robustness that no amount of clean-corpus tuning does.</p>
+<p>Two things follow that are easy to miss. First, <strong>end-to-end models fused away the modularity of <a href="#eq-noisy-channel" class="quarto-xref">Equation&nbsp;<span>28.3</span></a>, and the field has spent years rebuilding it</strong> — LM fusion, internal-LM estimation, contextual biasing, retrieval, and now LLM decoders are all attempts to recover separately-updatable knowledge that the classical system had for free. Second, <strong>evaluation has not kept pace</strong>: WER is saturated on the benchmarks everyone reports, insensitive to the errors that matter most, and vulnerable to normalisation choices and now to pre-training contamination.</p>
+<p>For the practitioner, the choice is mostly a point on the accuracy–speed–coverage surface. Parakeet-style Fast Conformer with a TDT decoder is the throughput choice; Whisper and its derivatives are the multilingual and zero-shot choice; LLM-decoder systems are the choice when promptability and instruction-following matter more than latency. For streaming, RNN-T remains unbeaten after fourteen years.</p>
+<p>The next chapter takes up the other answer to the data problem — learning speech representations without labels at all — which underpins not only low-resource ASR but the speaker, prosodic, and semantic representations used throughout the rest of this book.</p>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-amodei2016deepspeech2" class="csl-entry" role="listitem">
+<span class="nocase">Amodei, Dario, Sundaram Ananthanarayanan, Rishita Anubhai, et al.</span> 2016. <span>“Deep Speech 2: End-to-End Speech Recognition in English and Mandarin.”</span> <em>International Conference on Machine Learning (ICML)</em>, 173–82.
+</div>
+<div id="ref-ardila2020commonvoice" class="csl-entry" role="listitem">
+Ardila, Rosana, Megan Branson, Kelly Davis, et al. 2020. <span>“Common Voice: A Massively-Multilingual Speech Corpus.”</span> <em>Language Resources and Evaluation Conference (LREC)</em>, 4218–22.
+</div>
+<div id="ref-baevski2020wav2vec2" class="csl-entry" role="listitem">
+Baevski, Alexei, Yuhao Zhou, Abdelrahman Mohamed, and Michael Auli. 2020. <span>“Wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations.”</span> <em>Advances in Neural Information Processing Systems (NeurIPS)</em> 33: 12449–60.
+</div>
+<div id="ref-bain2023whisperx" class="csl-entry" role="listitem">
+Bain, Max, Jaesung Huh, Tengda Han, and Andrew Zisserman. 2023. <span>“<span>WhisperX</span>: Time-Accurate Speech Transcription of Long-Form Audio.”</span> <em>Interspeech</em>.
+</div>
+<div id="ref-barrault2023seamlessm4t" class="csl-entry" role="listitem">
+<span class="nocase">Barrault, Loïc, Yu-An Chung, Mariano Coria Meglioli, et al.</span> 2023. <span>“<span>SeamlessM4T</span>: Massively Multilingual and Multimodal Machine Translation.”</span> <em>arXiv Preprint arXiv:2308.11596</em>.
+</div>
+<div id="ref-carletta2005ami" class="csl-entry" role="listitem">
+<span class="nocase">Carletta, Jean, Simone Ashby, Sebastien Bourban, et al.</span> 2005. <span>“The AMI Meeting Corpus: A Pre-Announcement.”</span> <em>Proceedings of the 2nd Joint Workshop on Multimodal Interaction and Related Machine Learning Algorithms (MLMI)</em>, 28–39.
+</div>
+<div id="ref-chan2016las" class="csl-entry" role="listitem">
+Chan, William, Navdeep Jaitly, Quoc V. Le, and Oriol Vinyals. 2016. <span>“Listen, Attend and Spell: A Neural Network for Large Vocabulary Conversational Speech Recognition.”</span> <em>IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)</em>, 4960–64.
+</div>
+<div id="ref-chen2023hyporadise" class="csl-entry" role="listitem">
+Chen, Chen, Yuchen Hu, Chao-Han Huck Yang, Sabato Marco Siniscalchi, Pin-Yu Chen, and Eng Siong Chng. 2023. <span>“<span>HyPoradise</span>: An Open Baseline for Generative Speech Recognition with Large Language Models.”</span> <em>Advances in Neural Information Processing Systems (NeurIPS) Datasets and Benchmarks</em>.
+</div>
+<div id="ref-chen2021gigaspeech" class="csl-entry" role="listitem">
+<span class="nocase">Chen, Guoguo, Shuzhou Chai, Guanbo Wang, et al.</span> 2021. <span>“<span>GigaSpeech</span>: An Evolving, Multi-Domain <span>ASR</span> Corpus with 10,000 Hours of Transcribed Audio.”</span> <em>Interspeech</em>.
+</div>
+<div id="ref-chen2023blaser" class="csl-entry" role="listitem">
+Chen, Mingda, Paul-Ambroise Duquenne, Pierre Andrews, et al. 2023. <span>“<span>BLASER</span>: A Text-Free Speech-to-Speech Translation Evaluation Metric.”</span> <em>Annual Meeting of the Association for Computational Linguistics (ACL)</em>.
+</div>
+<div id="ref-chen2022wavlm" class="csl-entry" role="listitem">
+<span class="nocase">Chen, Sanyuan, Chengyi Wang, Zhengyang Chen, et al.</span> 2022. <span>“WavLM: Large-Scale Self-Supervised Pre-Training for Full Stack Speech Processing.”</span> <em>IEEE Journal of Selected Topics in Signal Processing</em> 16 (6): 1505–18.
+</div>
+<div id="ref-chen2024salm" class="csl-entry" role="listitem">
+Chen, Zhehuai, He Huang, Andrei Andrusenko, et al. 2024. <span>“<span>SALM</span>: Speech-Augmented Language Model with in-Context Learning for Speech Recognition and Translation.”</span> <em>IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)</em>.
+</div>
+<div id="ref-chiu2022bestrq" class="csl-entry" role="listitem">
+Chiu, Chung-Cheng, James Qin, Yu Zhang, Jiahui Yu, and Yonghui Wu. 2022. <span>“Self-Supervised Learning with Random-Projection Quantizer for Speech Recognition.”</span> <em>International Conference on Machine Learning (ICML)</em>.
+</div>
+<div id="ref-chu2024qwen2audio" class="csl-entry" role="listitem">
+Chu, Yunfei, Jin Xu, Qian Yang, et al. 2024. <span>“<span>Qwen2-Audio</span> Technical Report.”</span> <em>arXiv Preprint arXiv:2407.10759</em>.
+</div>
+<div id="ref-conneau2023fleurs" class="csl-entry" role="listitem">
+Conneau, Alexis, Min Ma, Simran Khanuja, et al. 2023. <span>“<span>FLEURS</span>: Few-Shot Learning Evaluation of Universal Representations of Speech.”</span> <em>IEEE Spoken Language Technology Workshop (SLT)</em>.
+</div>
+<div id="ref-dahl2012cddnnhmm" class="csl-entry" role="listitem">
+Dahl, George E., Dong Yu, Li Deng, and Alex Acero. 2012. <span>“Context-Dependent Pre-Trained Deep Neural Networks for Large-Vocabulary Speech Recognition.”</span> <em>IEEE Transactions on Audio, Speech, and Language Processing</em> 20 (1): 30–42.
+</div>
+<div id="ref-davis1980mfcc" class="csl-entry" role="listitem">
+Davis, Steven B., and Paul Mermelstein. 1980. <span>“Comparison of Parametric Representations for Monosyllabic Word Recognition in Continuously Spoken Sentences.”</span> <em>IEEE Transactions on Acoustics, Speech, and Signal Processing</em> 28 (4): 357–66.
+</div>
+<div id="ref-dong2018speechtransformer" class="csl-entry" role="listitem">
+Dong, Linhao, Shuang Xu, and Bo Xu. 2018. <span>“Speech-Transformer: A No-Recurrence Sequence-to-Sequence Model for Speech Recognition.”</span> <em>IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)</em>, 5884–88.
+</div>
+<div id="ref-gandhi2023distilwhisper" class="csl-entry" role="listitem">
+Gandhi, Sanchit, Patrick von Platen, and Alexander M. Rush. 2023. <span>“Distil-Whisper: Robust Knowledge Distillation via Large-Scale Pseudo Labelling.”</span> <em>arXiv Preprint arXiv:2311.00430</em>.
+</div>
+<div id="ref-graves2012rnnt" class="csl-entry" role="listitem">
+Graves, Alex. 2012. <span>“Sequence Transduction with Recurrent Neural Networks.”</span> <em>arXiv Preprint arXiv:1211.3711</em>.
+</div>
+<div id="ref-graves2006ctc" class="csl-entry" role="listitem">
+Graves, Alex, Santiago Fernández, Faustino Gomez, and Jürgen Schmidhuber. 2006. <span>“Connectionist Temporal Classification: Labelling Unsegmented Sequence Data with Recurrent Neural Networks.”</span> <em>International Conference on Machine Learning (ICML)</em>, 369–76.
+</div>
+<div id="ref-gu2024mamba" class="csl-entry" role="listitem">
+Gu, Albert, and Tri Dao. 2024. <span>“Mamba: Linear-Time Sequence Modeling with Selective State Spaces.”</span> <em>Conference on Language Modeling (COLM)</em>.
+</div>
+<div id="ref-gulati2020conformer" class="csl-entry" role="listitem">
+Gulati, Anmol, James Qin, Chung-Cheng Chiu, et al. 2020. <span>“Conformer: Convolution-Augmented Transformer for Speech Recognition.”</span> <em>Interspeech</em>, 5036–40.
+</div>
+<div id="ref-hannun2014deepspeech" class="csl-entry" role="listitem">
+Hannun, Awni, Carl Case, Jared Casper, et al. 2014. <span>“Deep Speech: Scaling up End-to-End Speech Recognition.”</span> <em>arXiv Preprint arXiv:1412.5567</em>.
+</div>
+<div id="ref-he2019streaming" class="csl-entry" role="listitem">
+<span class="nocase">He, Yanzhang, Tara N. Sainath, Rohit Prabhavalkar, et al.</span> 2019. <span>“Streaming End-to-End Speech Recognition for Mobile Devices.”</span> <em>IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)</em>, 6381–85.
+</div>
+<div id="ref-hernandez2018tedlium3" class="csl-entry" role="listitem">
+Hernandez, François, Vincent Nguyen, Sahar Ghannay, Natalia Tomashenko, and Yannick Estève. 2018. <span>“<span>TED-LIUM</span> 3: Twice as Much Data and Corpus Repartition for Experiments on Speaker Adaptation.”</span> <em>International Conference on Speech and Computer (SPECOM)</em>.
+</div>
+<div id="ref-hinton2012dnn" class="csl-entry" role="listitem">
+Hinton, Geoffrey, Li Deng, Dong Yu, et al. 2012. <span>“Deep Neural Networks for Acoustic Modeling in Speech Recognition: The Shared Views of Four Research Groups.”</span> <em>IEEE Signal Processing Magazine</em> 29 (6): 82–97.
+</div>
+<div id="ref-hsu2021hubert" class="csl-entry" role="listitem">
+Hsu, Wei-Ning, Benjamin Bolte, Yao-Hung Hubert Tsai, Kushal Lakhotia, Ruslan Salakhutdinov, and Abdelrahman Mohamed. 2021. <span>“HuBERT: Self-Supervised Speech Representation Learning by Masked Prediction of Hidden Units.”</span> <em>IEEE/ACM Transactions on Audio, Speech, and Language Processing</em> 29: 3451–60.
+</div>
+<div id="ref-jayanthi2023retrievecopy" class="csl-entry" role="listitem">
+Jayanthi, Sai Muralidhar, Devang Kulshreshtha, Saket Dingliwal, Srikanth Ronanki, and Sravan Bodapati. 2023. <span>“Retrieve and Copy: Scaling <span>ASR</span> Personalization to Large Catalogs.”</span> <em>Conference on Empirical Methods in Natural Language Processing (EMNLP)</em>.
+</div>
+<div id="ref-jelinek1976continuous" class="csl-entry" role="listitem">
+Jelinek, Frederick. 1976. <span>“Continuous Speech Recognition by Statistical Methods.”</span> <em>Proceedings of the IEEE</em> 64 (4): 532–56.
+</div>
+<div id="ref-kahn2020librilight" class="csl-entry" role="listitem">
+Kahn, Jacob, Morgane Rivière, Weiyi Zheng, et al. 2020. <span>“Libri-Light: A Benchmark for <span>ASR</span> with Limited or No Supervision.”</span> <em>IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)</em>, 7669–73.
+</div>
+<div id="ref-kang2024libriheavy" class="csl-entry" role="listitem">
+Kang, Wei, Xiaoyu Yang, Zengwei Yao, et al. 2024. <span>“Libriheavy: A 50,000 Hours <span>ASR</span> Corpus with Punctuation Casing and Context.”</span> <em>IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)</em>.
+</div>
+<div id="ref-kendall2023coraal" class="csl-entry" role="listitem">
+Kendall, Tyler, and Charlie Farrington. 2023. <em>The Corpus of Regional <span>African American</span> Language</em>. Version 2023.06. Eugene, OR: The Online Resources for African American Language Project.
+</div>
+<div id="ref-kim2022squeezeformer" class="csl-entry" role="listitem">
+Kim, Sehoon, Amir Gholami, Albert Shaw, et al. 2022. <span>“Squeezeformer: An Efficient Transformer for Automatic Speech Recognition.”</span> <em>Advances in Neural Information Processing Systems (NeurIPS)</em>.
+</div>
+<div id="ref-kim2017joint" class="csl-entry" role="listitem">
+Kim, Suyoun, Takaaki Hori, and Shinji Watanabe. 2017. <span>“Joint <span>CTC</span>-Attention Based End-to-End Speech Recognition Using Multi-Task Learning.”</span> <em>IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)</em>, 4835–39.
+</div>
+<div id="ref-koenecke2024careless" class="csl-entry" role="listitem">
+Koenecke, Allison, Anna Seo Gyeong Choi, Katelyn X. Mei, Hilke Schellmann, and Mona Sloane. 2024. <span>“Careless Whisper: Speech-to-Text Hallucination Harms.”</span> <em>ACM Conference on Fairness, Accountability, and Transparency (FAccT)</em>.
+</div>
+<div id="ref-koenecke2020racial" class="csl-entry" role="listitem">
+Koenecke, Allison, Andrew Nam, Emily Lake, et al. 2020. <span>“Racial Disparities in Automated Speech Recognition.”</span> <em>Proceedings of the National Academy of Sciences (PNAS)</em> 117 (14): 7684–89.
+</div>
+<div id="ref-le2021trie" class="csl-entry" role="listitem">
+Le, Duc, Mahaveer Jain, Gil Keren, et al. 2021. <span>“Contextualized Streaming End-to-End Speech Recognition with Trie-Based Deep Biasing and Shallow Fusion.”</span> <em>Interspeech</em>.
+</div>
+<div id="ref-mcdermott2019densityratio" class="csl-entry" role="listitem">
+McDermott, Erik, Hasim Sak, and Ehsan Variani. 2019. <span>“A Density Ratio Approach to Language Model Fusion in End-to-End Automatic Speech Recognition.”</span> <em>IEEE Automatic Speech Recognition and Understanding Workshop (ASRU)</em>.
+</div>
+<div id="ref-meng2021ilme" class="csl-entry" role="listitem">
+Meng, Zhong, Sarangarajan Parthasarathy, Eric Sun, et al. 2021. <span>“Internal Language Model Estimation for Domain-Adaptive End-to-End Speech Recognition.”</span> <em>IEEE Spoken Language Technology Workshop (SLT)</em>.
+</div>
+<div id="ref-mohri2002wfst" class="csl-entry" role="listitem">
+Mohri, Mehryar, Fernando Pereira, and Michael Riley. 2002. <span>“Weighted Finite-State Transducers in Speech Recognition.”</span> <em>Computer Speech &amp; Language</em> 16 (1): 69–88.
+</div>
+<div id="ref-moritz2019triggered" class="csl-entry" role="listitem">
+Moritz, Niko, Takaaki Hori, and Jonathan Le Roux. 2019. <span>“Triggered Attention for End-to-End Speech Recognition.”</span> <em>IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)</em>, 5666–70.
+</div>
+<div id="ref-noroozi2024cacheaware" class="csl-entry" role="listitem">
+Noroozi, Vahid, Somshubra Majumdar, Ankur Kumar, Jagadeesh Balam, and Boris Ginsburg. 2024. <span>“Stateful Conformer with Cache-Based Inference for Streaming Automatic Speech Recognition.”</span> <em>IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)</em>.
+</div>
+<div id="ref-oneill2021spgispeech" class="csl-entry" role="listitem">
+O’Neill, Patrick K., Vitaly Lavrukhin, Somshubra Majumdar, et al. 2021. <span>“<span>SPGISpeech</span>: 5,000 Hours of Transcribed Financial Audio for Fully Formatted End-to-End Speech Recognition.”</span> <em>Interspeech</em>.
+</div>
+<div id="ref-panayotov2015librispeech" class="csl-entry" role="listitem">
+Panayotov, Vassil, Guoguo Chen, Daniel Povey, and Sanjeev Khudanpur. 2015. <span>“<span>LibriSpeech</span>: An <span>ASR</span> Corpus Based on Public Domain Audio Books.”</span> <em>IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)</em>, 5206–10.
+</div>
+<div id="ref-park2019specaugment" class="csl-entry" role="listitem">
+Park, Daniel S., William Chan, Yu Zhang, et al. 2019. <span>“<span>SpecAugment</span>: A Simple Data Augmentation Method for Automatic Speech Recognition.”</span> <em>Interspeech</em>, 2613–17.
+</div>
+<div id="ref-park2025beyond" class="csl-entry" role="listitem">
+Park, Tae Jin, Chao-Han Huck Yang, Kyu J. Han, and Shinji Watanabe. 2025. <em>Beyond End-to-End <span>ASR</span>: Integrating Long-Context Acoustic and Linguistic Insights</em>. Tutorial, Interspeech 2025, Rotterdam.
+</div>
+<div id="ref-peddinti2015tdnn" class="csl-entry" role="listitem">
+Peddinti, Vijayaditya, Daniel Povey, and Sanjeev Khudanpur. 2015. <span>“A Time Delay Neural Network Architecture for Efficient Modeling of Long Temporal Contexts.”</span> <em>Interspeech</em>.
+</div>
+<div id="ref-peng2022branchformer" class="csl-entry" role="listitem">
+Peng, Yifan, Siddharth Dalmia, Ian Lane, and Shinji Watanabe. 2022. <span>“Branchformer: Parallel <span>MLP</span>-Attention Architectures to Capture Local and Global Context for Speech Recognition and Understanding.”</span> <em>International Conference on Machine Learning (ICML)</em>.
+</div>
+<div id="ref-peng2023owsm" class="csl-entry" role="listitem">
+<span class="nocase">Peng, Yifan, Jinchuan Tian, Brian Yan, et al.</span> 2023. <span>“Reproducing Whisper-Style Training Using an Open-Source Toolkit and Publicly Available Data (<span>OWSM</span>).”</span> <em>IEEE Automatic Speech Recognition and Understanding Workshop (ASRU)</em>.
+</div>
+<div id="ref-povey2011kaldi" class="csl-entry" role="listitem">
+Povey, Daniel, Arnab Ghoshal, Gilles Boulianne, et al. 2011. <span>“The <span>K</span>aldi Speech Recognition Toolkit.”</span> <em>Proceedings of IEEE Automatic Speech Recognition and Understanding Workshop (ASRU)</em>.
+</div>
+<div id="ref-povey2016lfmmi" class="csl-entry" role="listitem">
+Povey, Daniel, Vijayaditya Peddinti, Daniel Galvez, et al. 2016. <span>“Purely Sequence-Trained Neural Networks for <span>ASR</span> Based on Lattice-Free <span>MMI</span>.”</span> <em>Interspeech</em>.
+</div>
+<div id="ref-pratap2020mls" class="csl-entry" role="listitem">
+Pratap, Vineel, Qiantong Xu, Anuroop Sriram, Gabriel Synnaeve, and Ronan Collobert. 2020. <span>“<span>MLS</span>: A Large-Scale Multilingual Dataset for Speech Research.”</span> <em>Interspeech</em>.
+</div>
+<div id="ref-pundak2018clas" class="csl-entry" role="listitem">
+Pundak, Golan, Tara N. Sainath, Rohit Prabhavalkar, Anjuli Kannan, and Ding Zhao. 2018. <span>“Deep Context: End-to-End Contextual Speech Recognition.”</span> <em>IEEE Spoken Language Technology Workshop (SLT)</em>, 418–25.
+</div>
+<div id="ref-puvvada2024canary" class="csl-entry" role="listitem">
+Puvvada, Krishna C., Piotr Żelasko, He Huang, et al. 2024. <span>“Less Is More: Accurate Speech Recognition and Translation Without Web-Scale Data.”</span> <em>Interspeech</em>.
+</div>
+<div id="ref-radford2023whisper" class="csl-entry" role="listitem">
+Radford, Alec, Jong Wook Kim, Tao Xu, Greg Brockman, Christine McLeavey, and Ilya Sutskever. 2023. <span>“Robust Speech Recognition via Large-Scale Weak Supervision.”</span> <em>Proceedings of the 40th International Conference on Machine Learning (ICML)</em>.
+</div>
+<div id="ref-rekesh2023fastconformer" class="csl-entry" role="listitem">
+Rekesh, Dima, Nithin Rao Koluguri, Samuel Kriman, et al. 2023. <span>“Fast Conformer with Linearly Scalable Attention for Efficient Speech Recognition.”</span> <em>IEEE Automatic Speech Recognition and Understanding Workshop (ASRU)</em>.
+</div>
+<div id="ref-delrio2021earnings21" class="csl-entry" role="listitem">
+Rio, Miguel Del, Natalie Delworth, Ryan Westerman, et al. 2021. <span>“Earnings-21: A Practical Benchmark for <span>ASR</span> in the Wild.”</span> <em>Interspeech</em>.
+</div>
+<div id="ref-sriram2018coldfusion" class="csl-entry" role="listitem">
+Sriram, Anuroop, Heewoo Jun, Sanjeev Satheesh, and Adam Coates. 2018. <span>“Cold Fusion: Training Seq2Seq Models Together with Language Models.”</span> <em>Interspeech</em>.
+</div>
+<div id="ref-srivastav2025openasr" class="csl-entry" role="listitem">
+Srivastav, Vaibhav, Steven Zheng, Eric Bezzam, et al. 2025. <span>“Open <span>ASR</span> Leaderboard: Towards Reproducible and Transparent Multilingual and Long-Form Speech Recognition Evaluation.”</span> <em>arXiv Preprint arXiv:2510.06961</em>.
+</div>
+<div id="ref-tseng2025contamination" class="csl-entry" role="listitem">
+Tseng, Yuan, Titouan Parcollet, Rogier van Dalen, Shucong Zhang, and Sourav Bhattacharya. 2025. <span>“Evaluation of <span>LLMs</span> in Speech Is Often Flawed: Test Set Contamination in Large Language Models for Speech Recognition.”</span> <em>IEEE Automatic Speech Recognition and Understanding Workshop (ASRU)</em>.
+</div>
+<div id="ref-variani2020hat" class="csl-entry" role="listitem">
+Variani, Ehsan, David Rybach, Cyril Allauzen, and Michael Riley. 2020. <span>“Hybrid Autoregressive Transducer (<span>HAT</span>).”</span> <em>IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)</em>, 6139–43.
+</div>
+<div id="ref-vaswani2017attention" class="csl-entry" role="listitem">
+Vaswani, Ashish, Noam Shazeer, Niki Parmar, et al. 2017. <span>“Attention Is All You Need.”</span> <em>Advances in Neural Information Processing Systems (NeurIPS)</em>.
+</div>
+<div id="ref-watanabe2018espnet" class="csl-entry" role="listitem">
+Watanabe, Shinji, Takaaki Hori, Shigeki Karita, et al. 2018. <span>“<span>ESPnet</span>: End-to-End Speech Processing Toolkit.”</span> <em>Interspeech</em>, 2207–11.
+</div>
+<div id="ref-watanabe2020chime6" class="csl-entry" role="listitem">
+<span class="nocase">Watanabe, Shinji, Michael Mandel, Jon Barker, et al.</span> 2020. <span>“CHiME-6 Challenge: Tackling Multispeaker Speech Recognition for Unsegmented Recordings.”</span> <em>Proceedings of the 6th International Workshop on Speech Processing in Everyday Environments (CHiME)</em>.
+</div>
+<div id="ref-xu2023tdt" class="csl-entry" role="listitem">
+Xu, Hainan, Fei Jia, Somshubra Majumdar, He Huang, Shinji Watanabe, and Boris Ginsburg. 2023. <span>“Efficient Sequence Transduction by Jointly Predicting Tokens and Durations.”</span> <em>International Conference on Machine Learning (ICML)</em>.
+</div>
+<div id="ref-yao2024zipformer" class="csl-entry" role="listitem">
+Yao, Zengwei, Liyong Guo, Xiaoyu Yang, et al. 2024. <span>“Zipformer: A Faster and Better Encoder for Automatic Speech Recognition.”</span> <em>International Conference on Learning Representations (ICLR)</em>.
+</div>
+<div id="ref-zhang2023usm" class="csl-entry" role="listitem">
+<span class="nocase">Zhang, Yu, Wei Han, James Qin, et al.</span> 2023. <span>“Google <span>USM</span>: Scaling Automatic Speech Recognition Beyond 100 Languages.”</span> <em>arXiv Preprint arXiv:2303.01037</em>.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const callouts = document.querySelectorAll('.callout-tip');
+    callouts.forEach(function(callout) {
+      callout.style.borderLeftColor = '#2196f3'; //#616161; //'#4caf50';
+      callout.style.color = 'ffffff'; // Dark purple-gray text
+    });
+  });
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../chapters/audio/21-speech-representation-learning.html" class="pagination-link" aria-label="Speech Representation Learning and Foundation Models">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Speech Representation Learning and Foundation Models</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../chapters/audio/23-speaker-diarization.html" class="pagination-link" aria-label="Speaker Diarization">
+        <span class="nav-page-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Speaker Diarization</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="../../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

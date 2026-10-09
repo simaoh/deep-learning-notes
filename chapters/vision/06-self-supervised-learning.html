@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>6&nbsp; Self-Supervised Learning – deep_learning_notes</title>
+<title>7&nbsp; Self-Supervised Learning – deep_learning_notes</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -72,7 +72,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../../">
 <link href="../../chapters/vision/_intro-generative-models.html" rel="next">
-<link href="../../chapters/vision/05-vision-transformers.html" rel="prev">
+<link href="../../chapters/vision/06-foundation-models-for-segmentation.html" rel="prev">
 <script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="../../site_libs/quarto-html/popper.min.js"></script>
@@ -154,7 +154,7 @@ window.Quarto = {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/06-self-supervised-learning.html">Part III: Self-Supervised Learning</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/06-self-supervised-learning.html"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/06-self-supervised-learning.html">Part III: Self-Supervised Learning</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/06-self-supervised-learning.html"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -185,29 +185,24 @@ window.Quarto = {
  <span class="menu-text">Preface</span></a>
   </div>
 </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
- <span class="menu-text">Part I: Foundations</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_intro_foundations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Foundations</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/01-neural-networks-and-optimization.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Neural Networks and Optimization</span></span></a>
   </div>
 </li>
-          <li class="sidebar-item">
+        <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/02-generalization-and-learning-theory.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Generalization and Learning Theory</span></span></a>
   </div>
 </li>
-      </ul>
-  </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/_intro_computer_vision.html" class="sidebar-item-text sidebar-link">
@@ -216,13 +211,13 @@ window.Quarto = {
 </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
  <span class="menu-text">Part II: Visual Understanding</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/03-cnns.html" class="sidebar-item-text sidebar-link">
@@ -241,34 +236,40 @@ window.Quarto = {
  <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Vision Transformers</span></span></a>
   </div>
 </li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
- <span class="menu-text">Part III: Self-Supervised Learning</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  <a href="../../chapters/vision/06-foundation-models-for-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Foundation Models for Segmentation</span></span></a>
   </div>
 </li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
- <span class="menu-text">Part IV: Generative Modeling</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Self-Supervised Learning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Generative Modeling</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/_intro-generative-models.html" class="sidebar-item-text sidebar-link">
@@ -278,19 +279,19 @@ window.Quarto = {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/07-vaes.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/08-gans.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/09-diffusion-models.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -303,14 +304,198 @@ window.Quarto = {
   </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../intro.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Introduction</span></span></a>
+  <a href="../../chapters/video/_intro_video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Video</span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../summary.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Summary</span></span></a>
+  <a href="../../chapters/video/10-video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Video Fundamentals: Motion and Spatiotemporal Architectures</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/11-video-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Video Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/12-video-temporal-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Video Temporal Segmentation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/13-video-understanding-benchmarks.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Video Understanding Benchmarks</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/14-video-generation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Video Generation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/_intro_3d.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">3D Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/11-3d-data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">3D Data Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">3D Reconstruction</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/12-3d-reconstruction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">3D Reconstruction</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/13-gaussian-splatting.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">3D Gaussian Splatting</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Human Pose Estimation</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/human_pose_estimation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Human Pose Estimation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/_intro_nlp.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Natural Language Processing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/17-text-representation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Text Representation &amp; Word Embeddings</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/18-sequence-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Sequence Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/19-large-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Large Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/20-text-embeddings-evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Text Embedding Models &amp; Evaluation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/_intro_vision_language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Vision-Language</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/16-vision-language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Vision-Language Multimodal Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/_intro_time_series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Time Series</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/14-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">Time Series Fundamentals</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/15-deep-learning-for-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Deep Learning for Time Series</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/_intro_audio.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Audio</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/21-speech-representation-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Speech Representation Learning and Foundation Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/22-automatic-speech-recognition.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Automatic Speech Recognition</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/23-speaker-diarization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Speaker Diarization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/24-neural-audio-codecs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Neural Audio Codecs</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/25-speech-synthesis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">31</span>&nbsp; <span class="chapter-title">Speech Synthesis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/26-speech-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">32</span>&nbsp; <span class="chapter-title">Speech and Audio Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/27-audio-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">33</span>&nbsp; <span class="chapter-title">Audio Understanding Beyond Words</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
@@ -329,27 +514,27 @@ window.Quarto = {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#motivation-and-paradigm-overview" id="toc-motivation-and-paradigm-overview" class="nav-link active" data-scroll-target="#motivation-and-paradigm-overview"><span class="header-section-number">6.1</span> Motivation and Paradigm Overview</a></li>
-  <li><a href="#taxonomy-of-self-supervised-approaches" id="toc-taxonomy-of-self-supervised-approaches" class="nav-link" data-scroll-target="#taxonomy-of-self-supervised-approaches"><span class="header-section-number">6.2</span> Taxonomy of Self-Supervised Approaches</a></li>
+  <li><a href="#motivation-and-paradigm-overview" id="toc-motivation-and-paradigm-overview" class="nav-link active" data-scroll-target="#motivation-and-paradigm-overview"><span class="header-section-number">7.1</span> Motivation and Paradigm Overview</a></li>
+  <li><a href="#taxonomy-of-self-supervised-approaches" id="toc-taxonomy-of-self-supervised-approaches" class="nav-link" data-scroll-target="#taxonomy-of-self-supervised-approaches"><span class="header-section-number">7.2</span> Taxonomy of Self-Supervised Approaches</a></li>
   <li><a href="#invariance-based-learning" id="toc-invariance-based-learning" class="nav-link" data-scroll-target="#invariance-based-learning">Invariance-Based Learning</a></li>
-  <li><a href="#similarity-based-methods" id="toc-similarity-based-methods" class="nav-link" data-scroll-target="#similarity-based-methods"><span class="header-section-number">6.3</span> Similarity-Based Methods</a>
+  <li><a href="#similarity-based-methods" id="toc-similarity-based-methods" class="nav-link" data-scroll-target="#similarity-based-methods"><span class="header-section-number">7.3</span> Similarity-Based Methods</a>
   <ul class="collapse">
-  <li><a href="#contrastive-learning" id="toc-contrastive-learning" class="nav-link" data-scroll-target="#contrastive-learning"><span class="header-section-number">6.3.1</span> Contrastive Learning</a></li>
-  <li><a href="#clustering-based-methods" id="toc-clustering-based-methods" class="nav-link" data-scroll-target="#clustering-based-methods"><span class="header-section-number">6.3.2</span> Clustering-Based Methods</a></li>
-  <li><a href="#self-distillation-methods" id="toc-self-distillation-methods" class="nav-link" data-scroll-target="#self-distillation-methods"><span class="header-section-number">6.3.3</span> Self-Distillation Methods</a></li>
-  <li><a href="#comparison-of-similarity-based-methods" id="toc-comparison-of-similarity-based-methods" class="nav-link" data-scroll-target="#comparison-of-similarity-based-methods"><span class="header-section-number">6.3.4</span> Comparison of Similarity-Based Methods</a></li>
+  <li><a href="#contrastive-learning" id="toc-contrastive-learning" class="nav-link" data-scroll-target="#contrastive-learning"><span class="header-section-number">7.3.1</span> Contrastive Learning</a></li>
+  <li><a href="#clustering-based-methods" id="toc-clustering-based-methods" class="nav-link" data-scroll-target="#clustering-based-methods"><span class="header-section-number">7.3.2</span> Clustering-Based Methods</a></li>
+  <li><a href="#self-distillation-methods" id="toc-self-distillation-methods" class="nav-link" data-scroll-target="#self-distillation-methods"><span class="header-section-number">7.3.3</span> Self-Distillation Methods</a></li>
+  <li><a href="#comparison-of-similarity-based-methods" id="toc-comparison-of-similarity-based-methods" class="nav-link" data-scroll-target="#comparison-of-similarity-based-methods"><span class="header-section-number">7.3.4</span> Comparison of Similarity-Based Methods</a></li>
   </ul></li>
-  <li><a href="#redundancy-reduction-methods" id="toc-redundancy-reduction-methods" class="nav-link" data-scroll-target="#redundancy-reduction-methods"><span class="header-section-number">6.4</span> Redundancy Reduction Methods</a></li>
+  <li><a href="#redundancy-reduction-methods" id="toc-redundancy-reduction-methods" class="nav-link" data-scroll-target="#redundancy-reduction-methods"><span class="header-section-number">7.4</span> Redundancy Reduction Methods</a></li>
   <li><a href="#reconstructive-learning" id="toc-reconstructive-learning" class="nav-link" data-scroll-target="#reconstructive-learning">Reconstructive Learning</a></li>
-  <li><a href="#masked-auto-encoding" id="toc-masked-auto-encoding" class="nav-link" data-scroll-target="#masked-auto-encoding"><span class="header-section-number">6.5</span> Masked Auto-Encoding</a></li>
-  <li><a href="#evaluation-and-transfer-learning" id="toc-evaluation-and-transfer-learning" class="nav-link" data-scroll-target="#evaluation-and-transfer-learning"><span class="header-section-number">6.6</span> Evaluation and Transfer Learning</a></li>
-  <li><a href="#summary-and-interview-preparation" id="toc-summary-and-interview-preparation" class="nav-link" data-scroll-target="#summary-and-interview-preparation"><span class="header-section-number">6.7</span> Summary and Interview Preparation</a>
+  <li><a href="#masked-auto-encoding" id="toc-masked-auto-encoding" class="nav-link" data-scroll-target="#masked-auto-encoding"><span class="header-section-number">7.5</span> Masked Auto-Encoding</a></li>
+  <li><a href="#evaluation-and-transfer-learning" id="toc-evaluation-and-transfer-learning" class="nav-link" data-scroll-target="#evaluation-and-transfer-learning"><span class="header-section-number">7.6</span> Evaluation and Transfer Learning</a></li>
+  <li><a href="#summary-and-interview-preparation" id="toc-summary-and-interview-preparation" class="nav-link" data-scroll-target="#summary-and-interview-preparation"><span class="header-section-number">7.7</span> Summary and Interview Preparation</a>
   <ul class="collapse">
-  <li><a href="#core-concepts-checklist" id="toc-core-concepts-checklist" class="nav-link" data-scroll-target="#core-concepts-checklist"><span class="header-section-number">6.7.1</span> Core Concepts Checklist</a></li>
-  <li><a href="#common-interview-questions" id="toc-common-interview-questions" class="nav-link" data-scroll-target="#common-interview-questions"><span class="header-section-number">6.7.2</span> Common Interview Questions</a></li>
-  <li><a href="#method-selection-guide" id="toc-method-selection-guide" class="nav-link" data-scroll-target="#method-selection-guide"><span class="header-section-number">6.7.3</span> Method Selection Guide</a></li>
-  <li><a href="#company-context" id="toc-company-context" class="nav-link" data-scroll-target="#company-context"><span class="header-section-number">6.7.4</span> Company Context</a></li>
-  <li><a href="#further-reading" id="toc-further-reading" class="nav-link" data-scroll-target="#further-reading"><span class="header-section-number">6.7.5</span> Further Reading</a></li>
+  <li><a href="#core-concepts-checklist" id="toc-core-concepts-checklist" class="nav-link" data-scroll-target="#core-concepts-checklist"><span class="header-section-number">7.7.1</span> Core Concepts Checklist</a></li>
+  <li><a href="#common-interview-questions" id="toc-common-interview-questions" class="nav-link" data-scroll-target="#common-interview-questions"><span class="header-section-number">7.7.2</span> Common Interview Questions</a></li>
+  <li><a href="#method-selection-guide" id="toc-method-selection-guide" class="nav-link" data-scroll-target="#method-selection-guide"><span class="header-section-number">7.7.3</span> Method Selection Guide</a></li>
+  <li><a href="#company-context" id="toc-company-context" class="nav-link" data-scroll-target="#company-context"><span class="header-section-number">7.7.4</span> Company Context</a></li>
+  <li><a href="#further-reading" id="toc-further-reading" class="nav-link" data-scroll-target="#further-reading"><span class="header-section-number">7.7.5</span> Further Reading</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -357,9 +542,9 @@ window.Quarto = {
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/06-self-supervised-learning.html">Part III: Self-Supervised Learning</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/06-self-supervised-learning.html"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/06-self-supervised-learning.html">Part III: Self-Supervised Learning</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/06-self-supervised-learning.html"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></h1>
+<h1 class="title"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></h1>
 </div>
 
 
@@ -376,16 +561,16 @@ window.Quarto = {
 </header>
 
 
-<section id="motivation-and-paradigm-overview" class="level2" data-number="6.1">
-<h2 data-number="6.1" class="anchored" data-anchor-id="motivation-and-paradigm-overview"><span class="header-section-number">6.1</span> Motivation and Paradigm Overview</h2>
+<section id="motivation-and-paradigm-overview" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="motivation-and-paradigm-overview"><span class="header-section-number">7.1</span> Motivation and Paradigm Overview</h2>
 <p><strong>The Labeling Bottleneck</strong>: Training large vision models requires massive datasets, but manual annotation is expensive and slow. ImageNet took 3 years and $50K to label 14M images. Modern foundation models need billions of images.</p>
 <p><strong>Self-Supervised Learning (SSL)</strong>: Learn useful visual representations from unlabeled data by creating pretext tasks where supervision comes from the data itself.</p>
 <p><strong>Why SSL Works</strong>: Natural images have rich structure—spatial coherence, semantic consistency across augmentations, predictable patterns. SSL exploits these properties to learn features transferable to downstream tasks.</p>
 <p><strong>Performance Evolution</strong>: - 2018: SSL lags supervised by 10%+ on ImageNet - 2020: SSL matches supervised (SimCLR, MoCo) - 2023: SSL outperforms supervised for transfer (DINOv2: 82.1% linear probe vs.&nbsp;76.5% supervised)</p>
 <hr>
 </section>
-<section id="taxonomy-of-self-supervised-approaches" class="level2" data-number="6.2">
-<h2 data-number="6.2" class="anchored" data-anchor-id="taxonomy-of-self-supervised-approaches"><span class="header-section-number">6.2</span> Taxonomy of Self-Supervised Approaches</h2>
+<section id="taxonomy-of-self-supervised-approaches" class="level2" data-number="7.2">
+<h2 data-number="7.2" class="anchored" data-anchor-id="taxonomy-of-self-supervised-approaches"><span class="header-section-number">7.2</span> Taxonomy of Self-Supervised Approaches</h2>
 <p><strong>Two Main Paradigms</strong>:</p>
 <ol type="1">
 <li><p><strong>Invariance-Based Learning</strong>: Learn features invariant to augmentations <span class="math inline">\((f(x) \approx f(\text{Aug}(x))\)</span>.<br>
@@ -465,14 +650,14 @@ The main challenge is how to avoid low-level texture copying.</p></li>
 </tbody>
 </table>
 </section>
-<section id="similarity-based-methods" class="level2" data-number="6.3">
-<h2 data-number="6.3" class="anchored" data-anchor-id="similarity-based-methods"><span class="header-section-number">6.3</span> Similarity-Based Methods</h2>
+<section id="similarity-based-methods" class="level2" data-number="7.3">
+<h2 data-number="7.3" class="anchored" data-anchor-id="similarity-based-methods"><span class="header-section-number">7.3</span> Similarity-Based Methods</h2>
 <p><strong>Core Objective</strong>: Maximize similarity between augmented views of same image.</p>
 <p><span class="math display">\[\mathcal{L}_{\text{sim}} = d(f_\theta(\text{Aug}_1(x)), f_\theta(\text{Aug}_2(x)))\]</span></p>
 <p>where <span class="math inline">\(d\)</span> is distance metric (cosine, MSE). Methods differ in collapse prevention.</p>
 <hr>
-<section id="contrastive-learning" class="level3" data-number="6.3.1">
-<h3 data-number="6.3.1" class="anchored" data-anchor-id="contrastive-learning"><span class="header-section-number">6.3.1</span> Contrastive Learning</h3>
+<section id="contrastive-learning" class="level3" data-number="7.3.1">
+<h3 data-number="7.3.1" class="anchored" data-anchor-id="contrastive-learning"><span class="header-section-number">7.3.1</span> Contrastive Learning</h3>
 <p><strong>Principle</strong>: Explicitly push apart different images (negatives) while pulling together augmented views (positives).</p>
 <p><strong>General Contrastive Loss</strong>: <span class="math display">\[\mathcal{L} = -\log \frac{\exp(\text{sim}(f(x^+), f(x))/\tau)}{\exp(\text{sim}(f(x^+), f(x))/\tau) + \sum_{x^- \in \mathcal{N}} \exp(\text{sim}(f(x^-), f(x))/\tau)}\]</span></p>
 <p>where <span class="math inline">\(x^+\)</span> is positive pair, <span class="math inline">\(\mathcal{N}\)</span> is negative set, <span class="math inline">\(\tau=0.1\)</span> is temperature.</p>
@@ -536,8 +721,8 @@ Queue:             K=65,536 encoded keys</code></pre>
 </ol>
 <hr>
 </section>
-<section id="clustering-based-methods" class="level3" data-number="6.3.2">
-<h3 data-number="6.3.2" class="anchored" data-anchor-id="clustering-based-methods"><span class="header-section-number">6.3.2</span> Clustering-Based Methods</h3>
+<section id="clustering-based-methods" class="level3" data-number="7.3.2">
+<h3 data-number="7.3.2" class="anchored" data-anchor-id="clustering-based-methods"><span class="header-section-number">7.3.2</span> Clustering-Based Methods</h3>
 <p><strong>Core Principle</strong>: Prevent collapse by assigning features to discrete clusters, then enforce consistency of cluster assignments across augmented views.</p>
 <p><strong>Advantage</strong>: No explicit negatives needed (cluster assignment provides discrimination).</p>
 <hr>
@@ -599,8 +784,8 @@ To evaluate how meaningful the learned clusters are, DeepCluster compares its ps
 <p><strong>Performance</strong>: ResNet-50, 71.8% ImageNet linear probe (200 epochs)</p>
 <hr>
 </section>
-<section id="self-distillation-methods" class="level3" data-number="6.3.3">
-<h3 data-number="6.3.3" class="anchored" data-anchor-id="self-distillation-methods"><span class="header-section-number">6.3.3</span> Self-Distillation Methods</h3>
+<section id="self-distillation-methods" class="level3" data-number="7.3.3">
+<h3 data-number="7.3.3" class="anchored" data-anchor-id="self-distillation-methods"><span class="header-section-number">7.3.3</span> Self-Distillation Methods</h3>
 <p><strong>Principle</strong>: Prevent collapse via <strong>asymmetry</strong> between two networks (no negatives needed).</p>
 <p><strong>General Framework</strong>:</p>
 <ul>
@@ -756,8 +941,8 @@ matching second-order statistics (co-occurrence patterns of texture/style) rathe
 </ul>
 <hr>
 </section>
-<section id="comparison-of-similarity-based-methods" class="level3" data-number="6.3.4">
-<h3 data-number="6.3.4" class="anchored" data-anchor-id="comparison-of-similarity-based-methods"><span class="header-section-number">6.3.4</span> Comparison of Similarity-Based Methods</h3>
+<section id="comparison-of-similarity-based-methods" class="level3" data-number="7.3.4">
+<h3 data-number="7.3.4" class="anchored" data-anchor-id="comparison-of-similarity-based-methods"><span class="header-section-number">7.3.4</span> Comparison of Similarity-Based Methods</h3>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 12%">
@@ -839,8 +1024,8 @@ matching second-order statistics (co-occurrence patterns of texture/style) rathe
 <hr>
 </section>
 </section>
-<section id="redundancy-reduction-methods" class="level2" data-number="6.4">
-<h2 data-number="6.4" class="anchored" data-anchor-id="redundancy-reduction-methods"><span class="header-section-number">6.4</span> Redundancy Reduction Methods</h2>
+<section id="redundancy-reduction-methods" class="level2" data-number="7.4">
+<h2 data-number="7.4" class="anchored" data-anchor-id="redundancy-reduction-methods"><span class="header-section-number">7.4</span> Redundancy Reduction Methods</h2>
 <p><strong>Different Approach</strong>: Prevent collapse by decorrelating feature dimensions rather than using negatives or asymmetry.</p>
 <p><strong>Core Idea</strong>: Encourage cross-correlation matrix of features to be identity: <span class="math display">\[\mathbf{C} \approx \mathbf{I}\]</span></p>
 <p>where <span class="math inline">\(C_{ij} = \text{corr}(z_i, z_j)\)</span> (correlation between feature dimensions <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> across batch).</p>
@@ -894,8 +1079,8 @@ matching second-order statistics (co-occurrence patterns of texture/style) rathe
 <p><strong>Challenge</strong>: Avoid low-level texture copying—want semantic features, not pixel-level memorization.</p>
 <hr>
 </section>
-<section id="masked-auto-encoding" class="level2" data-number="6.5">
-<h2 data-number="6.5" class="anchored" data-anchor-id="masked-auto-encoding"><span class="header-section-number">6.5</span> Masked Auto-Encoding</h2>
+<section id="masked-auto-encoding" class="level2" data-number="7.5">
+<h2 data-number="7.5" class="anchored" data-anchor-id="masked-auto-encoding"><span class="header-section-number">7.5</span> Masked Auto-Encoding</h2>
 <p><strong>MAE (2022) - Masked Auto-Encoding for Images</strong>:</p>
 <p><strong>Core Idea</strong>: Mask 75% of image patches, reconstruct from visible 25%.</p>
 <p><strong>Why 75% vs.&nbsp;BERT’s 15%?</strong></p>
@@ -1089,8 +1274,8 @@ matching second-order statistics (co-occurrence patterns of texture/style) rathe
 <p><br> <strong>Hybrid Approaches</strong>: DINOv2 combines both (iBOT = DINO + masked prediction) → SOTA.</p>
 <hr>
 </section>
-<section id="evaluation-and-transfer-learning" class="level2" data-number="6.6">
-<h2 data-number="6.6" class="anchored" data-anchor-id="evaluation-and-transfer-learning"><span class="header-section-number">6.6</span> Evaluation and Transfer Learning</h2>
+<section id="evaluation-and-transfer-learning" class="level2" data-number="7.6">
+<h2 data-number="7.6" class="anchored" data-anchor-id="evaluation-and-transfer-learning"><span class="header-section-number">7.6</span> Evaluation and Transfer Learning</h2>
 </section>
 <section id="linear-probing" class="level2 unnumbered unlisted">
 <h2 class="unnumbered unlisted anchored" data-anchor-id="linear-probing">Linear Probing</h2>
@@ -1141,10 +1326,10 @@ matching second-order statistics (co-occurrence patterns of texture/style) rathe
 <p><strong>Video</strong>: DINOv2 features track across frames via k-NN (no temporal training needed).</p>
 <hr>
 </section>
-<section id="summary-and-interview-preparation" class="level2" data-number="6.7">
-<h2 data-number="6.7" class="anchored" data-anchor-id="summary-and-interview-preparation"><span class="header-section-number">6.7</span> Summary and Interview Preparation</h2>
-<section id="core-concepts-checklist" class="level3" data-number="6.7.1">
-<h3 data-number="6.7.1" class="anchored" data-anchor-id="core-concepts-checklist"><span class="header-section-number">6.7.1</span> Core Concepts Checklist</h3>
+<section id="summary-and-interview-preparation" class="level2" data-number="7.7">
+<h2 data-number="7.7" class="anchored" data-anchor-id="summary-and-interview-preparation"><span class="header-section-number">7.7</span> Summary and Interview Preparation</h2>
+<section id="core-concepts-checklist" class="level3" data-number="7.7.1">
+<h3 data-number="7.7.1" class="anchored" data-anchor-id="core-concepts-checklist"><span class="header-section-number">7.7.1</span> Core Concepts Checklist</h3>
 <p><strong>Paradigms</strong>:</p>
 <ul class="task-list">
 <li><label><input type="checkbox">Invariance-based: Learn features invariant to augmentations</label></li>
@@ -1167,8 +1352,8 @@ matching second-order statistics (co-occurrence patterns of texture/style) rathe
 <li><label><input type="checkbox">Why high mask ratio for images vs.&nbsp;BERT</label></li>
 </ul>
 </section>
-<section id="common-interview-questions" class="level3" data-number="6.7.2">
-<h3 data-number="6.7.2" class="anchored" data-anchor-id="common-interview-questions"><span class="header-section-number">6.7.2</span> Common Interview Questions</h3>
+<section id="common-interview-questions" class="level3" data-number="7.7.2">
+<h3 data-number="7.7.2" class="anchored" data-anchor-id="common-interview-questions"><span class="header-section-number">7.7.2</span> Common Interview Questions</h3>
 <ol type="1">
 <li><strong>“Compare contrastive learning approaches—SimCLR vs.&nbsp;MoCo.”</strong>
 <ul>
@@ -1210,8 +1395,8 @@ matching second-order statistics (co-occurrence patterns of texture/style) rathe
 </ul></li>
 </ol>
 </section>
-<section id="method-selection-guide" class="level3" data-number="6.7.3">
-<h3 data-number="6.7.3" class="anchored" data-anchor-id="method-selection-guide"><span class="header-section-number">6.7.3</span> Method Selection Guide</h3>
+<section id="method-selection-guide" class="level3" data-number="7.7.3">
+<h3 data-number="7.7.3" class="anchored" data-anchor-id="method-selection-guide"><span class="header-section-number">7.7.3</span> Method Selection Guide</h3>
 <p><strong>Choose Contrastive if</strong>:</p>
 <ul>
 <li>Have compute for large batches</li>
@@ -1237,15 +1422,15 @@ matching second-order statistics (co-occurrence patterns of texture/style) rathe
 <li>Want compute efficiency (encoder sees 25% of tokens)</li>
 </ul>
 </section>
-<section id="company-context" class="level3" data-number="6.7.4">
-<h3 data-number="6.7.4" class="anchored" data-anchor-id="company-context"><span class="header-section-number">6.7.4</span> Company Context</h3>
+<section id="company-context" class="level3" data-number="7.7.4">
+<h3 data-number="7.7.4" class="anchored" data-anchor-id="company-context"><span class="header-section-number">7.7.4</span> Company Context</h3>
 <ul>
 <li><strong>Meta</strong>: DINOv2 (foundation model), MAE (LLAMA-vision backbone)</li>
 <li><strong>Google</strong>: SimCLR, ViT-MAE variants</li>
 </ul>
 </section>
-<section id="further-reading" class="level3" data-number="6.7.5">
-<h3 data-number="6.7.5" class="anchored" data-anchor-id="further-reading"><span class="header-section-number">6.7.5</span> Further Reading</h3>
+<section id="further-reading" class="level3" data-number="7.7.5">
+<h3 data-number="7.7.5" class="anchored" data-anchor-id="further-reading"><span class="header-section-number">7.7.5</span> Further Reading</h3>
 <ul>
 <li><strong>Contrastive</strong>: <a href="https://arxiv.org/abs/2002.05709">SimCLR</a>, <a href="https://arxiv.org/abs/1911.05722">MoCo</a></li>
 <li><strong>Self-Distillation</strong>: <a href="https://arxiv.org/abs/2006.07733">BYOL</a>, <a href="https://arxiv.org/abs/2104.14294">DINO</a>, <a href="https://arxiv.org/abs/2304.07193">DINOv2</a></li>
@@ -1672,8 +1857,8 @@ matching second-order statistics (co-occurrence patterns of texture/style) rathe
   </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="../../chapters/vision/05-vision-transformers.html" class="pagination-link" aria-label="Vision Transformers">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Vision Transformers</span></span>
+      <a href="../../chapters/vision/06-foundation-models-for-segmentation.html" class="pagination-link" aria-label="Foundation Models for Segmentation">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Foundation Models for Segmentation</span></span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">

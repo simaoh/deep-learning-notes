@@ -1,0 +1,2253 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>13&nbsp; Video Temporal Segmentation – deep_learning_notes</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../chapters/video/13-video-understanding-benchmarks.html" rel="next">
+<link href="../../chapters/video/11-video-understanding.html" rel="prev">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-fd0503e23dce65854c81c5baaade3bdf.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../custom.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/video/12-video-temporal-segmentation.html"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Video Temporal Segmentation</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../">deep_learning_notes</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_intro_foundations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Foundations</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/01-neural-networks-and-optimization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Neural Networks and Optimization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/02-generalization-and-learning-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Generalization and Learning Theory</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro_computer_vision.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Computer Vision</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Visual Understanding</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/03-cnns.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Convolutional Neural Networks</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/04-object-detection-and-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Detection and Segmentation</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/05-vision-transformers.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Vision Transformers</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-foundation-models-for-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Foundation Models for Segmentation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Self-Supervised Learning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Generative Modeling</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Models</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/07-vaes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/08-gans.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/09-diffusion-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_conclusion-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Conclusion</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/_intro_video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Video</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/10-video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Video Fundamentals: Motion and Spatiotemporal Architectures</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/11-video-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Video Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/12-video-temporal-segmentation.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Video Temporal Segmentation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/13-video-understanding-benchmarks.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Video Understanding Benchmarks</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/14-video-generation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Video Generation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/_intro_3d.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">3D Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/11-3d-data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">3D Data Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">3D Reconstruction</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/12-3d-reconstruction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">3D Reconstruction</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/13-gaussian-splatting.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">3D Gaussian Splatting</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Human Pose Estimation</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/human_pose_estimation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Human Pose Estimation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/_intro_nlp.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Natural Language Processing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/17-text-representation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Text Representation &amp; Word Embeddings</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/18-sequence-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Sequence Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/19-large-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Large Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/20-text-embeddings-evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Text Embedding Models &amp; Evaluation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/_intro_vision_language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Vision-Language</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/16-vision-language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Vision-Language Multimodal Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/_intro_time_series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Time Series</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/14-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">Time Series Fundamentals</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/15-deep-learning-for-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Deep Learning for Time Series</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/_intro_audio.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Audio</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/21-speech-representation-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Speech Representation Learning and Foundation Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/22-automatic-speech-recognition.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Automatic Speech Recognition</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/23-speaker-diarization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Speaker Diarization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/24-neural-audio-codecs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Neural Audio Codecs</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/25-speech-synthesis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">31</span>&nbsp; <span class="chapter-title">Speech Synthesis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/26-speech-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">32</span>&nbsp; <span class="chapter-title">Speech and Audio Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/27-audio-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">33</span>&nbsp; <span class="chapter-title">Audio Understanding Beyond Words</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#sec-vts-notation" id="toc-sec-vts-notation" class="nav-link active" data-scroll-target="#sec-vts-notation"><span class="header-section-number">13.1</span> Notation</a></li>
+  <li><a href="#sec-vts-pipeline" id="toc-sec-vts-pipeline" class="nav-link" data-scroll-target="#sec-vts-pipeline"><span class="header-section-number">13.2</span> The Two-Stage Pipeline</a>
+  <ul class="collapse">
+  <li><a href="#sec-vts-why-two" id="toc-sec-vts-why-two" class="nav-link" data-scroll-target="#sec-vts-why-two"><span class="header-section-number">13.2.1</span> Why two stages and not one</a></li>
+  <li><a href="#sec-vts-cleanup" id="toc-sec-vts-cleanup" class="nav-link" data-scroll-target="#sec-vts-cleanup"><span class="header-section-number">13.2.2</span> Semantic grouping and cleanup</a></li>
+  </ul></li>
+  <li><a href="#sec-sbd" id="toc-sec-sbd" class="nav-link" data-scroll-target="#sec-sbd"><span class="header-section-number">13.3</span> Shot Boundary Detection</a>
+  <ul class="collapse">
+  <li><a href="#sec-sbd-signal" id="toc-sec-sbd-signal" class="nav-link" data-scroll-target="#sec-sbd-signal"><span class="header-section-number">13.3.1</span> The signal and why it breaks</a></li>
+  <li><a href="#sec-sbd-dense" id="toc-sec-sbd-dense" class="nav-link" data-scroll-target="#sec-sbd-dense"><span class="header-section-number">13.3.2</span> The dense-input constraint</a></li>
+  <li><a href="#sec-sbd-taxonomy" id="toc-sec-sbd-taxonomy" class="nav-link" data-scroll-target="#sec-sbd-taxonomy"><span class="header-section-number">13.3.3</span> Transition taxonomy</a></li>
+  <li><a href="#sec-sbd-learned" id="toc-sec-sbd-learned" class="nav-link" data-scroll-target="#sec-sbd-learned"><span class="header-section-number">13.3.4</span> Learned detectors</a></li>
+  <li><a href="#sec-omnishotcut" id="toc-sec-omnishotcut" class="nav-link" data-scroll-target="#sec-omnishotcut"><span class="header-section-number">13.3.5</span> OmniShotCut: SBD as relational prediction</a></li>
+  <li><a href="#sec-sbd-eval" id="toc-sec-sbd-eval" class="nav-link" data-scroll-target="#sec-sbd-eval"><span class="header-section-number">13.3.6</span> Benchmarks and metrics</a></li>
+  </ul></li>
+  <li><a href="#sec-scene" id="toc-sec-scene" class="nav-link" data-scroll-target="#sec-scene"><span class="header-section-number">13.4</span> Scene Boundary Detection</a>
+  <ul class="collapse">
+  <li><a href="#sec-scene-formulation" id="toc-sec-scene-formulation" class="nav-link" data-scroll-target="#sec-scene-formulation"><span class="header-section-number">13.4.1</span> Formulation</a></li>
+  <li><a href="#sec-scene-encoder" id="toc-sec-scene-encoder" class="nav-link" data-scroll-target="#sec-scene-encoder"><span class="header-section-number">13.4.2</span> The encoder era</a></li>
+  <li><a href="#sec-scenevlm" id="toc-sec-scenevlm" class="nav-link" data-scroll-target="#sec-scenevlm"><span class="header-section-number">13.4.3</span> Scene-VLM: sequence labelling as generation</a></li>
+  <li><a href="#sec-scene-eval" id="toc-sec-scene-eval" class="nav-link" data-scroll-target="#sec-scene-eval"><span class="header-section-number">13.4.4</span> Benchmarks and metrics</a></li>
+  </ul></li>
+  <li><a href="#sec-vts-practice" id="toc-sec-vts-practice" class="nav-link" data-scroll-target="#sec-vts-practice"><span class="header-section-number">13.5</span> Cost and Deployment</a></li>
+  <li><a href="#sec-scene-open" id="toc-sec-scene-open" class="nav-link" data-scroll-target="#sec-scene-open"><span class="header-section-number">13.6</span> Open Problems</a></li>
+  <li><a href="#sec-vts-summary" id="toc-sec-vts-summary" class="nav-link" data-scroll-target="#sec-vts-summary"><span class="header-section-number">13.7</span> Summary</a></li>
+  <li><a href="#sec-vts-sources" id="toc-sec-vts-sources" class="nav-link" data-scroll-target="#sec-vts-sources"><span class="header-section-number">13.8</span> Sources and Further Reading</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span id="sec-video-temporal-segmentation" class="quarto-section-identifier"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Video Temporal Segmentation</span></span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>A video file has no intrinsic units. It is a stream of pixels and audio samples — 108,000 frames per hour at 30 fps — and every downstream capability discussed in <a href="11-video-understanding.html" class="quarto-xref"><span>Chapter 12</span></a> silently assumes that someone has already cut that stream into pieces. Retrieval needs a chunk to embed and a timestamp to return; captioning needs a span short enough to describe; video-generation training needs clips with no discontinuity inside them. The chunk is the unit of everything, and choosing it is a task in its own right.</p>
+<p>The field cuts at two granularities, in two stages:</p>
+<ul>
+<li>A <strong>shot</strong> is the maximal run of frames from one uninterrupted camera take. Shot boundaries are <em>production artefacts</em>: they were inserted by an editor, they leave a photometric signature in the pixel stream, and they have (in principle) an exact frame index. Detecting them is a signal-processing problem.</li>
+<li>A <strong>scene</strong> is a maximal run of consecutive shots that is semantically coherent — same location, same time, same characters, same narrative beat. A conversation cutting between two camera angles is many shots and one scene. Scene boundaries leave <em>no</em> reliable low-level signature, because the strongest visual discontinuity inside a scene (an angle change) looks exactly like the one at its edge. Detecting them is a narrative-understanding problem.</li>
+</ul>
+<p>That asymmetry is the organising fact of this chapter, and it is worth stating quantitatively up front: on clean benchmarks, shot detection reaches F1 <span class="math inline">\(\approx 0.97\)</span>, while the state of the art in scene detection reaches F1 <span class="math inline">\(\approx 0.62\)</span>. These are not two difficulties of the same task; they are two different tasks that happen to compose.</p>
+<p><a href="#sec-vts-pipeline" class="quarto-xref"><span>Section 13.2</span></a> lays out the two-stage pipeline and the cost argument that forces the ordering, following the Mixpeek video-understanding pipeline write-up <span class="citation" data-cites="mixpeek2026scenesegmentation">(<a href="../../references.html#ref-mixpeek2026scenesegmentation" role="doc-biblioref">Mixpeek 2026</a>)</span>. <a href="#sec-sbd" class="quarto-xref"><span>Section 13.3</span></a> covers shot boundary detection, organised around OmniShotCut <span class="citation" data-cites="wang2026omnishotcut">(<a href="../../references.html#ref-wang2026omnishotcut" role="doc-biblioref">Wang et al. 2026</a>)</span> and its reformulation of the task. <a href="#sec-scene" class="quarto-xref"><span>Section 13.4</span></a> covers scene segmentation, organised around Scene-VLM <span class="citation" data-cites="berman2026scenevlm">(<a href="../../references.html#ref-berman2026scenevlm" role="doc-biblioref">Berman et al. 2026</a>)</span> and the shift from encoder classifiers to autoregressive multimodal decoders.</p>
+<section id="sec-vts-notation" class="level2" data-number="13.1">
+<h2 data-number="13.1" class="anchored" data-anchor-id="sec-vts-notation"><span class="header-section-number">13.1</span> Notation</h2>
+<div id="tbl-vts-notation" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-vts-notation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;13.1: Notation for temporal segmentation.
+</figcaption>
+<div aria-describedby="tbl-vts-notation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 29%">
+<col style="width: 32%">
+<col style="width: 38%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Concept</th>
+<th style="text-align: left;">Notation</th>
+<th style="text-align: left;">Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Frame</strong></td>
+<td style="text-align: left;"><span class="math inline">\(\mathbf{I}_t \in \mathbb{R}^{H \times W \times 3}\)</span></td>
+<td style="text-align: left;">Frame at index <span class="math inline">\(t \in \{0, \ldots, F-1\}\)</span>, at <em>native</em> frame rate.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Shot</strong></td>
+<td style="text-align: left;"><span class="math inline">\(s_i = [a_i, b_i]\)</span></td>
+<td style="text-align: left;">Contiguous frame interval, one camera take. Shots partition the video: <span class="math inline">\(a_i = b_{i-1} + 1\)</span>, <span class="math inline">\(a_1 = 0\)</span>.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Transition</strong></td>
+<td style="text-align: left;"><span class="math inline">\(\mathcal{T}_i \subseteq [b_i, a_{i+1}]\)</span></td>
+<td style="text-align: left;">The frames over which shot <span class="math inline">\(i\)</span> gives way to shot <span class="math inline">\(i+1\)</span>. A <em>hard cut</em> has <span class="math inline">\(\lvert \mathcal{T}_i \rvert = 0\)</span>; a <em>gradual</em> transition has <span class="math inline">\(\lvert \mathcal{T}_i \rvert = L &gt; 0\)</span>.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Dissimilarity signal</strong></td>
+<td style="text-align: left;"><span class="math inline">\(d(t)\)</span></td>
+<td style="text-align: left;">Scalar distance between frames <span class="math inline">\(t\)</span> and <span class="math inline">\(t+1\)</span> under some descriptor.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Scene</strong></td>
+<td style="text-align: left;"><span class="math inline">\(\sigma_j = [s_{p}, \ldots, s_{q}]\)</span></td>
+<td style="text-align: left;">Maximal run of consecutive shots sharing semantic coherence.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Boundary label</strong></td>
+<td style="text-align: left;"><span class="math inline">\(y_i \in \{0,1\}\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(y_i = 1\)</span> iff shot <span class="math inline">\(i\)</span> is the last shot of a scene. Scene segmentation is binary sequence labelling over shots.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Tolerance</strong></td>
+<td style="text-align: left;"><span class="math inline">\(\tau\)</span></td>
+<td style="text-align: left;">Frame slack allowed when matching a predicted boundary to a ground-truth one (typically <span class="math inline">\(\tau = 2\)</span>).</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</section>
+<section id="sec-vts-pipeline" class="level2" data-number="13.2">
+<h2 data-number="13.2" class="anchored" data-anchor-id="sec-vts-pipeline"><span class="header-section-number">13.2</span> The Two-Stage Pipeline</h2>
+<div id="fig-vts-pipeline" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-vts-pipeline-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/video/mixpeek-scene-segmentation.png" class="img-fluid figure-img" style="width:72.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-vts-pipeline-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;13.1: The two-level segmentation pipeline: shot boundary detection on the raw frame stream, then semantic grouping of shots into scenes, then cleanup rules that enforce a usable duration range. The scene, not the frame, becomes the retrieval unit. <em>Source: Mixpeek, “Scene Segmentation: How a Video Becomes Searchable Scenes” <span class="citation" data-cites="mixpeek2026scenesegmentation">(<a href="../../references.html#ref-mixpeek2026scenesegmentation" role="doc-biblioref">Mixpeek 2026</a>)</span>.</em>
+</figcaption>
+</figure>
+</div>
+<section id="sec-vts-why-two" class="level3" data-number="13.2.1">
+<h3 data-number="13.2.1" class="anchored" data-anchor-id="sec-vts-why-two"><span class="header-section-number">13.2.1</span> Why two stages and not one</h3>
+<p>The naive alternative — one model that reads the video and emits semantic segments — is not obviously wrong, and <a href="#sec-scene-open" class="quarto-xref"><span>Section 13.6</span></a> returns to it. What rules it out today is a cost asymmetry of roughly three orders of magnitude. A histogram-difference shot detector runs at over 1000 fps on a CPU with no model weights <span class="citation" data-cites="mixpeek2026scenesegmentation">(<a href="../../references.html#ref-mixpeek2026scenesegmentation" role="doc-biblioref">Mixpeek 2026</a>)</span>; a VLM pass that captions or directly reads each shot costs 100–1000× more. So the pipeline spends its cheap compute first, to reduce an hour of video from 108,000 frames to a few hundred shots, and only then spends expensive compute on the few hundred.</p>
+<p>This is the same reduction that makes retrieval tractable. Neighbouring frames inside a shot are near-duplicates, so embedding every frame is redundant; one embedding per scene cuts index storage by 10–100× and makes each result carry a start and end timestamp rather than an isolated frame <span class="citation" data-cites="mixpeek2026scenesegmentation">(<a href="../../references.html#ref-mixpeek2026scenesegmentation" role="doc-biblioref">Mixpeek 2026</a>)</span>. The scene is the unit that video search actually runs on, which is why the two-stage segmenter sits upstream of the retrieval stack of <a href="11-video-understanding.html#sec-video-retrieval" class="quarto-xref"><span>Section 12.4</span></a>.</p>
+</section>
+<section id="sec-vts-cleanup" class="level3" data-number="13.2.2">
+<h3 data-number="13.2.2" class="anchored" data-anchor-id="sec-vts-cleanup"><span class="header-section-number">13.2.2</span> Semantic grouping and cleanup</h3>
+<p>The second stage groups adjacent shots by meaning. The cheap version — and the one most production systems start with — captions one keyframe per shot with a VLM, embeds the captions, and clusters <em>adjacent</em> shots by embedding similarity; <a href="#sec-scene" class="quarto-xref"><span>Section 13.4</span></a> covers what replaces this when accuracy matters. Keyframe choice is not incidental: taking the middle frame of the shot plus a sharpness check (rejecting frames whose Laplacian variance is low) avoids blurry frames and frames sampled in the middle of a dissolve, and shots longer than ~10 s get several keyframes <span class="citation" data-cites="mixpeek2026scenesegmentation">(<a href="../../references.html#ref-mixpeek2026scenesegmentation" role="doc-biblioref">Mixpeek 2026</a>)</span>.</p>
+<p>Neither stage produces segments of usable length on its own, so a cleanup pass enforces a duration band. Two rules do most of the work:</p>
+<ul>
+<li><strong>Merge below ~2 s.</strong> A 0.3 s reaction cutaway is a real shot but a useless retrieval unit. Merge it into whichever neighbour it matches better by histogram or embedding similarity — merged, not dropped, so the partition stays exhaustive.</li>
+<li><strong>Split above ~60 s.</strong> A long segment is split at a point of audio silence, which lands the boundary at a natural pause rather than mid-sentence.</li>
+</ul>
+<p>The output is a partition into 2–60 s segments, each a coherent visual or narrative unit. One further signal is worth extracting here: when an audio boundary (speaker change, silence, music cue) and a visual boundary land within ~0.5 s of each other, the boundary is high confidence <span class="citation" data-cites="mixpeek2026scenesegmentation">(<a href="../../references.html#ref-mixpeek2026scenesegmentation" role="doc-biblioref">Mixpeek 2026</a>)</span>. Audio boundary detection is covered in <a href="../audio/23-speaker-diarization.html" class="quarto-xref"><span>Chapter 29</span></a>; the cross-modal agreement test is essentially free once both are running.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>The pipeline is an engineering convention, not a definition
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The 2 s / 60 s / 0.5 s constants are tuned to a retrieval product, not derived. Data curation for video-generation training uses a different band (a few seconds, hard-cut-free), chaptering uses minutes, and broadcast archiving follows editorial rules. What transfers is the <em>structure</em> — cheap boundary detection, then semantic grouping, then duration normalisation — not the numbers.</p>
+</div>
+</div>
+</section>
+</section>
+<section id="sec-sbd" class="level2" data-number="13.3">
+<h2 data-number="13.3" class="anchored" data-anchor-id="sec-sbd"><span class="header-section-number">13.3</span> Shot Boundary Detection</h2>
+<section id="sec-sbd-signal" class="level3" data-number="13.3.1">
+<h3 data-number="13.3.1" class="anchored" data-anchor-id="sec-sbd-signal"><span class="header-section-number">13.3.1</span> The signal and why it breaks</h3>
+<p>Classical shot boundary detection reduces the video to a scalar dissimilarity signal and looks for peaks. The standard descriptor is a colour histogram — HSV rather than RGB, because separating chroma from luminance makes the descriptor less sensitive to illumination change — compared under a <span class="math inline">\(\chi^2\)</span> distance,</p>
+<p><span id="eq-vts-hist"><span class="math display">\[
+d(t) \;=\; \sum_{b=1}^{B}
+\frac{\bigl(h_t[b] - h_{t+1}[b]\bigr)^2}{h_t[b] + h_{t+1}[b]},
+\tag{13.1}\]</span></span></p>
+<p>where <span class="math inline">\(h_t\)</span> is the normalised histogram of frame <span class="math inline">\(t\)</span> over <span class="math inline">\(B\)</span> bins. A hard cut makes <span class="math inline">\(d(t)\)</span> an impulse, and a fixed threshold catches it. FFmpeg’s scene score is a variant of this normalised to <span class="math inline">\([0,1]\)</span>, where 0.3–0.4 catches most hard cuts <span class="citation" data-cites="mixpeek2026scenesegmentation">(<a href="../../references.html#ref-mixpeek2026scenesegmentation" role="doc-biblioref">Mixpeek 2026</a>)</span>. This is the whole of PySceneDetect’s fast path <span class="citation" data-cites="castellano2025pyscenedetect">(<a href="../../references.html#ref-castellano2025pyscenedetect" role="doc-biblioref">Castellano 2025</a>)</span>: deterministic, weight-free, and faster than the decoder that feeds it.</p>
+<p>It fails on gradual transitions, and the reason is worth being precise about. A dissolve of length <span class="math inline">\(L\)</span> interpolates between shots, <span class="math inline">\(\mathbf{I}_{t} \approx (1-\alpha_t)\mathbf{A} + \alpha_t \mathbf{B}\)</span> with <span class="math inline">\(\alpha_t\)</span> sweeping <span class="math inline">\(0 \to 1\)</span> over <span class="math inline">\(L\)</span> frames. The <em>total</em> change is the same as a hard cut, but it is spread across <span class="math inline">\(L\)</span> frame pairs, so</p>
+<p><span id="eq-vts-gradual"><span class="math display">\[
+\max_t d(t) \;=\; \mathcal{O}\!\left(\frac{1}{L}\right)\quad\text{for a
+gradual transition, versus }\mathcal{O}(1)\ \text{for a hard cut.}
+\tag{13.2}\]</span></span></p>
+<p>For <span class="math inline">\(L = 30\)</span> frames, <a href="#eq-vts-gradual" class="quarto-xref">Equation&nbsp;<span>13.2</span></a> puts the peak an order of magnitude below the hard-cut threshold, indistinguishable from ordinary camera motion. Lowering the threshold to catch it floods the detector with false positives in any action sequence.</p>
+<p>The classical repair is adaptive thresholding: maintain a rolling window <span class="math inline">\(\mathcal{W}_t\)</span> of the last ~30 scores and flag a boundary when</p>
+<p><span id="eq-vts-adaptive"><span class="math display">\[
+d(t) \;&gt;\; \mu(\mathcal{W}_t) \;+\; k\,\sigma(\mathcal{W}_t),
+\qquad k \in [2, 3],
+\tag{13.3}\]</span></span></p>
+<p>which is what PySceneDetect’s <code>ContentDetector</code> implements, with a <code>min_scene_len</code> guard against spurious repeated cuts <span class="citation" data-cites="mixpeek2026scenesegmentation castellano2025pyscenedetect">(<a href="../../references.html#ref-mixpeek2026scenesegmentation" role="doc-biblioref">Mixpeek 2026</a>; <a href="../../references.html#ref-castellano2025pyscenedetect" role="doc-biblioref">Castellano 2025</a>)</span>. The bar now rises automatically in fast-cut action and falls in static dialogue. But adaptive thresholding only rescales the statistic; it does not recover the <span class="math inline">\(\mathcal{O}(1/L)\)</span> signal loss, because a long dissolve raises its own local mean. The real fix is to stop differencing adjacent frames and start <em>aggregating evidence over a window</em> — which is exactly what a learned temporal model does.</p>
+</section>
+<section id="sec-sbd-dense" class="level3" data-number="13.3.2">
+<h3 data-number="13.3.2" class="anchored" data-anchor-id="sec-sbd-dense"><span class="header-section-number">13.3.2</span> The dense-input constraint</h3>
+<p>One property separates SBD from every other video task in this book. The event being detected lives <em>between two adjacent frames</em>, so temporal subsampling is not available: a detector that reads 2 fps cannot localise a boundary to the frame. SBD must consume the native frame rate.</p>
+<p>Since the compute budget is fixed, that constraint is paid for in space. TransNet V2 and its lineage downsample aggressively — to <span class="math inline">\(48 \times 27\)</span> pixels — and spend the savings on temporal density <span class="citation" data-cites="soucek2024transnetv2 wang2026omnishotcut">(<a href="../../references.html#ref-soucek2024transnetv2" role="doc-biblioref">Souček and Lokoč 2024</a>; <a href="../../references.html#ref-wang2026omnishotcut" role="doc-biblioref">Wang et al. 2026</a>)</span>. This is the opposite trade from the video VLMs of <a href="11-video-understanding.html#sec-video-vlms" class="quarto-xref"><span>Section 12.3</span></a>, which keep high spatial resolution and sample a handful of frames per second. It is a good sanity check when reading a video paper: <em>which axis is it spending on, and does that match the event it claims to detect?</em></p>
+</section>
+<section id="sec-sbd-taxonomy" class="level3" data-number="13.3.3">
+<h3 data-number="13.3.3" class="anchored" data-anchor-id="sec-sbd-taxonomy"><span class="header-section-number">13.3.3</span> Transition taxonomy</h3>
+<p>Transitions are not a long tail of curiosities; they are a finite, enumerable set, because they are produced by a finite set of editing tools. OmniShotCut’s synthesis pipeline reproduces 9 main families and 30 subtypes <span class="citation" data-cites="wang2026omnishotcut">(<a href="../../references.html#ref-wang2026omnishotcut" role="doc-biblioref">Wang et al. 2026</a>)</span>; <a href="#tbl-vts-transitions" class="quarto-xref">Table&nbsp;<span>13.2</span></a> groups them by what they do to the dissimilarity signal of <a href="#eq-vts-hist" class="quarto-xref">Equation&nbsp;<span>13.1</span></a>.</p>
+<div id="tbl-vts-transitions" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-vts-transitions-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;13.2: Transition families covered by OmniShotCut’s synthesis pipeline, with their signature under a global histogram descriptor.
+</figcaption>
+<div aria-describedby="tbl-vts-transitions-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 15%">
+<col style="width: 19%">
+<col style="width: 41%">
+<col style="width: 23%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Family</th>
+<th style="text-align: left;">Subtypes</th>
+<th style="text-align: left;">Signature in <span class="math inline">\(d(t)\)</span></th>
+<th style="text-align: left;">Difficulty</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Hard cut</strong></td>
+<td style="text-align: left;">—</td>
+<td style="text-align: left;">Single impulse</td>
+<td style="text-align: left;">Easy; solved by <a href="#eq-vts-hist" class="quarto-xref">Equation&nbsp;<span>13.1</span></a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Dissolve</strong></td>
+<td style="text-align: left;">Transparent, cross-blur, ripple</td>
+<td style="text-align: left;">Broad low bump, <span class="math inline">\(\mathcal{O}(1/L)\)</span></td>
+<td style="text-align: left;">Hard for thresholds; endpoints ill-defined even for humans</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Fade</strong></td>
+<td style="text-align: left;">To/from black, to/from white, dip</td>
+<td style="text-align: left;">Ramp to a constant frame</td>
+<td style="text-align: left;">Endpoints ambiguous; the “boundary” frame is often a black frame</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Wipe</strong></td>
+<td style="text-align: left;">Unidirectional, diagonal, circular, bar, ripple, page-curl, mosaic</td>
+<td style="text-align: left;">Spatially localised change; global histogram barely moves</td>
+<td style="text-align: left;">Global descriptors fail structurally</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Push / Slide</strong></td>
+<td style="text-align: left;">Unidirectional, puzzle, horizontal, whip-pan, cube</td>
+<td style="text-align: left;">Looks like fast camera motion</td>
+<td style="text-align: left;">Confusable with genuine pans</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Zoom</strong></td>
+<td style="text-align: left;">Zoom in/out, spin in/out, cross zoom, swap</td>
+<td style="text-align: left;">Looks like a zoom</td>
+<td style="text-align: left;">Confusable with genuine zooms</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Doorway</strong></td>
+<td style="text-align: left;">Doorway open</td>
+<td style="text-align: left;">Structured occlusion</td>
+<td style="text-align: left;">Rare; absent from legacy training sets</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Sudden jump</strong></td>
+<td style="text-align: left;">—</td>
+<td style="text-align: left;">Impulse, but <em>within</em> one nominal shot</td>
+<td style="text-align: left;">Under-modelled; see below</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>The last row is OmniShotCut’s addition to the task. A <strong>sudden jump</strong> is a frame-to-frame discontinuity produced when an editor removes a short span from the middle of an otherwise continuous take: excessive abrupt motion or texture change between two consecutive frames, with no transition effect. Classical SBD ignores it because it is not a “cut” in the editorial sense. But it breaks every downstream consumer that assumes a shot is temporally continuous — point tracking, video object segmentation, and above all the temporal VAEs of <a href="14-video-generation.html" class="quarto-xref"><span>Chapter 15</span></a>, which compress several frames into shared tokens and are badly served by a subject teleporting across the frame mid-token <span class="citation" data-cites="wang2026omnishotcut agarwal2025cosmos">(<a href="../../references.html#ref-wang2026omnishotcut" role="doc-biblioref">Wang et al. 2026</a>; <a href="../../references.html#ref-agarwal2025cosmos" role="doc-biblioref"><span class="nocase">Agarwal et al.</span> 2025</a>)</span>.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Figure to add
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>A frame-strip visualisation of the transition families — for each of dissolve, fade, wipe, slide, zoom, doorway, sudden jump, and hard cut, a row of ~6 consecutive frames spanning shot A → transition → shot B, with the transition region shaded. OmniShotCut’s Figure 2 is the direct source <span class="citation" data-cites="wang2026omnishotcut">(<a href="../../references.html#ref-wang2026omnishotcut" role="doc-biblioref">Wang et al. 2026</a>)</span>.</p>
+</div>
+</div>
+</section>
+<section id="sec-sbd-learned" class="level3" data-number="13.3.4">
+<h3 data-number="13.3.4" class="anchored" data-anchor-id="sec-sbd-learned"><span class="header-section-number">13.3.4</span> Learned detectors</h3>
+<p>Deep SBD has been a 3D-CNN story since DeepSBD <span class="citation" data-cites="hassanien2017deepsbd">(<a href="../../references.html#ref-hassanien2017deepsbd" role="doc-biblioref">Hassanien et al. 2017</a>)</span>. The formulation is uniform across DeepSBD, ClipShots <span class="citation" data-cites="tang2018clipshots">(<a href="../../references.html#ref-tang2018clipshots" role="doc-biblioref">Tang et al. 2018</a>)</span>, TransNet / TransNet V2 <span class="citation" data-cites="soucek2019transnet soucek2024transnetv2">(<a href="../../references.html#ref-soucek2019transnet" role="doc-biblioref">Souček et al. 2019</a>; <a href="../../references.html#ref-soucek2024transnetv2" role="doc-biblioref">Souček and Lokoč 2024</a>)</span>, and AutoShot <span class="citation" data-cites="zhu2023autoshot">(<a href="../../references.html#ref-zhu2023autoshot" role="doc-biblioref">Zhu et al. 2023</a>)</span>: slide a small 3D CNN over a stack of heavily downsampled frames, emit a per-frame probability that the frame is inside a transition, threshold, and post-process into intervals. TransNet V2 remains the default production detector; AutoShot improved it by curating a short-video training set closer to modern content.</p>
+<p>Three limitations of this formulation motivate what follows.</p>
+<ol type="1">
+<li><strong>The output is a bare interval.</strong> Nothing tells the consumer whether a boundary was a hard cut, a dissolve, or a scene change. A video-generation data pipeline that wants clean vanilla segments and a media system that wants transition-aware indexing get the same undifferentiated output.</li>
+<li><strong>Sudden jumps are invisible.</strong> They are not annotated in any legacy dataset, so they are not learned.</li>
+<li><strong>The supervision is unreliable.</strong> Humans cannot localise the first and last frame of a dissolve or fade — the per-frame change in opacity is below perceptual threshold — so gradual-transition labels in BBC <span class="citation" data-cites="baraldi2015siamese">(<a href="../../references.html#ref-baraldi2015siamese" role="doc-biblioref">Baraldi et al. 2015a</a>)</span>, RAI <span class="citation" data-cites="baraldi2015hierarchical">(<a href="../../references.html#ref-baraldi2015hierarchical" role="doc-biblioref">Baraldi et al. 2015b</a>)</span> and IACC.3 <span class="citation" data-cites="awad2017trecvid">(<a href="../../references.html#ref-awad2017trecvid" role="doc-biblioref">Awad et al. 2017</a>)</span> are noisy where the task is hardest. These benchmarks are also drawn from legacy broadcast footage and do not cover anime, screen recordings, gameplay, or short-form vertical video.</li>
+</ol>
+<p><a href="#tbl-sbd-landscape" class="quarto-xref">Table&nbsp;<span>13.3</span></a> summarises the resulting landscape.</p>
+<div id="tbl-sbd-landscape" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-sbd-landscape-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;13.3: The shot boundary detection landscape.
+</figcaption>
+<div aria-describedby="tbl-sbd-landscape-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 28%">
+<col style="width: 21%">
+<col style="width: 21%">
+<col style="width: 28%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Method</th>
+<th style="text-align: left;">Type</th>
+<th style="text-align: left;">Idea</th>
+<th style="text-align: left;">Output</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">PySceneDetect <span class="citation" data-cites="castellano2025pyscenedetect">(<a href="../../references.html#ref-castellano2025pyscenedetect" role="doc-biblioref">Castellano 2025</a>)</span></td>
+<td style="text-align: left;">Handcrafted</td>
+<td style="text-align: left;">HSV histogram + adaptive threshold</td>
+<td style="text-align: left;">Hard cuts, intervals</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Koala-36M <span class="citation" data-cites="wang2025koala36m">(<a href="../../references.html#ref-wang2025koala36m" role="doc-biblioref"><span class="nocase">Wang et al.</span> 2025</a>)</span></td>
+<td style="text-align: left;">Handcrafted</td>
+<td style="text-align: left;">Structural-similarity filtering at dataset scale</td>
+<td style="text-align: left;">Hard cuts, intervals</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DeepSBD <span class="citation" data-cites="hassanien2017deepsbd">(<a href="../../references.html#ref-hassanien2017deepsbd" role="doc-biblioref">Hassanien et al. 2017</a>)</span></td>
+<td style="text-align: left;">3D CNN</td>
+<td style="text-align: left;">Learned spatio-temporal transition classifier</td>
+<td style="text-align: left;">Intervals</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">TransNet V2 <span class="citation" data-cites="soucek2024transnetv2">(<a href="../../references.html#ref-soucek2024transnetv2" role="doc-biblioref">Souček and Lokoč 2024</a>)</span></td>
+<td style="text-align: left;">3D CNN</td>
+<td style="text-align: left;">Dilated DDCNN cells at <span class="math inline">\(48\times27\)</span>; production default</td>
+<td style="text-align: left;">Per-frame transition prob.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">AutoShot <span class="citation" data-cites="zhu2023autoshot">(<a href="../../references.html#ref-zhu2023autoshot" role="doc-biblioref">Zhu et al. 2023</a>)</span></td>
+<td style="text-align: left;">3D CNN</td>
+<td style="text-align: left;">NAS-searched architecture + short-video training set</td>
+<td style="text-align: left;">Per-frame transition prob.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">OmniShotCut <span class="citation" data-cites="wang2026omnishotcut">(<a href="../../references.html#ref-wang2026omnishotcut" role="doc-biblioref">Wang et al. 2026</a>)</span></td>
+<td style="text-align: left;">Shot-query Transformer</td>
+<td style="text-align: left;">Relational prediction: ranges + intra/inter labels</td>
+<td style="text-align: left;">Shots + transition type + continuity relation</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</section>
+<section id="sec-omnishotcut" class="level3" data-number="13.3.5">
+<h3 data-number="13.3.5" class="anchored" data-anchor-id="sec-omnishotcut"><span class="header-section-number">13.3.5</span> OmniShotCut: SBD as relational prediction</h3>
+<p>OmniShotCut <span class="citation" data-cites="wang2026omnishotcut">(<a href="../../references.html#ref-wang2026omnishotcut" role="doc-biblioref">Wang et al. 2026</a>)</span> changes what the model outputs. Instead of a boundary indicator, it emits, for each shot <span class="math inline">\(i\)</span>, a triple</p>
+<p><span class="math display">\[
+\bigl(\,p^{\text{end}}_i,\; c^{\text{intra}}_i,\; c^{\text{inter}}_i\,\bigr),
+\]</span></p>
+<p>where <span class="math inline">\(p^{\text{end}}_i\)</span> localises the shot’s last frame, <span class="math inline">\(c^{\text{intra}}_i\)</span> classifies the shot’s own content into 8 categories (vanilla general video, plus dissolve / wipe / push / slide / zoom / fade / doorway when the shot <em>is</em> a transition region), and <span class="math inline">\(c^{\text{inter}}_i\)</span> classifies its relationship to the preceding shot as a transition, a hard cut, or a sudden jump. The intra-label says <em>what this segment is</em>; the inter-label says <em>how it joins to what came before</em>. Both are the information downstream consumers were previously inferring by heuristic.</p>
+<p><strong>Architecture.</strong> The model is DETR (see <a href="../vision/05-vision-transformers.html#sec-detr" class="quarto-xref"><span>Section 5.5</span></a>) transplanted to the time axis. A ResNet-18 encodes frames independently; the resulting <span class="math inline">\(F \times H \times W\)</span> feature grid is flattened to a single token sequence in <span class="math inline">\(\mathbb{R}^{d \times (F \cdot H \cdot W)}\)</span> with 3D sinusoidal position embeddings over <span class="math inline">\((t, x, y)\)</span> following VisTR <span class="citation" data-cites="wang2021vistr">(<a href="../../references.html#ref-wang2021vistr" role="doc-biblioref">Y. Wang et al. 2021</a>)</span>; a Transformer encoder mixes them; and a decoder consumes a fixed set of 24 learned <strong>shot queries</strong>, each of which aggregates evidence for one shot and is decoded by three heads. Total 34.5M parameters, of which 11.2M is the backbone.</p>
+<p><strong>Range prediction as classification.</strong> The one design choice worth dwelling on. A DETR-style head would regress normalised interval coordinates with <span class="math inline">\(L_1\)</span> + 1D GIoU. OmniShotCut instead makes the range head a softmax over <em>frame indices</em>: <span class="math inline">\(p^{\text{end}}_i \in \Delta^{F-1}\)</span>. Two consequences follow. Because shots partition the video, the start of shot <span class="math inline">\(i\)</span> is implied by the end of shot <span class="math inline">\(i-1\)</span>, so queries are intrinsically ordered and <strong>Hungarian matching is unnecessary</strong> — the ordered assignment that DETR must solve is given by the problem structure. And because the head is categorical, there is no threshold and no interval post-processing.</p>
+<p>The training objective, <a href="#eq-omni-loss" class="quarto-xref">Equation&nbsp;<span>13.4</span></a>, is three cross-entropies with a heavy weight on localisation (<span class="math inline">\(\lambda_{\text{range}} = 5\)</span> against <span class="math inline">\(\lambda_{\text{intra}} = \lambda_{\text{inter}} = 1\)</span>), with auxiliary supervision at intermediate decoder layers:</p>
+<p><span id="eq-omni-loss"><span class="math display">\[
+\mathcal{L} = \frac{1}{N}\sum_{i=1}^{N}
+\Bigl[\lambda_{\text{range}}\,\mathrm{CE}\bigl(p^{\text{end}}_i, y^{\text{end}}_i\bigr)
++ \lambda_{\text{intra}}\,\mathrm{CE}\bigl(p^{\text{intra}}_i, y^{\text{intra}}_i\bigr)
++ \lambda_{\text{inter}}\,\mathrm{CE}\bigl(p^{\text{inter}}_i, y^{\text{inter}}_i\bigr)\Bigr].
+\tag{13.4}\]</span></span></p>
+<p>The classification-vs-regression ablation (<a href="#tbl-sbd-ablation" class="quarto-xref">Table&nbsp;<span>13.5</span></a>) is more interesting than a clean win. Regression is <em>better</em> at transition IoU (0.718 vs 0.644) — unsurprising, since a continuous head optimises interval overlap directly — but worse at zero-tolerance sudden-jump accuracy (0.717 vs 0.759) and at range F1 (0.857 vs 0.881). Regression smooths; classification commits. When the target is a specific frame index, the last one or two frames are exactly what a regression loss cannot resolve, and those frames are the entire content of a hard cut.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Figure to add
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The shot-query decoder: frame tokens from a ResNet backbone, flattened with 3D <span class="math inline">\((t,x,y)\)</span> positional embeddings, through the Transformer encoder; <span class="math inline">\(N\)</span> learned shot queries cross-attending to frame features and decoding into range / intra / inter heads. OmniShotCut Figure 4 <span class="citation" data-cites="wang2026omnishotcut">(<a href="../../references.html#ref-wang2026omnishotcut" role="doc-biblioref">Wang et al. 2026</a>)</span>.</p>
+</div>
+</div>
+<p><strong>Synthetic supervision.</strong> The training data contains no human labels at all, and the argument for this is the strongest idea in the paper. Transitions are <em>generated</em> by editing software from known parameters. Annotating them is therefore an inverse problem — reverse-engineering a parametric effect from pixels, at a precision humans demonstrably lack — whereas synthesising them is the forward problem, with exact ground truth by construction. This is the same reasoning that produced synthetic degradation pipelines in blind super-resolution <span class="citation" data-cites="wang2021realesrgan">(<a href="../../references.html#ref-wang2021realesrgan" role="doc-biblioref">X. Wang et al. 2021</a>)</span>.</p>
+<p>The pipeline curates ~2.5M raw internet videos down to ~1.5M clean clips by filtering on resolution / fps / duration, verifying temporal continuity via DINOv3 <span class="citation" data-cites="simeoni2025dinov3">(<a href="../../references.html#ref-simeoni2025dinov3" role="doc-biblioref"><span class="nocase">Siméoni et al.</span> 2025</a>)</span> cosine similarity between sampled frames (<span class="math inline">\(\varepsilon_{\text{sim}} = 0.9\)</span>), and estimating motion strength with CoTracker3 <span class="citation" data-cites="karaev2025cotracker3">(<a href="../../references.html#ref-karaev2025cotracker3" role="doc-biblioref">Karaev et al. 2025</a>)</span> dense point tracking. It then composes 300K synthetic videos carrying 11.9M labelled transitions. Two distributional choices matter more than the effects themselves:</p>
+<ul>
+<li><strong>Semantic clustering of sources.</strong> Clips are grouped into 27,000 hierarchical <span class="math inline">\(k\)</span>-means clusters over DINOv3 embeddings, following the automatic-curation recipe of Vo et al. <span class="citation" data-cites="vo2024curation">(<a href="../../references.html#ref-vo2024curation" role="doc-biblioref"><span class="nocase">Vo et al.</span> 2024</a>)</span>, and 75% of transitions join two clips from the <em>same</em> cluster. Random pairing makes the task trivial — a mountain cutting to a kitchen is discriminable from the colour histogram alone. Same-cluster pairing forces the model onto fine-grained temporal cues. Removing it costs 9.3 points of transition IoU and 10.5 points of inter-relation accuracy (<a href="#tbl-sbd-ablation" class="quarto-xref">Table&nbsp;<span>13.5</span></a>), and it is the inter-label — the hard-cut-vs-sudden-jump distinction — that suffers most, exactly as one would predict.</li>
+<li><strong>Matching the real cut-rate distribution.</strong> Under random synthesis, fewer than 0.005% of samples contain more than five consecutive hard cuts, though rapid cutting is common in real editing. Forcing 25% of the corpus to be dense and short (28 clips of 0.15–1.0 s) raises sudden-jump accuracy from 0.509 to 0.759.</li>
+</ul>
+<p>The general lesson is that when supervision is synthetic, the <em>marginal distribution</em> of the synthesiser is a hyperparameter as consequential as the architecture, and matching it to the deployment distribution is where most of the gain lives.</p>
+</section>
+<section id="sec-sbd-eval" class="level3" data-number="13.3.6">
+<h3 data-number="13.3.6" class="anchored" data-anchor-id="sec-sbd-eval"><span class="header-section-number">13.3.6</span> Benchmarks and metrics</h3>
+<p>Boundary detection is scored by matching predicted boundaries to ground-truth boundaries within a tolerance <span class="math inline">\(\tau\)</span>, then computing precision, recall and F1 over the matching. Three details are easy to get wrong:</p>
+<ul>
+<li><strong>Tolerance.</strong> <span class="math inline">\(\tau = 2\)</span> frames is the convention, following the ShotBench protocol used in Cosmos <span class="citation" data-cites="agarwal2025cosmos">(<a href="../../references.html#ref-agarwal2025cosmos" role="doc-biblioref"><span class="nocase">Agarwal et al.</span> 2025</a>)</span>. Numbers are not comparable across different <span class="math inline">\(\tau\)</span>.</li>
+<li><strong>Micro- not macro-averaging.</strong> Counts are accumulated across all videos before computing the ratios, rather than averaging per-video F1, because cut counts vary by an order of magnitude between videos.</li>
+<li><strong>F1 hides the interesting failures.</strong> A detector can score well on range F1 while placing every dissolve boundary in the middle of the dissolve. OmniShotCut therefore reports two diagnostic metrics alongside it: <strong>transition IoU</strong>, the temporal intersection-over-union between predicted and ground-truth transition intervals (with the tolerance widened in proportion to the annotator’s confidence score), and <strong>sudden-jump accuracy</strong> at <em>zero</em> tolerance, since a sudden jump is instantaneous by definition.</li>
+</ul>
+<p>OmniShotCutBench is 114 one-minute videos standardised to 480p/30 fps, spanning vlog, anime, movie, concert, documentary, screen recording, gameplay and sports, annotated by trained annotators with per-boundary confidence scores, and disjoint from all synthetic training data. It is the response to the observation that BBC, RAI and IACC.3 are legacy broadcast footage with noisy gradual-transition labels.</p>
+<div id="tbl-sbd-results" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-sbd-results-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;13.4: Shot boundary detection results, reproduced from <span class="citation" data-cites="wang2026omnishotcut">(<a href="../../references.html#ref-wang2026omnishotcut" role="doc-biblioref">Wang et al. 2026</a>)</span>. Columns 2–8 are OmniShotCutBench (transition IoU, sudden-jump accuracy, shot-range precision/recall/F1, intra- and inter-relation accuracy); the last three are shot-range precision/recall/F1 on BBC Planet Earth. Higher is better throughout. On BBC, OmniShotCut merges its transition labels into hard-cut-only output to match the legacy annotation convention.
+</figcaption>
+<div aria-describedby="tbl-sbd-results-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 21%">
+<col style="width: 7%">
+<col style="width: 7%">
+<col style="width: 7%">
+<col style="width: 7%">
+<col style="width: 7%">
+<col style="width: 7%">
+<col style="width: 7%">
+<col style="width: 7%">
+<col style="width: 7%">
+<col style="width: 7%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Method</th>
+<th style="text-align: right;">Trans. IoU</th>
+<th style="text-align: right;">Jump Acc.</th>
+<th style="text-align: right;">P</th>
+<th style="text-align: right;">R</th>
+<th style="text-align: right;">F1</th>
+<th style="text-align: right;">Intra</th>
+<th style="text-align: right;">Inter</th>
+<th style="text-align: right;">BBC P</th>
+<th style="text-align: right;">BBC R</th>
+<th style="text-align: right;">BBC F1</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">PySceneDetect</td>
+<td style="text-align: right;">0.183</td>
+<td style="text-align: right;">0.417</td>
+<td style="text-align: right;">0.833</td>
+<td style="text-align: right;">0.689</td>
+<td style="text-align: right;">0.755</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">0.893</td>
+<td style="text-align: right;">0.884</td>
+<td style="text-align: right;">0.889</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">TransNet V2</td>
+<td style="text-align: right;">0.193</td>
+<td style="text-align: right;">0.262</td>
+<td style="text-align: right;"><strong>0.913</strong></td>
+<td style="text-align: right;">0.735</td>
+<td style="text-align: right;">0.814</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">0.983</td>
+<td style="text-align: right;">0.951</td>
+<td style="text-align: right;">0.967</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">AutoShot</td>
+<td style="text-align: right;">0.253</td>
+<td style="text-align: right;">0.455</td>
+<td style="text-align: right;">0.849</td>
+<td style="text-align: right;">0.783</td>
+<td style="text-align: right;">0.815</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;"><strong>0.984</strong></td>
+<td style="text-align: right;">0.922</td>
+<td style="text-align: right;">0.952</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">OmniShotCut</td>
+<td style="text-align: right;"><strong>0.644</strong></td>
+<td style="text-align: right;"><strong>0.759</strong></td>
+<td style="text-align: right;">0.904</td>
+<td style="text-align: right;"><strong>0.859</strong></td>
+<td style="text-align: right;"><strong>0.881</strong></td>
+<td style="text-align: right;">0.962</td>
+<td style="text-align: right;">0.827</td>
+<td style="text-align: right;">0.967</td>
+<td style="text-align: right;"><strong>0.974</strong></td>
+<td style="text-align: right;"><strong>0.971</strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Read <a href="#tbl-sbd-results" class="quarto-xref">Table&nbsp;<span>13.4</span></a> as two separate findings. On <strong>BBC</strong>, everything works: four methods spanning three decades of technique sit between F1 0.889 and 0.971. Legacy hard-cut detection in broadcast footage is a solved problem, and reporting only BBC numbers cannot distinguish methods. On <strong>OmniShotCutBench</strong>, range F1 spreads modestly (0.755 → 0.881) but the diagnostic metrics separate sharply: transition IoU goes from 0.18–0.25 to 0.64, and sudden-jump accuracy from 0.26–0.46 to 0.76. Prior detectors were finding <em>that</em> something happened while being 2.5–3.5× worse at saying <em>where and what</em>. This is the concrete payoff of the relational formulation, and it is invisible under the metric the field had been reporting.</p>
+<div id="tbl-sbd-ablation" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-sbd-ablation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;13.5: OmniShotCut ablations <span class="citation" data-cites="wang2026omnishotcut">(<a href="../../references.html#ref-wang2026omnishotcut" role="doc-biblioref">Wang et al. 2026</a>)</span>. Bold is the better setting within each group; the base configuration is repeated as the reference row. Note that resolution is non-monotonic — the extra spatial detail at <span class="math inline">\(128\times160\)</span> costs temporal context under a fixed token budget.
+</figcaption>
+<div aria-describedby="tbl-sbd-ablation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 32%">
+<col style="width: 29%">
+<col style="width: 9%">
+<col style="width: 9%">
+<col style="width: 9%">
+<col style="width: 9%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Ablation</th>
+<th style="text-align: left;">Setting</th>
+<th style="text-align: right;">Trans. IoU</th>
+<th style="text-align: right;">Jump Acc.</th>
+<th style="text-align: right;">Range F1</th>
+<th style="text-align: left;">Intra / Inter Acc.</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Range head</td>
+<td style="text-align: left;"><strong>Classification</strong></td>
+<td style="text-align: right;">0.644</td>
+<td style="text-align: right;"><strong>0.759</strong></td>
+<td style="text-align: right;"><strong>0.881</strong></td>
+<td style="text-align: left;"><strong>0.962 / 0.827</strong></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><span class="math inline">\(L_1\)</span> + 1D GIoU</td>
+<td style="text-align: right;"><strong>0.718</strong></td>
+<td style="text-align: right;">0.717</td>
+<td style="text-align: right;">0.857</td>
+<td style="text-align: left;">0.956 / 0.809</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Source clustering</td>
+<td style="text-align: left;"><strong>SSL clusters (75%)</strong></td>
+<td style="text-align: right;"><strong>0.644</strong></td>
+<td style="text-align: right;"><strong>0.759</strong></td>
+<td style="text-align: right;"><strong>0.881</strong></td>
+<td style="text-align: left;"><strong>0.962 / 0.827</strong></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">Random pairing</td>
+<td style="text-align: right;">0.551</td>
+<td style="text-align: right;">0.664</td>
+<td style="text-align: right;">0.861</td>
+<td style="text-align: left;">0.957 / 0.722</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Cut-rate prior</td>
+<td style="text-align: left;"><strong>25% dense/short</strong></td>
+<td style="text-align: right;"><strong>0.644</strong></td>
+<td style="text-align: right;"><strong>0.759</strong></td>
+<td style="text-align: right;"><strong>0.881</strong></td>
+<td style="text-align: left;"><strong>0.962 / 0.827</strong></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">Natural (random)</td>
+<td style="text-align: right;">0.610</td>
+<td style="text-align: right;">0.509</td>
+<td style="text-align: right;">0.831</td>
+<td style="text-align: left;">0.955 / 0.790</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Resolution</td>
+<td style="text-align: left;"><span class="math inline">\(64\times96\)</span></td>
+<td style="text-align: right;">0.582</td>
+<td style="text-align: right;">0.699</td>
+<td style="text-align: right;">0.877</td>
+<td style="text-align: left;">0.959 / 0.818</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><strong><span class="math inline">\(96\times128\)</span></strong></td>
+<td style="text-align: right;"><strong>0.644</strong></td>
+<td style="text-align: right;"><strong>0.759</strong></td>
+<td style="text-align: right;"><strong>0.881</strong></td>
+<td style="text-align: left;"><strong>0.962 / 0.827</strong></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><span class="math inline">\(128\times160\)</span></td>
+<td style="text-align: right;">0.584</td>
+<td style="text-align: right;">0.723</td>
+<td style="text-align: right;">0.867</td>
+<td style="text-align: left;">0.954 / 0.794</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Shot queries</td>
+<td style="text-align: left;">12</td>
+<td style="text-align: right;">0.556</td>
+<td style="text-align: right;">0.735</td>
+<td style="text-align: right;">0.876</td>
+<td style="text-align: left;">0.953 / <strong>0.833</strong></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><strong>24</strong></td>
+<td style="text-align: right;"><strong>0.644</strong></td>
+<td style="text-align: right;"><strong>0.759</strong></td>
+<td style="text-align: right;"><strong>0.881</strong></td>
+<td style="text-align: left;"><strong>0.962</strong> / 0.827</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">48</td>
+<td style="text-align: right;">0.590</td>
+<td style="text-align: right;">0.753</td>
+<td style="text-align: right;">0.873</td>
+<td style="text-align: left;">0.959 / 0.811</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</section>
+</section>
+<section id="sec-scene" class="level2" data-number="13.4">
+<h2 data-number="13.4" class="anchored" data-anchor-id="sec-scene"><span class="header-section-number">13.4</span> Scene Boundary Detection</h2>
+<section id="sec-scene-formulation" class="level3" data-number="13.4.1">
+<h3 data-number="13.4.1" class="anchored" data-anchor-id="sec-scene-formulation"><span class="header-section-number">13.4.1</span> Formulation</h3>
+<p>The input is now the shot sequence <span class="math inline">\(s_1, \ldots, s_M\)</span> produced by <a href="#sec-sbd" class="quarto-xref"><span>Section 13.3</span></a>, each represented by a few keyframes and optionally by aligned text. The output is a binary label per shot, <span class="math inline">\(y_i = 1\)</span> iff shot <span class="math inline">\(i\)</span> closes a scene. On MovieNet a feature film is ~1000 shots, so this is long-range sequence labelling with a sparse positive class.</p>
+<p>Every pre-2025 method factorises the problem the same way — a <em>point-wise</em> classifier over a local window of <span class="math inline">\(2w+1\)</span> shots,</p>
+<p><span id="eq-scene-pointwise"><span class="math display">\[
+\hat{y}_i \;=\; f_\theta\bigl(s_{i-w}, \ldots, s_{i}, \ldots, s_{i+w}\bigr),
+\tag{13.5}\]</span></span></p>
+<p>with each <span class="math inline">\(\hat{y}_i\)</span> computed independently. LGSS <span class="citation" data-cites="rao2020lgss">(<a href="../../references.html#ref-rao2020lgss" role="doc-biblioref">Rao et al. 2020</a>)</span>, ShotCoL <span class="citation" data-cites="chen2021shotcol">(<a href="../../references.html#ref-chen2021shotcol" role="doc-biblioref">Chen et al. 2021</a>)</span>, BaSSL <span class="citation" data-cites="mun2022bassl">(<a href="../../references.html#ref-mun2022bassl" role="doc-biblioref">Mun et al. 2022</a>)</span>, TranS4mer <span class="citation" data-cites="islam2023trans4mer">(<a href="../../references.html#ref-islam2023trans4mer" role="doc-biblioref">Islam et al. 2023</a>)</span> and MEGA <span class="citation" data-cites="sadoughi2023mega">(<a href="../../references.html#ref-sadoughi2023mega" role="doc-biblioref">Sadoughi et al. 2023</a>)</span> differ in how <span class="math inline">\(f_\theta\)</span> is built and pretrained, not in this factorisation.</p>
+<p>Two things are wrong with <a href="#eq-scene-pointwise" class="quarto-xref">Equation&nbsp;<span>13.5</span></a>, and both are what Scene-VLM attacks:</p>
+<ol type="1">
+<li><strong>Independence.</strong> Boundary labels are strongly dependent — two scene boundaries one shot apart is nearly impossible — and <a href="#eq-scene-pointwise" class="quarto-xref">Equation&nbsp;<span>13.5</span></a> cannot express that, since <span class="math inline">\(\hat{y}_i\)</span> never sees <span class="math inline">\(\hat{y}_{i-1}\)</span>.</li>
+<li><strong>Visual-centric bias.</strong> A scene is defined by location, time, characters and narrative theme. Dialogue and character identity are direct evidence for three of those four, but appear in these models only as auxiliary fused features, if at all.</li>
+</ol>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Why this is genuinely harder than shot detection
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>A shot boundary has a ground truth: an editor put it there. A scene boundary is an interpretation, and two annotators watching the same film will not agree everywhere. The published F1 ceiling of ~0.62 should be read against an unmeasured human agreement ceiling, not against 1.0. MovieNet does not report inter-annotator agreement, which makes the headroom in this task genuinely unknown.</p>
+</div>
+</div>
+</section>
+<section id="sec-scene-encoder" class="level3" data-number="13.4.2">
+<h3 data-number="13.4.2" class="anchored" data-anchor-id="sec-scene-encoder"><span class="header-section-number">13.4.2</span> The encoder era</h3>
+<p>The progression is a compressed replay of representation learning generally.</p>
+<ul>
+<li><strong>Unsupervised clustering</strong> <span class="citation" data-cites="baraldi2015hierarchical">(<a href="../../references.html#ref-baraldi2015hierarchical" role="doc-biblioref">Baraldi et al. 2015b</a>)</span> grouped visually similar shots with hand-crafted descriptors. Label-free, but it can only find visual continuity, which is the wrong invariant: a shot/reverse-shot conversation is visually <em>dis</em>continuous and semantically one scene.</li>
+<li><strong>Deep embeddings and sequence models.</strong> A Siamese CNN over shot pairs <span class="citation" data-cites="baraldi2015siamese">(<a href="../../references.html#ref-baraldi2015siamese" role="doc-biblioref">Baraldi et al. 2015a</a>)</span> replaced hand-crafted features; LSTMs modelled continuity across shots. MovieNet <span class="citation" data-cites="huang2020movienet">(<a href="../../references.html#ref-huang2020movienet" role="doc-biblioref">Huang et al. 2020</a>)</span> then made large-scale supervision possible and, critically, shipped subtitles, speech and character identities alongside the frames.</li>
+<li><strong>LGSS</strong> <span class="citation" data-cites="rao2020lgss">(<a href="../../references.html#ref-rao2020lgss" role="doc-biblioref">Rao et al. 2020</a>)</span> made the multimodal, local-to-global structure explicit: aggregate place / cast / action / audio features locally, then reason globally over the whole movie.</li>
+<li><strong>Self-supervised shot representations.</strong> ShotCoL <span class="citation" data-cites="chen2021shotcol">(<a href="../../references.html#ref-chen2021shotcol" role="doc-biblioref">Chen et al. 2021</a>)</span> learned shot embeddings contrastively, using <em>temporal adjacency</em> as the positive-pair signal. BaSSL <span class="citation" data-cites="mun2022bassl">(<a href="../../references.html#ref-mun2022bassl" role="doc-biblioref">Mun et al. 2022</a>)</span> sharpened this into <em>boundary-aware</em> pretraining: construct pseudo-boundaries, and pretrain with objectives that require detecting them, so the representation is shaped by the downstream task rather than by generic similarity.</li>
+<li><strong>Efficient long-range modelling.</strong> TranS4mer <span class="citation" data-cites="islam2023trans4mer">(<a href="../../references.html#ref-islam2023trans4mer" role="doc-biblioref">Islam et al. 2023</a>)</span> interleaves self-attention with state-space (S4) layers, buying long-range temporal mixing at sub-quadratic cost. It remains the efficiency reference point: 37M parameters, 1 GB, 0.24 s per 10 decisions.</li>
+<li><strong>Multimodal fusion and distillation.</strong> MEGA <span class="citation" data-cites="sadoughi2023mega">(<a href="../../references.html#ref-sadoughi2023mega" role="doc-biblioref">Sadoughi et al. 2023</a>)</span> aligns video, subtitles and screenplay through cross-modal attention and distillation, and is the strongest F1 among encoder methods (55.3) — evidence that the text signal was always there to be used.</li>
+</ul>
+<p>A parallel line targets <strong>video chaptering</strong> on web video <span class="citation" data-cites="yang2023vidchapters">(<a href="../../references.html#ref-yang2023vidchapters" role="doc-biblioref">Yang et al. 2023</a>)</span>, where boundaries are semantic and need not align to shots. Chapter-LLaMA <span class="citation" data-cites="ventura2025chapterllama">(<a href="../../references.html#ref-ventura2025chapterllama" role="doc-biblioref">Ventura et al. 2025</a>)</span> feeds transcripts and keyframe <em>captions</em> to an LLM. The two lines fail on each other’s domain in an instructive way: Chapter-LLaMA scores 38.6 F1 on MovieNet, because caption-based reasoning discards the visual structure that carries cinematic scene changes, while Scene-VLM underperforms Chapter-LLaMA on VidChapters when the latter uses its native LLaMA backbone. Cinematic scenes are visual; web chapters are spoken. <a href="#tbl-scene-capabilities" class="quarto-xref">Table&nbsp;<span>13.6</span></a> collects what each family can and cannot do.</p>
+<div id="tbl-scene-capabilities" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-scene-capabilities-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;13.6: Capability comparison, reproduced from <span class="citation" data-cites="berman2026scenevlm">(<a href="../../references.html#ref-berman2026scenevlm" role="doc-biblioref">Berman et al. 2026</a>)</span>.
+</figcaption>
+<div aria-describedby="tbl-scene-capabilities-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 28%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Method</th>
+<th style="text-align: center;">Sequential prediction</th>
+<th style="text-align: center;">Confidence scores</th>
+<th style="text-align: center;">Explainability</th>
+<th style="text-align: center;">Cinematic</th>
+<th style="text-align: center;">Chaptering</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">ShotCoL <span class="citation" data-cites="chen2021shotcol">(<a href="../../references.html#ref-chen2021shotcol" role="doc-biblioref">Chen et al. 2021</a>)</span></td>
+<td style="text-align: center;">✗</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✗</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✗</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">BaSSL <span class="citation" data-cites="mun2022bassl">(<a href="../../references.html#ref-mun2022bassl" role="doc-biblioref">Mun et al. 2022</a>)</span></td>
+<td style="text-align: center;">✗</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✗</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✗</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">TranS4mer <span class="citation" data-cites="islam2023trans4mer">(<a href="../../references.html#ref-islam2023trans4mer" role="doc-biblioref">Islam et al. 2023</a>)</span></td>
+<td style="text-align: center;">✗</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✗</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✗</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">MEGA <span class="citation" data-cites="sadoughi2023mega">(<a href="../../references.html#ref-sadoughi2023mega" role="doc-biblioref">Sadoughi et al. 2023</a>)</span></td>
+<td style="text-align: center;">✗</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✗</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✗</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Chapter-LLaMA <span class="citation" data-cites="ventura2025chapterllama">(<a href="../../references.html#ref-ventura2025chapterllama" role="doc-biblioref">Ventura et al. 2025</a>)</span></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✗</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✗</td>
+<td style="text-align: center;">✓</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Scene-VLM <span class="citation" data-cites="berman2026scenevlm">(<a href="../../references.html#ref-berman2026scenevlm" role="doc-biblioref">Berman et al. 2026</a>)</span></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</section>
+<section id="sec-scenevlm" class="level3" data-number="13.4.3">
+<h3 data-number="13.4.3" class="anchored" data-anchor-id="sec-scenevlm"><span class="header-section-number">13.4.3</span> Scene-VLM: sequence labelling as generation</h3>
+<p>Scene-VLM <span class="citation" data-cites="berman2026scenevlm">(<a href="../../references.html#ref-berman2026scenevlm" role="doc-biblioref">Berman et al. 2026</a>)</span> fine-tunes Qwen2.5-VL-7B <span class="citation" data-cites="bai2025qwen25vl">(<a href="../../references.html#ref-bai2025qwen25vl" role="doc-biblioref">Bai et al. 2025</a>)</span> (see <a href="11-video-understanding.html#sec-vlm-qwen" class="quarto-xref"><span>Section 12.3.2</span></a>) to emit boundary decisions as text. The conceptual move is to replace <a href="#eq-scene-pointwise" class="quarto-xref">Equation&nbsp;<span>13.5</span></a> with an autoregressive factorisation,</p>
+<p><span id="eq-scene-seq"><span class="math display">\[
+p\bigl(y_{1:T} \mid C\bigr) \;=\; \prod_{i=1}^{T}
+p_\theta\bigl(y_i \mid y_{&lt;i},\, C\bigr),
+\tag{13.6}\]</span></span></p>
+<p>where the context <span class="math inline">\(C = \{s_i\}_{i=1}^{N}\)</span> is a sequence of multimodal shot representations. Each <span class="math inline">\(s_i\)</span> carries <span class="math inline">\(K\)</span> keyframes, the shot’s transcript (from provided subtitles or Whisper, <a href="../audio/22-automatic-speech-recognition.html" class="quarto-xref"><span>Chapter 28</span></a>), and optional metadata such as actor identity. The model is prompted to emit <code>shot_id: Yes/No</code> per shot, and trained with ordinary next-token prediction. Making the decisions <em>tokens in one sequence</em> is what makes the dependency in <a href="#eq-scene-seq" class="quarto-xref">Equation&nbsp;<span>13.6</span></a> free.</p>
+<p>Four design choices carry the result.</p>
+<p><strong>Context–focus windows.</strong> Predictions are emitted only for a <em>focus</em> window of <span class="math inline">\(l_{\text{focus}}\)</span> shots centred inside a larger <em>context</em> window of <span class="math inline">\(l_{\text{context}}\)</span> shots — 10 inside 20 by default. Shots at the edge of a context window have evidence on one side only, and <a href="#tbl-scene-design" class="quarto-xref">Table&nbsp;<span>13.10</span></a> shows this is not a small effect: without margins, per-position F1 collapses at the edges, while with margins it is flat across all ten positions. This is “valid” padding applied to time, and it is the sort of detail that separates a working system from a reproduction.</p>
+<p><strong>Confidence from token logits.</strong> VLMs have no classification head, but the <code>Yes</code>/<code>No</code> token position is a genuine binary branch point, so restricting the softmax to those two tokens recovers a usable score:</p>
+<p><span id="eq-scenevlm-conf"><span class="math display">\[
+\mathrm{conf}_i \;=\;
+\frac{p_i(\texttt{Yes})}{p_i(\texttt{Yes}) + p_i(\texttt{No})}.
+\tag{13.7}\]</span></span></p>
+<p>This is what makes AP computable and gives the precision–recall control that encoder classifiers had for free. F1 peaks at 0.641 near threshold 0.438 and stays within 0.62–0.64 over thresholds 0.27–0.56, so the operating point is not delicate.</p>
+<p>The failed alternative is more instructive than the success. A “concise” output format that emits <em>only</em> the IDs of boundary shots is 8.3× faster (10.5 s vs 87.2 s per movie) and still competitive (53.4 F1, between TranS4mer and MEGA) — but its confidence scores are meaningless, because <span class="math inline">\(p(\texttt{Yes} \mid \texttt{shot\_id}\ \text{already emitted}) \approx 1\)</span>. Having committed to emitting the shot ID, the model has already made the decision; the <code>Yes</code> token is a formatting obligation, not a choice. <strong>A token’s logit is only informative if the token sits at a real branch point in the output distribution</strong> — a general caution for anyone extracting confidence from a generative model. Recovering confidence by repeated sampling instead is strictly worse on both axes: 52.6 F1 at 105.2 s per movie.</p>
+<p><strong>Shot-ID markers.</strong> A small high-contrast numeric tag is overlaid on the top-left of each frame, binding the pixels to the shot ID used in the text prompt. Removing it costs 1.3 F1 — small, but it is a nearly free fix for a real grounding ambiguity when 60 frames share one context window.</p>
+<p><strong>Explainability by minimal alignment.</strong> Prompting the boundary-trained model for rationales fails badly (22/30 parse failures, 14/30 hallucinations). A second fine-tuning stage on <strong>35</strong> human-written rationales removes both entirely (0/30, 0/30). The lesson is about format, not knowledge: the capability was latent in the backbone and needed only enough supervision to fix the output contract.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Figure to add
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The Scene-VLM inference diagram: a strip of <span class="math inline">\(N\)</span> shot representations (keyframes with overlaid shot-ID tags, subtitles, actor metadata), the context window in grey with the focus window highlighted, the autoregressive <code>Shot i: Yes/No</code> output, and the <code>Yes</code>/<code>No</code> logit probe feeding <a href="#eq-scenevlm-conf" class="quarto-xref">Equation&nbsp;<span>13.7</span></a>. Scene-VLM Figure 2 <span class="citation" data-cites="berman2026scenevlm">(<a href="../../references.html#ref-berman2026scenevlm" role="doc-biblioref">Berman et al. 2026</a>)</span>.</p>
+</div>
+</div>
+<p><strong>What the model attends to.</strong> Aggregate attention mass is dominated by visual tokens, but visual tokens also vastly outnumber the others; after normalising by token count, subtitles and actor IDs receive attention comparable to frames. The ablation in <a href="#tbl-scene-inputs" class="quarto-xref">Table&nbsp;<span>13.9</span></a> agrees: removing vision is catastrophic (62.1 → 32.0 F1) while text alone is nearly useless (31.5), yet the text modalities each contribute ~1 F1 point on top of vision. Vision is necessary; text is a genuine but marginal complement.</p>
+<p>A second observation is more surprising. Attention from a shot’s verdict token skews toward <em>subsequent</em> shots rather than preceding ones. The authors’ explanation is that information about preceding shots is already encoded in the previously generated verdict tokens, so the model spends its attention on the evidence it has not yet summarised. If correct, this is a mechanistic argument for why <a href="#eq-scene-seq" class="quarto-xref">Equation&nbsp;<span>13.6</span></a> helps: sequential decoding does not merely add a prior over label sequences, it frees attention capacity.</p>
+</section>
+<section id="sec-scene-eval" class="level3" data-number="13.4.4">
+<h3 data-number="13.4.4" class="anchored" data-anchor-id="sec-scene-eval"><span class="header-section-number">13.4.4</span> Benchmarks and metrics</h3>
+<p><a href="#tbl-vts-datasets" class="quarto-xref">Table&nbsp;<span>13.7</span></a> lists the datasets used across both stages.</p>
+<div id="tbl-vts-datasets" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-vts-datasets-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;13.7: Datasets for temporal segmentation.
+</figcaption>
+<div aria-describedby="tbl-vts-datasets-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 27%">
+<col style="width: 24%">
+<col style="width: 18%">
+<col style="width: 30%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Dataset</th>
+<th style="text-align: left;">Domain</th>
+<th style="text-align: left;">Size</th>
+<th style="text-align: left;">Used for</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>MovieNet-318</strong> <span class="citation" data-cites="huang2020movienet">(<a href="../../references.html#ref-huang2020movienet" role="doc-biblioref">Huang et al. 2020</a>)</span></td>
+<td style="text-align: left;">Cinematic</td>
+<td style="text-align: left;">318 movies, ~1000 shots each; 190 / 64 / 64 split</td>
+<td style="text-align: left;">Primary supervised benchmark</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>BBC Planet Earth</strong> <span class="citation" data-cites="baraldi2015siamese">(<a href="../../references.html#ref-baraldi2015siamese" role="doc-biblioref">Baraldi et al. 2015a</a>)</span></td>
+<td style="text-align: left;">Documentary</td>
+<td style="text-align: left;">10 episodes, ~50 min each; 670 scenes, 4.9K shots</td>
+<td style="text-align: left;">Zero-shot OOD; also a legacy <em>shot</em> benchmark</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>VidChapters-7M</strong> <span class="citation" data-cites="yang2023vidchapters">(<a href="../../references.html#ref-yang2023vidchapters" role="doc-biblioref">Yang et al. 2023</a>)</span></td>
+<td style="text-align: left;">Web video</td>
+<td style="text-align: left;">Creator-provided chapter titles; 1000 train / 300 eval subset</td>
+<td style="text-align: left;">Chaptering transfer</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>OmniShotCutBench</strong> <span class="citation" data-cites="wang2026omnishotcut">(<a href="../../references.html#ref-wang2026omnishotcut" role="doc-biblioref">Wang et al. 2026</a>)</span></td>
+<td style="text-align: left;">Wide-domain</td>
+<td style="text-align: left;">114 videos, 114 min, 480p/30fps</td>
+<td style="text-align: left;">Modern shot detection</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>RAI</strong> <span class="citation" data-cites="baraldi2015hierarchical">(<a href="../../references.html#ref-baraldi2015hierarchical" role="doc-biblioref">Baraldi et al. 2015b</a>)</span>, <strong>IACC.3</strong> <span class="citation" data-cites="awad2017trecvid">(<a href="../../references.html#ref-awad2017trecvid" role="doc-biblioref">Awad et al. 2017</a>)</span></td>
+<td style="text-align: left;">Broadcast</td>
+<td style="text-align: left;">Legacy</td>
+<td style="text-align: left;">Historical shot detection</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Two metrics are standard, and the difference matters. <strong>AP</strong> is the area under the precision–recall curve over the confidence scores — threshold-free, and the number to trust. <strong>F1</strong> is reported at an <em>optimised</em> operating point, i.e.&nbsp;tuned on the evaluation set, so it is an oracle-threshold number and systematically optimistic; it is comparable across papers only because everyone tunes the same way. When a method reports F1 but cannot produce calibrated scores, AP is unavailable — which is precisely why <a href="#eq-scenevlm-conf" class="quarto-xref">Equation&nbsp;<span>13.7</span></a> was needed.</p>
+<div id="tbl-scene-results" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-scene-results-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;13.8: Scene segmentation results <span class="citation" data-cites="berman2026scenevlm">(<a href="../../references.html#ref-berman2026scenevlm" role="doc-biblioref">Berman et al. 2026</a>)</span>. BBC is evaluated zero-shot after training on MovieNet-318.
+</figcaption>
+<div aria-describedby="tbl-scene-results-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Method</th>
+<th style="text-align: right;">MovieNet F1</th>
+<th style="text-align: right;">MovieNet AP</th>
+<th style="text-align: right;">BBC AP (zero-shot)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Chapter-LLaMA <span class="citation" data-cites="ventura2025chapterllama">(<a href="../../references.html#ref-ventura2025chapterllama" role="doc-biblioref">Ventura et al. 2025</a>)</span></td>
+<td style="text-align: right;">38.6</td>
+<td style="text-align: right;">41.5</td>
+<td style="text-align: right;">—</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">LGSS <span class="citation" data-cites="rao2020lgss">(<a href="../../references.html#ref-rao2020lgss" role="doc-biblioref">Rao et al. 2020</a>)</span></td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">47.1</td>
+<td style="text-align: right;">—</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">ShotCoL <span class="citation" data-cites="chen2021shotcol">(<a href="../../references.html#ref-chen2021shotcol" role="doc-biblioref">Chen et al. 2021</a>)</span></td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">53.4</td>
+<td style="text-align: right;">—</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">BaSSL <span class="citation" data-cites="mun2022bassl">(<a href="../../references.html#ref-mun2022bassl" role="doc-biblioref">Mun et al. 2022</a>)</span></td>
+<td style="text-align: right;">47.0</td>
+<td style="text-align: right;">57.4</td>
+<td style="text-align: right;">40.0</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">TimeSformer <span class="citation" data-cites="bertasius2021timesformer">(<a href="../../references.html#ref-bertasius2021timesformer" role="doc-biblioref">Bertasius et al. 2021</a>)</span></td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">42.2</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">MEGA <span class="citation" data-cites="sadoughi2023mega">(<a href="../../references.html#ref-sadoughi2023mega" role="doc-biblioref">Sadoughi et al. 2023</a>)</span></td>
+<td style="text-align: right;">55.3</td>
+<td style="text-align: right;">58.6</td>
+<td style="text-align: right;">—</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">TranS4mer <span class="citation" data-cites="islam2023trans4mer">(<a href="../../references.html#ref-islam2023trans4mer" role="doc-biblioref">Islam et al. 2023</a>)</span></td>
+<td style="text-align: right;">48.4</td>
+<td style="text-align: right;">60.8</td>
+<td style="text-align: right;">43.6</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Scene-VLM</strong> <span class="citation" data-cites="berman2026scenevlm">(<a href="../../references.html#ref-berman2026scenevlm" role="doc-biblioref">Berman et al. 2026</a>)</span></td>
+<td style="text-align: right;"><strong>62.1</strong></td>
+<td style="text-align: right;"><strong>66.8</strong></td>
+<td style="text-align: right;"><strong>45.8</strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>In <a href="#tbl-scene-results" class="quarto-xref">Table&nbsp;<span>13.8</span></a>, Scene-VLM gains +13.7 F1 / +6.0 AP over TranS4mer and +6.8 F1 / +8.2 AP over MEGA. Note that F1 and AP rank the encoder methods <em>differently</em> (MEGA leads on F1, TranS4mer on AP), which is what one expects when F1 is threshold-optimised: MEGA has a better single operating point, TranS4mer a better ranking. And note the absolute level. The best reported number on the primary benchmark is F1 0.62 — for a binary classification problem — against F1 0.97 for shot detection on BBC.</p>
+<p>Fine-tuning is not optional. Zero-shot Qwen2.5-VL-7B scores 11.1 F1 and fails to follow the output format 7.9% of the time; zero-shot Claude 4.5 Sonnet reaches 37.6 F1 with near-perfect formatting but still no confidence scores, since its logits are inaccessible. The fine-tuned 7B model reaches 61.8 F1 (at <span class="math inline">\(K=1\)</span>) with zero parse failures under rule-based parsing. Whatever Scene-VLM learns in ~29k LoRA training samples, frontier VLMs do not have it zero-shot.</p>
+<div id="tbl-scene-inputs" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-scene-inputs-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;13.9: Scene-VLM input-modality ablation <span class="citation" data-cites="berman2026scenevlm">(<a href="../../references.html#ref-berman2026scenevlm" role="doc-biblioref">Berman et al. 2026</a>)</span>. Vision is necessary and nearly sufficient; text is complementary but not standalone.
+</figcaption>
+<div aria-describedby="tbl-scene-inputs-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 40%">
+<col style="width: 36%">
+<col style="width: 12%">
+<col style="width: 12%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Ablation</th>
+<th style="text-align: left;">Setting</th>
+<th style="text-align: right;">F1</th>
+<th style="text-align: right;">AP</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Full model</td>
+<td style="text-align: left;">Visual + shot-ID + subtitles + actor-ID</td>
+<td style="text-align: right;"><strong>62.1</strong></td>
+<td style="text-align: right;"><strong>66.8</strong></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Remove one</td>
+<td style="text-align: left;">− visual</td>
+<td style="text-align: right;">32.0</td>
+<td style="text-align: right;">34.7</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">− shot-ID markers</td>
+<td style="text-align: right;">60.8</td>
+<td style="text-align: right;">64.1</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">− subtitles</td>
+<td style="text-align: right;">61.1</td>
+<td style="text-align: right;">62.2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">− actor-ID</td>
+<td style="text-align: right;">61.3</td>
+<td style="text-align: right;">62.0</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Keep one</td>
+<td style="text-align: left;">visual only</td>
+<td style="text-align: right;">58.6</td>
+<td style="text-align: right;">61.4</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">subtitles only</td>
+<td style="text-align: right;">31.5</td>
+<td style="text-align: right;">33.2</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">actor-ID only</td>
+<td style="text-align: right;">24.8</td>
+<td style="text-align: right;">28.6</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<div id="tbl-scene-design" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-scene-design-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;13.10: Scene-VLM design ablations <span class="citation" data-cites="berman2026scenevlm">(<a href="../../references.html#ref-berman2026scenevlm" role="doc-biblioref">Berman et al. 2026</a>)</span>. Margins are worth +2.4 F1 (20&amp;10 vs 20&amp;20), sequential decoding +2.0 F1 (20&amp;10 vs 20&amp;1), and scale is still paying at 7B. Extra frames per shot barely matter — a shot is by construction visually homogeneous, so one representative frame carries most of the boundary evidence.
+</figcaption>
+<div aria-describedby="tbl-scene-design-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Ablation</th>
+<th style="text-align: left;">Setting</th>
+<th style="text-align: right;">F1</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Context &amp; focus</td>
+<td style="text-align: left;">20 &amp; 20 (no margin)</td>
+<td style="text-align: right;">59.7</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><strong>20 &amp; 10</strong></td>
+<td style="text-align: right;"><strong>62.1</strong></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">20 &amp; 5</td>
+<td style="text-align: right;">61.9</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">20 &amp; 1 (point-wise)</td>
+<td style="text-align: right;">60.1</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">10 &amp; 10 (no margin)</td>
+<td style="text-align: right;">58.4</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">10 &amp; 1</td>
+<td style="text-align: right;">59.4</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">5 &amp; 5 (no margin)</td>
+<td style="text-align: right;">55.8</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Frames/shot <span class="math inline">\(K\)</span></td>
+<td style="text-align: left;">1 / 2 / 3</td>
+<td style="text-align: right;">61.8 / 61.9 / <strong>62.1</strong></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Model size</td>
+<td style="text-align: left;">1.5B / 3B / 7B</td>
+<td style="text-align: right;">55.9 / 59.6 / <strong>62.1</strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</section>
+</section>
+<section id="sec-vts-practice" class="level2" data-number="13.5">
+<h2 data-number="13.5" class="anchored" data-anchor-id="sec-vts-practice"><span class="header-section-number">13.5</span> Cost and Deployment</h2>
+<p>The accuracy gains are real and so is their price. <a href="#tbl-vts-cost" class="quarto-xref">Table&nbsp;<span>13.11</span></a> puts the two eras side by side.</p>
+<div id="tbl-vts-cost" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-vts-cost-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;13.11: Compute for scene segmentation <span class="citation" data-cites="berman2026scenevlm">(<a href="../../references.html#ref-berman2026scenevlm" role="doc-biblioref">Berman et al. 2026</a>)</span>, batch size 1, no quantisation or KV-cache-optimised serving. Roughly 200× the parameters and 10× the latency of the encoder baseline buys +13.7 F1 plus confidence and rationales.
+</figcaption>
+<div aria-describedby="tbl-vts-cost-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 34%">
+<col style="width: 13%">
+<col style="width: 13%">
+<col style="width: 13%">
+<col style="width: 13%">
+<col style="width: 13%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">System</th>
+<th style="text-align: right;">Params</th>
+<th style="text-align: right;">Memory</th>
+<th style="text-align: right;">Latency (10 decisions)</th>
+<th style="text-align: right;">F1</th>
+<th style="text-align: right;">AP</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">TranS4mer-3F <span class="citation" data-cites="islam2023trans4mer">(<a href="../../references.html#ref-islam2023trans4mer" role="doc-biblioref">Islam et al. 2023</a>)</span></td>
+<td style="text-align: right;">37M</td>
+<td style="text-align: right;">1 GB</td>
+<td style="text-align: right;">0.24 s</td>
+<td style="text-align: right;">48.4</td>
+<td style="text-align: right;">60.8</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Scene-VLM-1F (3B)</td>
+<td style="text-align: right;">3B</td>
+<td style="text-align: right;">7 GB</td>
+<td style="text-align: right;">1.15 s</td>
+<td style="text-align: right;">55.7</td>
+<td style="text-align: right;">58.2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Scene-VLM-3F (3B)</td>
+<td style="text-align: right;">3B</td>
+<td style="text-align: right;">9 GB</td>
+<td style="text-align: right;">1.35 s</td>
+<td style="text-align: right;">59.6</td>
+<td style="text-align: right;">62.8</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Scene-VLM-1F (7B)</td>
+<td style="text-align: right;">7B</td>
+<td style="text-align: right;">16 GB</td>
+<td style="text-align: right;">1.84 s</td>
+<td style="text-align: right;">61.8</td>
+<td style="text-align: right;">65.3</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Scene-VLM-3F (7B)</td>
+<td style="text-align: right;">7B</td>
+<td style="text-align: right;">18 GB</td>
+<td style="text-align: right;">2.34 s</td>
+<td style="text-align: right;">62.1</td>
+<td style="text-align: right;">66.8</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Three deployment regimes follow, and they want different things:</p>
+<ul>
+<li><strong>Data curation at scale</strong> (video-generation training corpora, <a href="14-video-generation.html" class="quarto-xref"><span>Chapter 15</span></a>). Only stage one matters, but it must be transition-aware and sudden-jump-aware: a clip with a dissolve at its head or a discontinuity in its middle is training poison for a temporal VAE. This is OmniShotCut’s target, and the 3.3× gap in transition IoU over TransNet V2 is the argument.</li>
+<li><strong>Retrieval indexing.</strong> PySceneDetect for shots, keyframe captions + adjacent-shot clustering for scenes, and the 2 s / 60 s cleanup rules of <a href="#sec-vts-pipeline" class="quarto-xref"><span>Section 13.2</span></a>. Scene boundaries need only be <em>good enough</em> that the retrieved segment is watchable, and the cheap pipeline clears that bar at a fraction of the cost.</li>
+<li><strong>Media operations with human review.</strong> Confidence scores and rationales stop being niceties: an editor triaging boundary proposals needs to sort by confidence and to check the model’s reasoning against narrative intent. This is the regime that justifies Scene-VLM’s price, and the 8.3× cheaper “concise” variant is the fallback when precision–recall control is not required.</li>
+</ul>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Important
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The two stages are trained and evaluated in isolation, and this hides a real failure mode. MovieNet ships ground-truth shot boundaries, so every published scene model has been evaluated on <em>perfect</em> shot input. In deployment the shot detector runs first, and its errors — a missed gradual transition, a dissolve boundary placed mid-dissolve — silently corrupt the shot representations the scene model consumes. No published benchmark measures this propagation.</p>
+</div>
+</div>
+</section>
+<section id="sec-scene-open" class="level2" data-number="13.6">
+<h2 data-number="13.6" class="anchored" data-anchor-id="sec-scene-open"><span class="header-section-number">13.6</span> Open Problems</h2>
+<p><strong>The scene is not well defined.</strong> No published inter-annotator agreement exists for MovieNet scene boundaries, so nobody knows whether F1 0.62 is halfway to the ceiling or nearly at it. This is the single most important missing measurement in the task, and it is cheap to obtain.</p>
+<p><strong>Cascade error is unmeasured.</strong> See the note above. An end-to-end benchmark that runs a real shot detector into a scene model would tell us how much of the scene-segmentation gap is actually shot-detection debt.</p>
+<p><strong>Domain generalisation is poor in both directions.</strong> On MovieNet, Chapter-LLaMA trails Scene-VLM by 23.5 F1 (38.6 vs 62.1), because caption-based reasoning discards the visual structure that carries cinematic scene changes. On VidChapters the ordering reverses: Chapter-LLaMA with its native LLaMA-3.1 backbone reaches 42.6 F1 against Scene-VLM’s 32.2 — though under a matched Qwen backbone Scene-VLM leads (32.2 vs 28.4), so part of that gap is backbone rather than method. Either way, no published system covers both regimes without retraining.</p>
+<p><strong>Audio is barely used.</strong> Scene-VLM consumes <em>transcripts</em>, not audio. Score, ambience, and silence are among the strongest scene cues a film editor deliberately places — a music cue frequently <em>is</em> the boundary — and the cross-modal agreement heuristic of <a href="#sec-vts-pipeline" class="quarto-xref"><span>Section 13.2</span></a> suggests the signal is easy to exploit. The sound-event and audio-scene machinery of <a href="../audio/27-audio-understanding.html" class="quarto-xref"><span>Chapter 33</span></a> is sitting unused here.</p>
+<p><strong>Online and streaming variants are absent.</strong> Both formulations are offline: OmniShotCut reads a 100-frame clip, Scene-VLM needs a right-context margin by construction. Live segmentation has to commit to boundaries without future evidence, and nothing in either literature addresses the resulting latency/accuracy trade-off.</p>
+<p><strong>One stage instead of two?</strong> The two-stage split is justified by cost, not by correctness, and the cost argument weakens as long-context video models improve. A model that reads a whole video and emits a semantic partition directly would avoid cascade error entirely. Nothing today comes close on either accuracy or cost, but this is the direction the cost curve points.</p>
+<p><strong>Synthetic supervision has a horizon.</strong> OmniShotCut’s own limitation section is honest: a parameterised synthesiser reproduces the transitions someone thought to parameterise. Elaborate cinematic transitions built from industry template libraries lie outside the generated distribution, and there is no obvious way to discover what is missing except by finding failures.</p>
+</section>
+<section id="sec-vts-summary" class="level2" data-number="13.7">
+<h2 data-number="13.7" class="anchored" data-anchor-id="sec-vts-summary"><span class="header-section-number">13.7</span> Summary</h2>
+<p>Temporal segmentation is where video understanding starts, and it splits cleanly into two problems that share a name and nothing else.</p>
+<p>Shot detection is a signal-processing problem with a physically real ground truth. It has been essentially solved on legacy hard-cut benchmarks since the first 3D CNNs, and OmniShotCut’s contribution is to show that the metric which certified this — range F1 — was hiding the part that still fails. Once you ask <em>where exactly</em> a dissolve begins and <em>what kind</em> of discontinuity a boundary is, prior detectors score 0.18–0.25 transition IoU. The fixes are a richer output space (intra- and inter-shot relations), a formulation that exploits the problem’s structure (contiguous shots make queries intrinsically ordered, so no Hungarian matching; discrete frame indices instead of coordinate regression, so no thresholding), and supervision generated forward from editing operations rather than annotated backward from pixels, with the synthesiser’s marginal distribution treated as a first-class hyperparameter.</p>
+<p>Scene detection is a narrative-understanding problem with a constructed ground truth, and it is not close to solved. A decade of encoder methods converged on point-wise classification of independent shots from visual-centric features; Scene-VLM’s gain comes from dropping both assumptions — autoregressive decoding makes each decision condition on the last, and multimodal input lets dialogue and character identity carry the three-quarters of the scene definition that pixels do not. Two engineering details generalise beyond this task: valid-padding in time (the context–focus window) is necessary whenever a sequence model emits predictions over a windowed input, and a generated token’s logit is informative only where the token sits at a genuine branch point in the output distribution.</p>
+<p>The gap between F1 0.97 and F1 0.62 is the honest state of the field. Whether the second number is near a human ceiling nobody has measured, or whether it is genuine headroom, is the question the next benchmark should answer.</p>
+</section>
+<section id="sec-vts-sources" class="level2" data-number="13.8">
+<h2 data-number="13.8" class="anchored" data-anchor-id="sec-vts-sources"><span class="header-section-number">13.8</span> Sources and Further Reading</h2>
+<div id="tbl-vts-sources" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-vts-sources-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;13.12: Source attribution by section.
+</figcaption>
+<div aria-describedby="tbl-vts-sources-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Section</th>
+<th style="text-align: left;">Primary sources</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><a href="#sec-vts-pipeline" class="quarto-xref"><span>Section 13.2</span></a></td>
+<td style="text-align: left;">Mixpeek, <a href="https://mixpeek.com/diagrams/scene-segmentation">“Scene Segmentation: How a Video Becomes Searchable Scenes”</a> <span class="citation" data-cites="mixpeek2026scenesegmentation">(<a href="../../references.html#ref-mixpeek2026scenesegmentation" role="doc-biblioref">Mixpeek 2026</a>)</span> — the source of <a href="#fig-vts-pipeline" class="quarto-xref">Figure&nbsp;<span>13.1</span></a> and of the concrete pipeline constants (&gt;1000 fps histogram detection, 2 s merge / 60 s split, 0.5 s audio-visual agreement, 10–100× storage reduction, Laplacian-variance keyframe selection)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><a href="#sec-sbd-signal" class="quarto-xref"><span>Section 13.3.1</span></a>, <a href="#sec-sbd-taxonomy" class="quarto-xref"><span>Section 13.3.3</span></a></td>
+<td style="text-align: left;">OmniShotCut <span class="citation" data-cites="wang2026omnishotcut">(<a href="../../references.html#ref-wang2026omnishotcut" role="doc-biblioref">Wang et al. 2026</a>)</span> §2 for the field overview and its Figure 2 for the transition taxonomy; PySceneDetect <span class="citation" data-cites="castellano2025pyscenedetect">(<a href="../../references.html#ref-castellano2025pyscenedetect" role="doc-biblioref">Castellano 2025</a>)</span> for the reference implementation of <a href="#eq-vts-hist" class="quarto-xref">Equation&nbsp;<span>13.1</span></a> and <a href="#eq-vts-adaptive" class="quarto-xref">Equation&nbsp;<span>13.3</span></a></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><a href="#sec-sbd-learned" class="quarto-xref"><span>Section 13.3.4</span></a></td>
+<td style="text-align: left;">DeepSBD <span class="citation" data-cites="hassanien2017deepsbd">(<a href="../../references.html#ref-hassanien2017deepsbd" role="doc-biblioref">Hassanien et al. 2017</a>)</span>; TransNet <span class="citation" data-cites="soucek2019transnet">(<a href="../../references.html#ref-soucek2019transnet" role="doc-biblioref">Souček et al. 2019</a>)</span> and TransNet V2 <span class="citation" data-cites="soucek2024transnetv2">(<a href="../../references.html#ref-soucek2024transnetv2" role="doc-biblioref">Souček and Lokoč 2024</a>)</span>, the production default; AutoShot <span class="citation" data-cites="zhu2023autoshot">(<a href="../../references.html#ref-zhu2023autoshot" role="doc-biblioref">Zhu et al. 2023</a>)</span>. Kar et al. <span class="citation" data-cites="kar2024sbdsurvey">(<a href="../../references.html#ref-kar2024sbdsurvey" role="doc-biblioref">Kar et al. 2024</a>)</span> is the recent survey</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><a href="#sec-omnishotcut" class="quarto-xref"><span>Section 13.3.5</span></a></td>
+<td style="text-align: left;">OmniShotCut <span class="citation" data-cites="wang2026omnishotcut">(<a href="../../references.html#ref-wang2026omnishotcut" role="doc-biblioref">Wang et al. 2026</a>)</span> §3, plus its supplementary for the full 30-subtype taxonomy and synthesis parameters. Architectural ancestry: DETR <span class="citation" data-cites="carion2020detr">(<a href="../../references.html#ref-carion2020detr" role="doc-biblioref">Carion et al. 2020</a>)</span> (<a href="../vision/05-vision-transformers.html#sec-detr" class="quarto-xref"><span>Section 5.5</span></a>) and VisTR <span class="citation" data-cites="wang2021vistr">(<a href="../../references.html#ref-wang2021vistr" role="doc-biblioref">Y. Wang et al. 2021</a>)</span>. Curation components: DINOv3 <span class="citation" data-cites="simeoni2025dinov3">(<a href="../../references.html#ref-simeoni2025dinov3" role="doc-biblioref"><span class="nocase">Siméoni et al.</span> 2025</a>)</span>, SSL clustering <span class="citation" data-cites="vo2024curation">(<a href="../../references.html#ref-vo2024curation" role="doc-biblioref"><span class="nocase">Vo et al.</span> 2024</a>)</span>, CoTracker3 <span class="citation" data-cites="karaev2025cotracker3">(<a href="../../references.html#ref-karaev2025cotracker3" role="doc-biblioref">Karaev et al. 2025</a>)</span>. The synthetic-supervision argument mirrors Real-ESRGAN <span class="citation" data-cites="wang2021realesrgan">(<a href="../../references.html#ref-wang2021realesrgan" role="doc-biblioref">X. Wang et al. 2021</a>)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><a href="#sec-sbd-eval" class="quarto-xref"><span>Section 13.3.6</span></a></td>
+<td style="text-align: left;">OmniShotCut <span class="citation" data-cites="wang2026omnishotcut">(<a href="../../references.html#ref-wang2026omnishotcut" role="doc-biblioref">Wang et al. 2026</a>)</span> §4 for <a href="#tbl-sbd-results" class="quarto-xref">Table&nbsp;<span>13.4</span></a> and <a href="#tbl-sbd-ablation" class="quarto-xref">Table&nbsp;<span>13.5</span></a>; the <span class="math inline">\(\tau=2\)</span> protocol follows ShotBench in Cosmos <span class="citation" data-cites="agarwal2025cosmos">(<a href="../../references.html#ref-agarwal2025cosmos" role="doc-biblioref"><span class="nocase">Agarwal et al.</span> 2025</a>)</span>. Legacy benchmarks: BBC <span class="citation" data-cites="baraldi2015siamese">(<a href="../../references.html#ref-baraldi2015siamese" role="doc-biblioref">Baraldi et al. 2015a</a>)</span>, RAI <span class="citation" data-cites="baraldi2015hierarchical">(<a href="../../references.html#ref-baraldi2015hierarchical" role="doc-biblioref">Baraldi et al. 2015b</a>)</span>, IACC.3 <span class="citation" data-cites="awad2017trecvid">(<a href="../../references.html#ref-awad2017trecvid" role="doc-biblioref">Awad et al. 2017</a>)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><a href="#sec-scene-encoder" class="quarto-xref"><span>Section 13.4.2</span></a></td>
+<td style="text-align: left;">Scene-VLM <span class="citation" data-cites="berman2026scenevlm">(<a href="../../references.html#ref-berman2026scenevlm" role="doc-biblioref">Berman et al. 2026</a>)</span> §2 for the survey framing. Primary papers: LGSS <span class="citation" data-cites="rao2020lgss">(<a href="../../references.html#ref-rao2020lgss" role="doc-biblioref">Rao et al. 2020</a>)</span>, ShotCoL <span class="citation" data-cites="chen2021shotcol">(<a href="../../references.html#ref-chen2021shotcol" role="doc-biblioref">Chen et al. 2021</a>)</span>, BaSSL <span class="citation" data-cites="mun2022bassl">(<a href="../../references.html#ref-mun2022bassl" role="doc-biblioref">Mun et al. 2022</a>)</span>, TranS4mer <span class="citation" data-cites="islam2023trans4mer">(<a href="../../references.html#ref-islam2023trans4mer" role="doc-biblioref">Islam et al. 2023</a>)</span>, MEGA <span class="citation" data-cites="sadoughi2023mega">(<a href="../../references.html#ref-sadoughi2023mega" role="doc-biblioref">Sadoughi et al. 2023</a>)</span>, scene-consistency learning <span class="citation" data-cites="wu2022scenecrl">(<a href="../../references.html#ref-wu2022scenecrl" role="doc-biblioref">Wu et al. 2022</a>)</span>. MovieNet <span class="citation" data-cites="huang2020movienet">(<a href="../../references.html#ref-huang2020movienet" role="doc-biblioref">Huang et al. 2020</a>)</span> is the dataset that made the supervised era possible. Chaptering: VidChapters-7M <span class="citation" data-cites="yang2023vidchapters">(<a href="../../references.html#ref-yang2023vidchapters" role="doc-biblioref">Yang et al. 2023</a>)</span>, Chapter-LLaMA <span class="citation" data-cites="ventura2025chapterllama">(<a href="../../references.html#ref-ventura2025chapterllama" role="doc-biblioref">Ventura et al. 2025</a>)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><a href="#sec-scenevlm" class="quarto-xref"><span>Section 13.4.3</span></a>, <a href="#sec-scene-eval" class="quarto-xref"><span>Section 13.4.4</span></a></td>
+<td style="text-align: left;">Scene-VLM <span class="citation" data-cites="berman2026scenevlm">(<a href="../../references.html#ref-berman2026scenevlm" role="doc-biblioref">Berman et al. 2026</a>)</span> §3–4 and Appendix B; Appendix B.1 (the concise-vs-comprehensive comparison) is the most transferable part of the paper if you extract confidence from generative models. Backbone: Qwen2.5-VL <span class="citation" data-cites="bai2025qwen25vl">(<a href="../../references.html#ref-bai2025qwen25vl" role="doc-biblioref">Bai et al. 2025</a>)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><a href="#sec-vts-practice" class="quarto-xref"><span>Section 13.5</span></a></td>
+<td style="text-align: left;">Scene-VLM <span class="citation" data-cites="berman2026scenevlm">(<a href="../../references.html#ref-berman2026scenevlm" role="doc-biblioref">Berman et al. 2026</a>)</span> Appendix B.4 for <a href="#tbl-vts-cost" class="quarto-xref">Table&nbsp;<span>13.11</span></a></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-agarwal2025cosmos" class="csl-entry" role="listitem">
+<span class="nocase">Agarwal, Niket, Arslan Ali, Maciej Bala, et al.</span> 2025. <span>“Cosmos World Foundation Model Platform for Physical AI.”</span> <em>arXiv Preprint arXiv:2501.03575</em>.
+</div>
+<div id="ref-awad2017trecvid" class="csl-entry" role="listitem">
+Awad, George, Asad A. Butt, Jonathan Fiscus, et al. 2017. <span>“TRECVID 2017: Evaluating Ad-Hoc and Instance Video Search, Events Detection, Video Captioning and Hyperlinking.”</span> <em>TREC Video Retrieval Evaluation (TRECVID)</em>.
+</div>
+<div id="ref-bai2025qwen25vl" class="csl-entry" role="listitem">
+Bai, Shuai, Keqin Chen, Xuejing Liu, et al. 2025. <em>Qwen2.5-VL Technical Report</em>. <a href="https://arxiv.org/abs/2502.13923">https://arxiv.org/abs/2502.13923</a>.
+</div>
+<div id="ref-baraldi2015siamese" class="csl-entry" role="listitem">
+Baraldi, Lorenzo, Costantino Grana, and Rita Cucchiara. 2015a. <span>“A Deep Siamese Network for Scene Detection in Broadcast Videos.”</span> <em>Proceedings of the 23rd ACM International Conference on Multimedia</em>, 1199–202.
+</div>
+<div id="ref-baraldi2015hierarchical" class="csl-entry" role="listitem">
+Baraldi, Lorenzo, Costantino Grana, and Rita Cucchiara. 2015b. <span>“Shot and Scene Detection via Hierarchical Clustering for Re-Using Broadcast Video.”</span> <em>International Conference on Computer Analysis of Images and Patterns (CAIP)</em>, 801–11.
+</div>
+<div id="ref-berman2026scenevlm" class="csl-entry" role="listitem">
+Berman, Nimrod, Adam Botach, Emanuel Ben-Baruch, et al. 2026. <span>“Scene-VLM: Multimodal Video Scene Segmentation via Vision-Language Models.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>.
+</div>
+<div id="ref-bertasius2021timesformer" class="csl-entry" role="listitem">
+Bertasius, Gedas, Heng Wang, and Lorenzo Torresani. 2021. <span>“Is Space-Time Attention All You Need for Video Understanding?”</span> <em>Proceedings of the International Conference on Machine Learning (ICML)</em>.
+</div>
+<div id="ref-carion2020detr" class="csl-entry" role="listitem">
+Carion, Nicolas, Francisco Massa, Gabriel Synnaeve, Nicolas Usunier, Alexander Kirillov, and Sergey Zagoruyko. 2020. <span>“End-to-End Object Detection with Transformers (<span>DETR</span>).”</span> <em>ECCV</em>.
+</div>
+<div id="ref-castellano2025pyscenedetect" class="csl-entry" role="listitem">
+Castellano, Brandon. 2025. <em>PySceneDetect: Python and OpenCV-Based Scene Cut/Transition Detection Program and Library</em>. <a href="https://github.com/Breakthrough/PySceneDetect" class="uri">Https://github.com/Breakthrough/PySceneDetect</a>.
+</div>
+<div id="ref-chen2021shotcol" class="csl-entry" role="listitem">
+Chen, Shixing, Xiaohan Nie, David Fan, Dongqing Zhang, Vimal Bhat, and Raffay Hamid. 2021. <span>“Shot Contrastive Self-Supervised Learning for Scene Boundary Detection.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>, 9796–805.
+</div>
+<div id="ref-hassanien2017deepsbd" class="csl-entry" role="listitem">
+Hassanien, Ahmed, Mohamed Elgharib, Ahmed Selim, Sung-Ho Bae, Mohamed Hefeeda, and Wojciech Matusik. 2017. <span>“Large-Scale, Fast and Accurate Shot Boundary Detection Through Spatio-Temporal Convolutional Neural Networks.”</span> <em>arXiv Preprint arXiv:1705.03281</em>.
+</div>
+<div id="ref-huang2020movienet" class="csl-entry" role="listitem">
+Huang, Qingqiu, Yu Xiong, Anyi Rao, Jiaze Wang, and Dahua Lin. 2020. <span>“MovieNet: A Holistic Dataset for Movie Understanding.”</span> <em>European Conference on Computer Vision (ECCV)</em>, 709–27.
+</div>
+<div id="ref-islam2023trans4mer" class="csl-entry" role="listitem">
+Islam, Md Mohaiminul, Mahmudul Hasan, Kishan Shamsundar Athrey, Tony Braskich, and Gedas Bertasius. 2023. <span>“Efficient Movie Scene Detection Using State-Space Transformers.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>, 18749–58.
+</div>
+<div id="ref-kar2024sbdsurvey" class="csl-entry" role="listitem">
+Kar, Tejaswini, Priyadarshi Kanungo, Sachi Nandan Mohanty, Sven Groppe, and Jinghua Groppe. 2024. <span>“Video Shot-Boundary Detection: Issues, Challenges and Solutions.”</span> <em>Artificial Intelligence Review</em> 57 (4): 104.
+</div>
+<div id="ref-karaev2025cotracker3" class="csl-entry" role="listitem">
+Karaev, Nikita, Yuri Makarov, Jianyuan Wang, Natalia Neverova, Andrea Vedaldi, and Christian Rupprecht. 2025. <span>“CoTracker3: Simpler and Better Point Tracking by Pseudo-Labelling Real Videos.”</span> <em>Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)</em>, 6013–22.
+</div>
+<div id="ref-mixpeek2026scenesegmentation" class="csl-entry" role="listitem">
+Mixpeek. 2026. <em>Scene Segmentation: How a Video Becomes Searchable Scenes</em>. <a href="https://mixpeek.com/diagrams/scene-segmentation" class="uri">Https://mixpeek.com/diagrams/scene-segmentation</a>.
+</div>
+<div id="ref-mun2022bassl" class="csl-entry" role="listitem">
+Mun, Jonghwan, Minchul Shin, Gunsoo Han, et al. 2022. <span>“Boundary-Aware Self-Supervised Learning for Video Scene Segmentation.”</span> <em>Proceedings of the Asian Conference on Computer Vision (ACCV)</em>, 4027–43.
+</div>
+<div id="ref-rao2020lgss" class="csl-entry" role="listitem">
+Rao, Anyi, Linning Xu, Yu Xiong, et al. 2020. <span>“A Local-to-Global Approach to Multi-Modal Movie Scene Segmentation.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>, 10146–55.
+</div>
+<div id="ref-sadoughi2023mega" class="csl-entry" role="listitem">
+Sadoughi, Najmeh, Xinyu Li, Avijit Vajpayee, et al. 2023. <span>“MEGA: Multimodal Alignment Aggregation and Distillation for Cinematic Video Segmentation.”</span> <em>Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)</em>, 23331–40.
+</div>
+<div id="ref-simeoni2025dinov3" class="csl-entry" role="listitem">
+<span class="nocase">Siméoni, Oriane, Huy V. Vo, Maximilian Seitzer, et al.</span> 2025. <span>“DINOv3.”</span> <em>arXiv Preprint arXiv:2508.10104</em>.
+</div>
+<div id="ref-soucek2024transnetv2" class="csl-entry" role="listitem">
+Souček, Tomáš, and Jakub Lokoč. 2024. <span>“TransNet V2: An Effective Deep Network Architecture for Fast Shot Transition Detection.”</span> <em>Proceedings of the 32nd ACM International Conference on Multimedia</em>, 11218–21.
+</div>
+<div id="ref-soucek2019transnet" class="csl-entry" role="listitem">
+Souček, Tomáš, Jaroslav Moravec, and Jakub Lokoč. 2019. <span>“TransNet: A Deep Network for Fast Detection of Common Shot Transitions.”</span> <em>arXiv Preprint arXiv:1906.03363</em>.
+</div>
+<div id="ref-tang2018clipshots" class="csl-entry" role="listitem">
+Tang, Shitao, Litong Feng, Zhanghui Kuang, Yimin Chen, and Wei Zhang. 2018. <span>“Fast Video Shot Transition Localization with Deep Structured Models.”</span> <em>Asian Conference on Computer Vision (ACCV)</em>, 577–92.
+</div>
+<div id="ref-ventura2025chapterllama" class="csl-entry" role="listitem">
+Ventura, Lucas, Antoine Yang, Cordelia Schmid, and Gül Varol. 2025. <span>“Chapter-Llama: Efficient Chaptering in Hour-Long Videos with LLMs.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>, 18947–58.
+</div>
+<div id="ref-vo2024curation" class="csl-entry" role="listitem">
+<span class="nocase">Vo, Huy V., Vasil Khalidov, Timothée Darcet, et al.</span> 2024. <span>“Automatic Data Curation for Self-Supervised Learning: A Clustering-Based Approach.”</span> <em>arXiv Preprint arXiv:2405.15613</em>.
+</div>
+<div id="ref-wang2026omnishotcut" class="csl-entry" role="listitem">
+Wang, Boyang, Guangyi Xu, Jiahui Zhang, Zhipeng Tang, and Zezhou Cheng. 2026. <span>“OmniShotCut: Holistic Relational Shot Boundary Detection with Shot-Query Transformer.”</span> <em>arXiv Preprint arXiv:2604.24762</em>.
+</div>
+<div id="ref-wang2025koala36m" class="csl-entry" role="listitem">
+<span class="nocase">Wang, Qiuheng, Yukai Shi, Jiarong Ou, et al.</span> 2025. <span>“Koala-36M: A Large-Scale Video Dataset Improving Consistency Between Fine-Grained Conditions and Video Content.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>, 8428–37.
+</div>
+<div id="ref-wang2021realesrgan" class="csl-entry" role="listitem">
+Wang, Xintao, Liangbin Xie, Chao Dong, and Ying Shan. 2021. <span>“Real-ESRGAN: Training Real-World Blind Super-Resolution with Pure Synthetic Data.”</span> <em>Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) Workshops</em>, 1905–14.
+</div>
+<div id="ref-wang2021vistr" class="csl-entry" role="listitem">
+Wang, Yuqing, Zhaoliang Xu, Xinlong Wang, et al. 2021. <span>“End-to-End Video Instance Segmentation with Transformers.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>, 8741–50.
+</div>
+<div id="ref-wu2022scenecrl" class="csl-entry" role="listitem">
+Wu, Haoqian, Keyu Chen, Yanan Luo, et al. 2022. <span>“Scene Consistency Representation Learning for Video Scene Segmentation.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>, 14021–30.
+</div>
+<div id="ref-yang2023vidchapters" class="csl-entry" role="listitem">
+Yang, Antoine, Arsha Nagrani, Ivan Laptev, Josef Sivic, and Cordelia Schmid. 2023. <span>“VidChapters-7M: Video Chapters at Scale.”</span> <em>Advances in Neural Information Processing Systems (NeurIPS)</em> 36: 49428–44.
+</div>
+<div id="ref-zhu2023autoshot" class="csl-entry" role="listitem">
+Zhu, Wentao, Yufang Huang, Xiufeng Xie, et al. 2023. <span>“AutoShot: A Short Video Dataset and State-of-the-Art Shot Boundary Detection.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) Workshops</em>, 2238–47.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const callouts = document.querySelectorAll('.callout-tip');
+    callouts.forEach(function(callout) {
+      callout.style.borderLeftColor = '#2196f3'; //#616161; //'#4caf50';
+      callout.style.color = 'ffffff'; // Dark purple-gray text
+    });
+  });
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../chapters/video/11-video-understanding.html" class="pagination-link" aria-label="Video Understanding">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Video Understanding</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../chapters/video/13-video-understanding-benchmarks.html" class="pagination-link" aria-label="Video Understanding Benchmarks">
+        <span class="nav-page-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Video Understanding Benchmarks</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="../../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

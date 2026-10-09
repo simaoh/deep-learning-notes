@@ -1,0 +1,1753 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>24&nbsp; Vision-Language Multimodal Models – deep_learning_notes</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../chapters/time_series/_intro_time_series.html" rel="next">
+<link href="../../chapters/vision_language/_intro_vision_language.html" rel="prev">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-fd0503e23dce65854c81c5baaade3bdf.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../custom.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision_language/16-vision-language.html"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Vision-Language Multimodal Models</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../">deep_learning_notes</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_intro_foundations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Foundations</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/01-neural-networks-and-optimization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Neural Networks and Optimization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/02-generalization-and-learning-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Generalization and Learning Theory</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro_computer_vision.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Computer Vision</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Visual Understanding</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/03-cnns.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Convolutional Neural Networks</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/04-object-detection-and-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Detection and Segmentation</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/05-vision-transformers.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Vision Transformers</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-foundation-models-for-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Foundation Models for Segmentation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Self-Supervised Learning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Generative Modeling</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Models</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/07-vaes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/08-gans.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/09-diffusion-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_conclusion-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Conclusion</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/_intro_video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Video</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/10-video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Video Fundamentals: Motion and Spatiotemporal Architectures</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/11-video-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Video Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/12-video-temporal-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Video Temporal Segmentation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/13-video-understanding-benchmarks.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Video Understanding Benchmarks</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/14-video-generation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Video Generation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/_intro_3d.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">3D Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/11-3d-data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">3D Data Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">3D Reconstruction</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/12-3d-reconstruction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">3D Reconstruction</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/13-gaussian-splatting.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">3D Gaussian Splatting</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Human Pose Estimation</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/human_pose_estimation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Human Pose Estimation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/_intro_nlp.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Natural Language Processing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/17-text-representation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Text Representation &amp; Word Embeddings</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/18-sequence-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Sequence Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/19-large-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Large Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/20-text-embeddings-evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Text Embedding Models &amp; Evaluation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/_intro_vision_language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Vision-Language</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/16-vision-language.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Vision-Language Multimodal Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/_intro_time_series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Time Series</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/14-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">Time Series Fundamentals</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/15-deep-learning-for-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Deep Learning for Time Series</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/_intro_audio.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Audio</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/21-speech-representation-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Speech Representation Learning and Foundation Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/22-automatic-speech-recognition.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Automatic Speech Recognition</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/23-speaker-diarization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Speaker Diarization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/24-neural-audio-codecs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Neural Audio Codecs</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/25-speech-synthesis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">31</span>&nbsp; <span class="chapter-title">Speech Synthesis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/26-speech-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">32</span>&nbsp; <span class="chapter-title">Speech and Audio Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/27-audio-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">33</span>&nbsp; <span class="chapter-title">Audio Understanding Beyond Words</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#modalities-and-the-vision-language-setting" id="toc-modalities-and-the-vision-language-setting" class="nav-link active" data-scroll-target="#modalities-and-the-vision-language-setting"><span class="header-section-number">24.1</span> Modalities and the Vision-Language Setting</a>
+  <ul class="collapse">
+  <li><a href="#core-tasks" id="toc-core-tasks" class="nav-link" data-scroll-target="#core-tasks"><span class="header-section-number">24.1.1</span> Core Tasks</a></li>
+  <li><a href="#task-examples" id="toc-task-examples" class="nav-link" data-scroll-target="#task-examples"><span class="header-section-number">24.1.2</span> Task Examples</a></li>
+  </ul></li>
+  <li><a href="#pre-training" id="toc-pre-training" class="nav-link" data-scroll-target="#pre-training"><span class="header-section-number">24.2</span> Pre-Training</a>
+  <ul class="collapse">
+  <li><a href="#architecture-modality-fusion" id="toc-architecture-modality-fusion" class="nav-link" data-scroll-target="#architecture-modality-fusion"><span class="header-section-number">24.2.1</span> Architecture: Modality Fusion</a></li>
+  <li><a href="#pre-training-objectives" id="toc-pre-training-objectives" class="nav-link" data-scroll-target="#pre-training-objectives"><span class="header-section-number">24.2.2</span> Pre-Training Objectives</a></li>
+  </ul></li>
+  <li><a href="#models" id="toc-models" class="nav-link" data-scroll-target="#models"><span class="header-section-number">24.3</span> Models</a>
+  <ul class="collapse">
+  <li><a href="#a.-contrastive-learning-objective" id="toc-a.-contrastive-learning-objective" class="nav-link" data-scroll-target="#a.-contrastive-learning-objective"><span class="header-section-number">24.3.1</span> A. Contrastive Learning Objective</a></li>
+  <li><a href="#b.-masked-token-learning-objective" id="toc-b.-masked-token-learning-objective" class="nav-link" data-scroll-target="#b.-masked-token-learning-objective"><span class="header-section-number">24.3.2</span> B. Masked Token Learning Objective</a></li>
+  <li><a href="#c.-generative-objective-and-large-multimodal-models-lmms" id="toc-c.-generative-objective-and-large-multimodal-models-lmms" class="nav-link" data-scroll-target="#c.-generative-objective-and-large-multimodal-models-lmms"><span class="header-section-number">24.3.3</span> C. Generative Objective and Large Multimodal Models (LMMs)</a></li>
+  </ul></li>
+  <li><a href="#transfer-learning" id="toc-transfer-learning" class="nav-link" data-scroll-target="#transfer-learning"><span class="header-section-number">24.4</span> Transfer Learning</a></li>
+  <li><a href="#knowledge-distillation" id="toc-knowledge-distillation" class="nav-link" data-scroll-target="#knowledge-distillation"><span class="header-section-number">24.5</span> Knowledge Distillation</a></li>
+  <li><a href="#datasets" id="toc-datasets" class="nav-link" data-scroll-target="#datasets"><span class="header-section-number">24.6</span> Datasets</a></li>
+  <li><a href="#vision-foundation-models-unifying-vision-tasks" id="toc-vision-foundation-models-unifying-vision-tasks" class="nav-link" data-scroll-target="#vision-foundation-models-unifying-vision-tasks"><span class="header-section-number">24.7</span> Vision Foundation Models: Unifying Vision Tasks</a></li>
+  <li><a href="#interview-questions" id="toc-interview-questions" class="nav-link" data-scroll-target="#interview-questions"><span class="header-section-number">24.8</span> Interview Questions</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Vision-Language Multimodal Models</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="modalities-and-the-vision-language-setting" class="level2" data-number="24.1">
+<h2 data-number="24.1" class="anchored" data-anchor-id="modalities-and-the-vision-language-setting"><span class="header-section-number">24.1</span> Modalities and the Vision-Language Setting</h2>
+<p><strong>Modality</strong>: two data sources correspond to different modalities if the representation of at least one cannot be mapped unambiguously into the other — a pixel grid and a token sequence encode fundamentally different information and cannot be losslessly converted into each other.</p>
+<p><strong>Vision-Language (VL) modeling</strong> learns statistical patterns relating image and text data. Modern VL models are <strong>pre-trained on large image-text datasets</strong> via a general pretext task, then adapted to downstream tasks of interest via <strong>transfer learning</strong> or <strong>knowledge distillation</strong>.</p>
+<section id="core-tasks" class="level3" data-number="24.1.1">
+<h3 data-number="24.1.1" class="anchored" data-anchor-id="core-tasks"><span class="header-section-number">24.1.1</span> Core Tasks</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Task</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Text-to-Image Retrieval</td>
+<td>Text query, image database</td>
+<td>Best-matching image</td>
+</tr>
+<tr class="even">
+<td>Image Captioning</td>
+<td>Image</td>
+<td>Natural-language description</td>
+</tr>
+<tr class="odd">
+<td>Visual Question Answering (VQA)</td>
+<td>Image, question</td>
+<td>Answer</td>
+</tr>
+<tr class="even">
+<td>Grounding / Referring Expressions</td>
+<td>Image, region description</td>
+<td>Bounding box</td>
+</tr>
+<tr class="odd">
+<td>Visual Dialog</td>
+<td>Image, dialog history, question</td>
+<td>Answer to the last question</td>
+</tr>
+<tr class="even">
+<td>Image Generation</td>
+<td>Text description</td>
+<td>Image</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="task-examples" class="level3" data-number="24.1.2">
+<h3 data-number="24.1.2" class="anchored" data-anchor-id="task-examples"><span class="header-section-number">24.1.2</span> Task Examples</h3>
+<p>The same generic architecture — a visual encoder <span class="math inline">\(h(\cdot)\)</span>, a language encoder <span class="math inline">\(g(\cdot)\)</span>, and a combination function <span class="math inline">\(f(\cdot)\)</span> — instantiates each task below by varying the inputs and output of <span class="math inline">\(f(\cdot)\)</span>.</p>
+<div class="quarto-layout-panel" data-layout="[[1,1], [1,1], [1,1], [1,1], [1,1], [1]]">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-task-retrieval-diagram" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-task-retrieval-diagram-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/task_image_retrieval_diagram.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-task-retrieval-diagram-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.1: Text-to-Image Retrieval: <span class="math inline">\(f(\cdot)\)</span> outputs an image-caption similarity score.
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-task-retrieval-example" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-task-retrieval-example-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/task_image_retrieval.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-task-retrieval-example-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.2: Retrieval result for the query “Grey haired man in black and yellow tie.”
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-task-captioning-diagram" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-task-captioning-diagram-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/task_image_captioning_diagram.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-task-captioning-diagram-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.3: Image Captioning: a visual encoder feeds a language decoder that generates a caption autoregressively.
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-task-captioning-example" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-task-captioning-example-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/task_captioning.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-task-captioning-example-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.4: Captioning example: “Two young girls are playing with lego toy.”
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-task-vqa-diagram" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-task-vqa-diagram-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/task_VQA_diagram.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-task-vqa-diagram-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.5: VQA: <span class="math inline">\(f(\cdot)\)</span> combines image and question embeddings to produce an answer.
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-task-vqa-example" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-task-vqa-example-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/task_VQA.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-task-vqa-example-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.6: VQA example. Q: “What is the mustache made of?” A: “bananas”
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-task-grounding-diagram" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-task-grounding-diagram-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/task_grounding_diagram.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-task-grounding-diagram-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.7: Grounding / Referring Expressions: <span class="math inline">\(f(\cdot)\)</span> scores image-patch / phrase pairs.
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-task-grounding-example" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-task-grounding-example-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/task_grounding.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-task-grounding-example-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.8: Grounding example: the box marks the region matching “Woman with the white shirt.”
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-task-dialog-diagram" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-task-dialog-diagram-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/task_dialog_diagram.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-task-dialog-diagram-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.9: Visual Dialog: the language encoder consumes both the dialog history and the new question.
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-task-dialog-example" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-task-dialog-example-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/task_dialog.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-task-dialog-example-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.10: Visual Dialog example: a multi-turn Q&amp;A grounded in the same image.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-task-generation-example" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-task-generation-example-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/task_generation.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-task-generation-example-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.11: Image Generation example (DALL-E): “An armchair in the shape of an Avocado.”
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</section>
+</section>
+<section id="pre-training" class="level2" data-number="24.2">
+<h2 data-number="24.2" class="anchored" data-anchor-id="pre-training"><span class="header-section-number">24.2</span> Pre-Training</h2>
+<div id="fig-vl-training-phases" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-vl-training-phases-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/vision_language_training_phases.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:85.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-vl-training-phases-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.12: Overview: VL model pre-training (contrastive, generative, and alignment objectives), transfer learning (prompt tuning, feature adaptation), and knowledge distillation to task-specific architectures.
+</figcaption>
+</figure>
+</div>
+<p>Two challenges dominate VL pre-training:</p>
+<ul>
+<li><strong>Data Alignment</strong>: learning the semantic correspondence between the two modalities.</li>
+<li><strong>Complexity</strong>: the computational cost of training and serving a large multimodal model.</li>
+</ul>
+<p>VL models differ primarily along two axes: <strong>architecture</strong> (how the modalities are fused) and <strong>pre-training objective</strong> (what signal drives the alignment).</p>
+<section id="architecture-modality-fusion" class="level3" data-number="24.2.1">
+<h3 data-number="24.2.1" class="anchored" data-anchor-id="architecture-modality-fusion"><span class="header-section-number">24.2.1</span> Architecture: Modality Fusion</h3>
+<div id="fig-modality-fusion" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-modality-fusion-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/architecture2.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:95.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-modality-fusion-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.13: The three modality-fusion architectures: (a) Two-Tower / Late Fusion, (b) Two-Leg / Intermediate Fusion, (c) One-Tower / Early Fusion.
+</figcaption>
+</figure>
+</div>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Fusion</th>
+<th>Description</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Late Fusion</strong> (Two-Tower)</td>
+<td>Two independent encoders process each modality separately; outputs combined only via a similarity score (e.g.&nbsp;dot product)</td>
+<td>CLIP, ALIGN</td>
+</tr>
+<tr class="even">
+<td><strong>Intermediate Fusion</strong> (Two-Leg / Cross-Attention)</td>
+<td>Two separate networks, connected by cross-attention layers between modalities</td>
+<td>Flamingo, BLIP-2</td>
+</tr>
+<tr class="odd">
+<td><strong>Early Fusion</strong> (Single-Tower / Self-Attention)</td>
+<td>A single encoder embeds both modalities into a shared token sequence, processed by joint self-attention</td>
+<td>BEiT-3, VisualBERT</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Interview Insight</strong>: “Which fusion strategy for retrieval vs.&nbsp;reasoning?” Late fusion is the only architecture that scales to retrieval over millions of images — embeddings are pre-computed once and compared via a single dot product at query time. Early and intermediate fusion enable much richer cross-modal reasoning (needed for VQA, captioning, grounding) but require a full forward pass through the joint model for every query, making them unsuitable for large-scale retrieval.</p>
+</section>
+<section id="pre-training-objectives" class="level3" data-number="24.2.2">
+<h3 data-number="24.2.2" class="anchored" data-anchor-id="pre-training-objectives"><span class="header-section-number">24.2.2</span> Pre-Training Objectives</h3>
+<ol type="1">
+<li><strong>Contrastive Learning</strong>: distinguish a matched (image, caption) pair from mismatched pairs.</li>
+<li><strong>Masked Token Learning</strong>: predict masked input tokens (image patches and/or text tokens) from the unmasked context.</li>
+<li><strong>Generative Learning</strong>: autoregressive next-token prediction on the language output, conditioned on the image via cross-attention.</li>
+</ol>
+<hr>
+</section>
+</section>
+<section id="models" class="level2" data-number="24.3">
+<h2 data-number="24.3" class="anchored" data-anchor-id="models"><span class="header-section-number">24.3</span> Models</h2>
+<section id="a.-contrastive-learning-objective" class="level3" data-number="24.3.1">
+<h3 data-number="24.3.1" class="anchored" data-anchor-id="a.-contrastive-learning-objective"><span class="header-section-number">24.3.1</span> A. Contrastive Learning Objective</h3>
+<section id="clip-align-2021" class="level4" data-number="24.3.1.1">
+<h4 data-number="24.3.1.1" class="anchored" data-anchor-id="clip-align-2021"><span class="header-section-number">24.3.1.1</span> CLIP / ALIGN (2021)</h4>
+<p><strong>Architecture</strong>: dual encoder — a Transformer text encoder and a ResNet or ViT image encoder, projecting both modalities into a shared embedding space.</p>
+<p><strong>Training</strong>: given a batch of <span class="math inline">\(N\)</span> (image, caption) pairs, encode each into normalized embeddings <span class="math inline">\(\mathbf{v}_i, \mathbf{t}_i\)</span> and minimize the symmetric InfoNCE loss over the <span class="math inline">\(N \times N\)</span> similarity matrix <span class="math inline">\(S_{ij} = \mathbf{v}_i^\top \mathbf{t}_j / \tau\)</span>: <span class="math display">\[\boxed{\mathcal{L}_{\text{CLIP}} = \frac{1}{2N}\sum_{i=1}^N \left[-\log\frac{\exp(S_{ii})}{\sum_{j=1}^N \exp(S_{ij})} -\log\frac{\exp(S_{ii})}{\sum_{j=1}^N \exp(S_{ji})}\right]}\]</span> where <span class="math inline">\(\tau\)</span> is a learnable temperature. The two terms are the image→text and text→image classification losses: each image must pick out its matching caption among the <span class="math inline">\(N\)</span> in the batch, and vice versa.</p>
+<div id="fig-clip-training" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-clip-training-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/clip_training.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:80.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-clip-training-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.14: CLIP training: the <span class="math inline">\(N \times N\)</span> matrix of cosine similarities between image and text embeddings; the diagonal entries are the positive pairs.
+</figcaption>
+</figure>
+</div>
+<p><strong>Inference</strong>: for zero-shot classification, encode each class label as a text prompt (e.g.&nbsp;“a photo of a {class}”) and assign the image to the class whose text embedding has the highest cosine similarity with the image embedding.</p>
+<div id="fig-clip-inference" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-clip-inference-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/clip_inference.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:80.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-clip-inference-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.15: CLIP zero-shot inference: class names are embedded as “a photo of a {object}” prompts, and the image is assigned to the class with the highest image-text similarity.
+</figcaption>
+</figure>
+</div>
+<p><strong>Scaling</strong>: data size, batch size, and model size all improve accuracy — larger batches give a harder contrastive task (more negatives per positive), which is one reason CLIP-style training benefits disproportionately from scale.</p>
+<div id="fig-clip-large-scale" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-clip-large-scale-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/clip_large_scale.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:70.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-clip-large-scale-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.16: CLIP’s contrastive “bag of words” objective reaches a given zero-shot ImageNet accuracy with far fewer images processed than a transformer language-modeling objective.
+</figcaption>
+</figure>
+</div>
+<p><strong>Interview Insight</strong>: “Why does CLIP need such large batch sizes?” Every other sample in the batch serves as a negative for the contrastive loss. Small batches give few, easy negatives — the model can satisfy the loss without learning fine-grained distinctions. Large batches (32k+ in the original CLIP) make the discrimination task hard enough to drive useful representation learning.</p>
+</section>
+<section id="improvements-combining-clip-with-other-objectives" class="level4" data-number="24.3.1.2">
+<h4 data-number="24.3.1.2" class="anchored" data-anchor-id="improvements-combining-clip-with-other-objectives"><span class="header-section-number">24.3.1.2</span> Improvements Combining CLIP with Other Objectives</h4>
+<ul>
+<li><strong>FLIP (2022)</strong>: randomly drops a large fraction of image patches before encoding, reducing compute and acting as data augmentation — the efficiency gains can be reinvested as accuracy gains at a fixed compute budget.</li>
+<li><strong>CoCa (2022)</strong>: trains a single model with <em>both</em> a contrastive loss (image-text matching) and a captioning (generative) loss, unifying the two paradigms.</li>
+<li><strong>Florence (2021)</strong>: a unified image representation pre-trained with a contrastive objective, transferable across classification, retrieval, detection, and captioning.</li>
+<li><strong>DeCLIP (2022)</strong>: supplements the contrastive signal with self-supervision (image-image, text-text) and nearest-neighbor supervision, improving data efficiency.</li>
+<li><strong>FILIP (2021)</strong> — fine-grained alignment between image patches and text tokens. Given <span class="math inline">\(N\)</span> image patch embeddings <span class="math inline">\(\{\mathbf{v}_k\}\)</span> and <span class="math inline">\(M\)</span> text token embeddings <span class="math inline">\(\{\mathbf{t}_r\}\)</span>, the image-text similarity is the average, over image patches, of the maximum similarity to any text token: <span class="math display">\[\text{sim}(\mathbf{V}, \mathbf{T}) = \frac{1}{N}\sum_{k=1}^N \max_{r=1,\ldots,M} \mathbf{v}_k^\top \mathbf{t}_r\]</span> This token-level max-similarity replaces the single global cosine similarity in the InfoNCE loss, giving a much finer-grained training signal than CLIP’s pooled embeddings.</li>
+</ul>
+<div id="fig-filip" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-filip-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/filip.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:95.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-filip-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.17: FILIP’s cross-modal late interaction (left) computes token-wise image-to-text and text-to-image similarities. The token-level attention maps (right) localize which image patches each word attends to — much sharper than CLIP’s global similarity.
+</figcaption>
+</figure>
+</div>
+</section>
+<section id="siglip-sigmoid-loss-for-language-image-pre-training-2023" class="level4" data-number="24.3.1.3">
+<h4 data-number="24.3.1.3" class="anchored" data-anchor-id="siglip-sigmoid-loss-for-language-image-pre-training-2023"><span class="header-section-number">24.3.1.3</span> SigLIP (Sigmoid Loss for Language-Image Pre-training, 2023)</h4>
+<p>SigLIP keeps CLIP’s dual-encoder architecture but replaces the softmax-based InfoNCE loss with a <strong>pairwise sigmoid loss</strong>. Each (image, text) pair in the batch is treated as an <em>independent binary classification</em> — match or non-match — rather than a multi-way classification over the batch: <span class="math display">\[\boxed{\mathcal{L}_{\text{SigLIP}} = -\frac{1}{N}\sum_{i=1}^N\sum_{j=1}^N \log\sigma\!\left(z_{ij}\,(t\,\mathbf{v}_i^\top\mathbf{t}_j + b)\right)}, \qquad z_{ij} = \begin{cases} +1 &amp; i = j \\ -1 &amp; i \neq j \end{cases}\]</span> where <span class="math inline">\(t\)</span> is a learnable temperature, <span class="math inline">\(b\)</span> a learnable bias, and <span class="math inline">\(\sigma\)</span> the sigmoid function.</p>
+<div id="fig-siglip-loss" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-siglip-loss-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/siglip_loss.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:90.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-siglip-loss-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.18: CLIP’s softmax loss normalizes over all <span class="math inline">\(N\)</span> pairs in each row/column of the similarity matrix; SigLIP’s sigmoid loss treats every <span class="math inline">\((i,j)\)</span> pair as an independent binary classification.
+</figcaption>
+</figure>
+</div>
+<p><strong>Why it matters</strong>:</p>
+<ul>
+<li>SigLIP <strong>outperforms CLIP at small batch sizes</strong> — the per-pair loss doesn’t degrade when there are fewer negatives.</li>
+<li>SigLIP is <strong>more memory-efficient at very large batch sizes</strong>, because the sigmoid loss decomposes over individual <span class="math inline">\((i,j)\)</span> pairs — no global softmax normalization (and the associated cross-device all-gather of the full similarity matrix) is required.</li>
+</ul>
+<div id="fig-siglip-batch-size" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-siglip-batch-size-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/siglip_batch_size.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:55.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-siglip-batch-size-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.19: Zero-shot ImageNet accuracy vs.&nbsp;batch size: the sigmoid loss matches or exceeds the softmax loss across the range, with its advantage most visible at small batch sizes.
+</figcaption>
+</figure>
+</div>
+</section>
+<section id="siglip2-2025" class="level4" data-number="24.3.1.4">
+<h4 data-number="24.3.1.4" class="anchored" data-anchor-id="siglip2-2025"><span class="header-section-number">24.3.1.4</span> SigLIP2 (2025)</h4>
+<div id="fig-siglip2" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-siglip2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/siglip_2.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:70.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-siglip2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.20: SigLIP2 architecture: alongside the sigmoid image-text matching loss (SigLIP v1), an EMA teacher provides self-distillation/masked-prediction targets (SILC/TIPS), and an autoregressive decoder adds a captioning loss (LocCa).
+</figcaption>
+</figure>
+</div>
+<p>SigLIP2 combines SigLIP’s sigmoid image-text matching objective with auxiliary self-supervised losses that improve <strong>un-pooled (per-patch) image features</strong>:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Auxiliary Objective</th>
+<th>Type of Loss</th>
+<th>Primary Benefit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Captioning-based Pretraining (LocCa)</td>
+<td>Image-to-Text, Region-to-Text</td>
+<td><strong>Localization</strong> — image captioning, referring expression prediction, and grounded captioning force the vision encoder to be location-aware</td>
+</tr>
+<tr class="even">
+<td>Self-Distillation (Global-Local)</td>
+<td>Self-Supervised</td>
+<td><strong>Dense feature semantics</strong> — a student matches a teacher’s full-image representation from local crops, encouraging consistent local-to-global features</td>
+</tr>
+<tr class="odd">
+<td>Masked Prediction</td>
+<td>Self-Supervised</td>
+<td><strong>Richer per-patch representations</strong> — the student predicts teacher features of masked patches</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="b.-masked-token-learning-objective" class="level3" data-number="24.3.2">
+<h3 data-number="24.3.2" class="anchored" data-anchor-id="b.-masked-token-learning-objective"><span class="header-section-number">24.3.2</span> B. Masked Token Learning Objective</h3>
+<section id="beit-beit-2-beit-3-20212023" class="level4" data-number="24.3.2.1">
+<h4 data-number="24.3.2.1" class="anchored" data-anchor-id="beit-beit-2-beit-3-20212023"><span class="header-section-number">24.3.2.1</span> BEiT / BEiT-2 / BEiT-3 (2021–2023)</h4>
+<p><strong>Pre-training task</strong>: BEiT-3 extends BERT-style masked modeling to image tokens, text tokens, and image-text pairs in a unified manner — randomly masking 15% of tokens in unimodal text, 50% of tokens in text paired with images, and 40% of image patches (block-wise masking, as in BEiT).</p>
+<p><strong>Model</strong>: a <strong>Multiway Transformer</strong> — shared self-attention modules followed by three modality-specific feed-forward “experts” (vision, language, vision-language), allowing a single backbone to specialize per modality while sharing the attention computation.</p>
+<div id="fig-beit3" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-beit3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/beit.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:85.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-beit3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.21: BEiT-3’s Multiway Transformer: images, text, and image-text pairs share a multi-head self-attention module, then route through modality-specific feed-forward “experts” (V-FFN, L-FFN, VL-FFN).
+</figcaption>
+</figure>
+</div>
+<p><strong>Data</strong>: ~21M image-text pairs for multimodal pre-training, plus 14M unimodal images (ImageNet-21K) and 160GB of text corpora (Wikipedia, BookCorpus, OpenWebText, CC-News, Stories).</p>
+<p><strong>Advantage over contrastive pre-training</strong>: masked-token pre-training requires a <strong>much smaller batch size</strong>. BEiT-3 uses batches of 6,144 samples total (2,048 images + 2,048 texts + 2,048 image-text pairs) — orders of magnitude smaller than the 32k+ batches needed for contrastive learning, because the loss is computed per-token rather than relying on in-batch negatives.</p>
+<hr>
+</section>
+</section>
+<section id="c.-generative-objective-and-large-multimodal-models-lmms" class="level3" data-number="24.3.3">
+<h3 data-number="24.3.3" class="anchored" data-anchor-id="c.-generative-objective-and-large-multimodal-models-lmms"><span class="header-section-number">24.3.3</span> C. Generative Objective and Large Multimodal Models (LMMs)</h3>
+<p>The <strong>generative objective</strong> is an autoregressive loss on the language output, with the image injected via cross-attention from text tokens to image features: <span class="math display">\[\mathcal{L}_{\text{gen}} = -\sum_{l=1}^{L} \log p_\theta(y_l \mid y_{&lt;l}, \mathbf{X}_{\text{img}})\]</span></p>
+<div id="fig-generative-objective" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-generative-objective-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/text_generative_ojective.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:90.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-generative-objective-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.22: The language model predicts each next token from the visual tokens and all preceding text tokens; the causal attention mask (right) allows every token to attend to the visual tokens but only to earlier text tokens.
+</figcaption>
+</figure>
+</div>
+<p>This objective underlies most modern <strong>Large Multimodal Models (LMMs)</strong>, which connect a pre-trained vision encoder to a pre-trained (often frozen) LLM via a lightweight <strong>connection module</strong>.</p>
+<div id="fig-lmm-stack" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-lmm-stack-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/architecture1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:45.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-lmm-stack-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.23: The generic LMM stack: a (frozen) vision encoder, a trainable connection module, and a (frozen) language model.
+</figcaption>
+</figure>
+</div>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>GIT (2022)</th>
+<th>BLIP-2 (2023)</th>
+<th>Flamingo (2022)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Language Model</td>
+<td>From scratch</td>
+<td>Frozen: FLAN-T5 / OPT</td>
+<td>Frozen: 70B Chinchilla</td>
+</tr>
+<tr class="even">
+<td>Connection Module</td>
+<td>—</td>
+<td><strong>Q-Former</strong> (trained)</td>
+<td><strong>Perceiver Resampler</strong> + gated cross-attention (trained)</td>
+</tr>
+<tr class="odd">
+<td>Vision Encoder</td>
+<td>Pre-trained: Florence/CLIP</td>
+<td>Frozen: EVA/CLIP</td>
+<td>Frozen: NFNet (CLIP-like)</td>
+</tr>
+</tbody>
+</table>
+<div id="fig-git" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-git-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/git_vlm.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:70.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-git-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.24: GIT: image features from a pre-trained image encoder are prepended to the text embeddings, and a Transformer text decoder autoregressively generates the output text.
+</figcaption>
+</figure>
+</div>
+<p><strong>Q-Former (BLIP-2)</strong> — a trainable module connecting a frozen image encoder to a frozen LLM, itself composed of an image Transformer and a text Transformer sharing self-attention:</p>
+<div id="fig-blip2" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-blip2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/blip_2.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:80.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-blip2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.25: BLIP-2’s two-stage training: (1) the Q-Former learns vision-language representations from a frozen image encoder; (2) the Q-Former’s output queries are fed to a frozen LLM as a generative bridge.
+</figcaption>
+</figure>
+</div>
+<ul>
+<li>The image Transformer takes a <strong>fixed number of learnable query tokens</strong> as input (à la DETR), which interact with frozen image features via cross-attention.</li>
+<li><strong>Stage 1 (representation learning)</strong>: jointly optimizes three losses — Image-Text Contrastive learning, Image-grounded Text Generation, and Image-Text Matching (binary classification with hard negatives).</li>
+<li><strong>Stage 2 (generative pre-training)</strong>: a linear projection maps the query embeddings into the LLM’s input embedding space; the projected queries are prepended to the text sequence as “soft visual prompts,” and the frozen LLM is trained to generate captions conditioned on them.</li>
+</ul>
+<div id="fig-qformer-details" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-qformer-details-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/q_former_details.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:90.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-qformer-details-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.26: Q-Former internals: the same learned queries interact with image features via cross-attention and with text via self-attention, under different attention masks for each Stage-1 loss (bidirectional for ITM, multi-modal causal for image-grounded generation, uni-modal for the contrastive loss).
+</figcaption>
+</figure>
+</div>
+<p><strong>Perceiver Resampler (Flamingo)</strong> — converts a variable-length (and for video, spatiotemporal) sequence of vision-encoder features into a <strong>fixed small number of tokens</strong> (64), via cross-attention from a fixed set of learnable query tokens to the vision features — the same query-based compression idea as Q-Former and DETR.</p>
+<p>Flamingo chains the Perceiver Resampler with newly-initialized, trainable <strong>gated cross-attention layers</strong> inserted between the frozen LLM’s self-attention blocks: <span class="math display">\[\mathbf{h}' = \mathbf{h} + \tanh(\alpha)\cdot \text{CrossAttn}(\mathbf{Q}=\mathbf{h}, \mathbf{K}=\mathbf{V}=\mathbf{X}_{\text{img}})\]</span> The gate <span class="math inline">\(\alpha\)</span> is initialized to zero, so at initialization the block is the identity — the frozen LLM’s behavior is preserved until the cross-attention layers learn to use the visual input. Flamingo accepts an interleaved sequence of images and text and generates text.</p>
+<div id="fig-flamingo" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-flamingo-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/flamingo.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:90.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-flamingo-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.27: Flamingo architecture: each image/video is independently encoded by a frozen vision encoder and a trainable Perceiver Resampler, then injected into the frozen LLM via trainable GATED XATTN-DENSE layers interleaved between the LLM’s blocks.
+</figcaption>
+</figure>
+</div>
+<div id="fig-flamingo-chat" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-flamingo-chat-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/flamingo_chat_like_input.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:90.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-flamingo-chat-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.28: Flamingo’s interleaved chat-like input: a few-shot prompt of images and text lets the frozen LLM generalize to new questions about the final image, including comparisons across images.
+</figcaption>
+</figure>
+</div>
+<p><strong>LLaVA (Large Language-and-Vision Assistant, 2023)</strong> — a single LLM consumes both text tokens and image tokens (projected into the language embedding space by a linear layer), with <strong>two-stage training</strong>:</p>
+<ul>
+<li><strong>Stage 1 — Lightweight alignment</strong>: only the projection matrix is trained, on a subset of Conceptual Captions (CC3M).</li>
+<li><strong>Stage 2 — Supervised fine-tuning (SFT)</strong>: both the projection matrix and the LLM are updated on visual instruction data (multi-turn chat) and Science QA (multimodal reasoning).</li>
+</ul>
+<div id="fig-llava-architecture" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-llava-architecture-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/llava_training_objective.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:85.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-llava-architecture-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.29: LLaVA architecture: image features <span class="math inline">\(\mathbf{Z}_v\)</span> from a frozen vision encoder are mapped by a trainable projection <span class="math inline">\(\mathbf{W}\)</span> into the language embedding space (<span class="math inline">\(\mathbf{H}_v\)</span>), then concatenated with the language instruction tokens <span class="math inline">\(\mathbf{H}_q\)</span> and fed to the language model <span class="math inline">\(f_\phi\)</span> to produce the response <span class="math inline">\(\mathbf{X}_a\)</span>.
+</figcaption>
+</figure>
+</div>
+<section id="lmm-improvements" class="level4" data-number="24.3.3.1">
+<h4 data-number="24.3.3.1" class="anchored" data-anchor-id="lmm-improvements"><span class="header-section-number">24.3.3.1</span> LMM Improvements</h4>
+<ol type="1">
+<li><p><strong>Architecture</strong>: LLM backbone size matters most for final performance. Vision encoder size matters less than its <em>training data and representation quality</em> — a CLIP-pretrained encoder is the strongest single choice, and mixing multiple vision encoders can further help.</p></li>
+<li><p><strong>Visual tokens — higher resolution matters</strong>:</p>
+<ul>
+<li><strong>Multi-crop / dynamic high resolution</strong>: tile a high-resolution image into multiple fixed-size crops, each encoded independently, to support resolutions beyond the encoder’s native input size.</li>
+</ul>
+<div id="fig-llava-high-res" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-llava-high-res-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/llava_high_res.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:90.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-llava-high-res-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.30: Dynamic high resolution: the input image is split into crops (and separately resized to a low-resolution overview), each encoded independently and flattened into the LLM’s input sequence.
+</figcaption>
+</figure>
+</div>
+<ul>
+<li><strong>Token reduction</strong>: with up to <span class="math inline">\(576 \times 5\)</span> visual tokens for a multi-crop high-res image, strategies include adaptive sampling, nested/elastic token organization, and stacking tokens across layers (rather than only along the sequence at the input layer) to keep sequence length tractable.</li>
+</ul></li>
+<li><p><strong>Visual prompts</strong>: vision foundation models (Grounding DINO, SAM, SEEM) provide grounding signals, injected via two strategies:</p>
+<ul>
+<li><strong>Feature-based</strong>: points, masks, boxes encoded and passed as additional tokens to the LLM.</li>
+<li><strong>Pixel-based</strong>: points, masks, boxes overlaid directly on image pixels — simpler to implement and apply.</li>
+</ul></li>
+<li><p><strong>Training strategy</strong>: the best recipe is to fully fine-tune the model on high-quality “recap” data, after an initial projector-only warm-up followed by fine-tuning on general data.</p></li>
+<li><p><strong>Video</strong>: LLaVA-NeXT extends the dynamic-high-resolution mechanism (originally for high-resolution <em>images</em>) to handle <strong>multiple frames</strong>, trained with Direct Preference Optimization (DPO) on high-quality video data. At inference, relative positional embeddings across frames support longer videos than seen during training.</p>
+<div id="fig-llava-next-video" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-llava-next-video-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/llava_next_video.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:80.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-llava-next-video-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.31: LLaVA-NeXT extends multi-patch processing for high-resolution images (left) to multi-frame processing for video (right), reusing the same split-encode-flatten pipeline across frames.
+</figcaption>
+</figure>
+</div></li>
+</ol>
+<p><strong>Emergent abilities</strong>: large VL models (e.g.&nbsp;Flamingo) display capabilities — implicit counting, arithmetic, celebrity recognition, OCR — that are <strong>emergent</strong>: absent in smaller models, present only once scale crosses some threshold, and not directly optimized for during pre-training.</p>
+<div id="fig-emergent-abilities" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-emergent-abilities-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/emergent_abilities.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:85.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-emergent-abilities-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.32: Examples of Flamingo’s emergent few-shot abilities: visual dialogue, OCR-based reasoning, arithmetic, counting, multilingual captioning, and reasoning about “out of distribution” images (e.g.&nbsp;a 3D-rendered flamingo).
+</figcaption>
+</figure>
+</div>
+<hr>
+</section>
+</section>
+</section>
+<section id="transfer-learning" class="level2" data-number="24.4">
+<h2 data-number="24.4" class="anchored" data-anchor-id="transfer-learning"><span class="header-section-number">24.4</span> Transfer Learning</h2>
+<p>Pre-trained VL models often underperform on downstream tasks due to mismatches in <strong>data distribution</strong> (image and text statistics of the target task) and <strong>training objective</strong> (the pretext task differs from the downstream task). Four strategies adapt a pre-trained VL model:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Strategy</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Prompt Tuning</strong></td>
+<td>Learn a continuous text prompt prepended to the input sequence, and/or a visual prompt added to the input image; the backbone is frozen</td>
+</tr>
+<tr class="even">
+<td><strong>Feature Adaptation</strong></td>
+<td>Insert a small trainable network (e.g.&nbsp;a few linear layers, as in CLIP-Adapter) after the frozen encoders, trained with the task-specific loss</td>
+</tr>
+<tr class="odd">
+<td><strong>Fine-Tuning</strong></td>
+<td>Update the whole model (or a subset of layers) on task-specific data</td>
+</tr>
+<tr class="even">
+<td><strong>Instruction Fine-Tuning</strong></td>
+<td>Fine-tune on machine-generated instruction-following data, improving zero-shot performance on novel instructions</td>
+</tr>
+</tbody>
+</table>
+<div id="fig-prompt-tuning" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-prompt-tuning-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/prompt_tuning.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:90.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-prompt-tuning-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.33: Prompt Tuning: (a) a learnable continuous text prompt is prepended to the class label; (b) a learnable visual prompt is added to the input image. The frozen encoders are unchanged.
+</figcaption>
+</figure>
+</div>
+<div id="fig-feature-adaptation" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-feature-adaptation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/feature_adaptation.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:70.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-feature-adaptation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.34: Feature Adaptation (CLIP-Adapter): a small trainable network is inserted after the frozen image encoder, and its output is combined with the original visual features before the classification loss.
+</figcaption>
+</figure>
+</div>
+<p><strong>Instruction tuning for VL (LLaVA)</strong>: for each MS-COCO (image, 5 captions) pair, a text-only GPT-4 generates instruction-following data <strong>from the captions alone</strong> — conversations, detailed descriptions, and complex-reasoning Q&amp;A — without ever seeing the image. A pre-trained VL model is then fine-tuned on this synthetic (image, instruction, response) data.</p>
+<div id="fig-llava-training-data" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-llava-training-data-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/llava_training_data.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:95.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-llava-training-data-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.35: Examples of the three types of LLaVA instruction-tuning data generated from MS-COCO captions and bounding boxes: (1) multi-turn conversations, (2) detailed descriptions, and (3) complex reasoning.
+</figcaption>
+</figure>
+</div>
+<hr>
+</section>
+<section id="knowledge-distillation" class="level2" data-number="24.5">
+<h2 data-number="24.5" class="anchored" data-anchor-id="knowledge-distillation"><span class="header-section-number">24.5</span> Knowledge Distillation</h2>
+<p>Transfer learning preserves the original model architecture; <strong>knowledge distillation</strong> instead transfers the <em>learned representations</em> of a large, generally pre-trained VL model into a <strong>task-specific architecture</strong>.</p>
+<p><strong>Example — object detection and semantic segmentation</strong>: region-level (Faster R-CNN, DETR) and pixel-level (segmentation) knowledge is distilled from the <em>image-level</em> representations of a generic pre-trained VL model (e.g.&nbsp;CLIP), bridging the gap between the VL model’s global image-text alignment and the dense, localized predictions required by detection/segmentation.</p>
+<hr>
+</section>
+<section id="datasets" class="level2" data-number="24.6">
+<h2 data-number="24.6" class="anchored" data-anchor-id="datasets"><span class="header-section-number">24.6</span> Datasets</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Dataset</th>
+<th>Images</th>
+<th>Captions per image</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>MS-COCO</td>
+<td>122K</td>
+<td>5</td>
+</tr>
+<tr class="even">
+<td>Conceptual Captions</td>
+<td>3.3M</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>LAION-COCO</td>
+<td>600M</td>
+<td>1</td>
+</tr>
+<tr class="even">
+<td>LAION-5B</td>
+<td>5.85B</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="vision-foundation-models-unifying-vision-tasks" class="level2" data-number="24.7">
+<h2 data-number="24.7" class="anchored" data-anchor-id="vision-foundation-models-unifying-vision-tasks"><span class="header-section-number">24.7</span> Vision Foundation Models: Unifying Vision Tasks</h2>
+<p>Language models unified many language tasks under a single architecture (decoder LLMs), and conversational LLMs (ChatGPT) enabled human-AI interaction. Vision tasks, by contrast, vary widely in <strong>input</strong>, <strong>output</strong>, and <strong>task granularity</strong> (image-level, region-level, pixel-level), making a single unifying architecture harder to design. Three lines of work address this:</p>
+<div id="fig-unified-vl-tasks" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-unified-vl-tasks-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/unified_vl_tasks.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:90.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-unified-vl-tasks-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.36: Vision tasks vary along three axes: (a) input type (static/dynamic, single/multi-modal), (b) task granularity (image-, region-, pixel-level), and (c) output type (spatial vs.&nbsp;semantic).
+</figcaption>
+</figure>
+</div>
+<ol type="1">
+<li><p><strong>Free-text task unification</strong> (GroupViT, MaskCLIP, OpenSeg): replace fixed class label sets with free-text language, allowing a single model to handle arbitrary categories specified at inference time via text.</p>
+<div id="fig-unifying-tasks" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-unifying-tasks-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/unifying_tasks.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:80.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-unifying-tasks-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.37: Replacing fixed class labels with a text encoder over concept names (“language”) unifies classification, detection, and segmentation models (CLIP, GLIP, MaskCLIP) with their label-based counterparts (ViT, DETR, Mask2Former) across the granularity axis.
+</figcaption>
+</figure>
+</div></li>
+<li><p><strong>Output unification across granularities</strong> (UniTab, Pix2Seq v2, Unified-IO, UniPerceiver-v2, X-Decoder): represent diverse outputs (bounding boxes, masks, captions, labels) in a common sequence format, allowing one model/decoder to serve detection, segmentation, and captioning.</p></li>
+<li><p><strong>Human-AI interaction via prompting</strong> (SegGPT 2023, SAM 2023, SEEM 2024): text and visual prompts (points, boxes, scribbles) let a user interactively specify the segmentation/detection target at inference time.</p>
+<div id="fig-human-interaction" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-human-interaction-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/vision_language/human_interaction.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:80.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-human-interaction-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24.38: Prompting-based interaction lets a single model move flexibly along both the granularity axis (image/region/pixel) and the label-vs-language axis at inference time, rather than requiring a separately trained model for each combination.
+</figcaption>
+</figure>
+</div></li>
+</ol>
+<hr>
+</section>
+<section id="interview-questions" class="level2" data-number="24.8">
+<h2 data-number="24.8" class="anchored" data-anchor-id="interview-questions"><span class="header-section-number">24.8</span> Interview Questions</h2>
+<p><strong>Q: Why does CLIP require very large batch sizes, and how does SigLIP address this?</strong></p>
+<p>CLIP’s InfoNCE loss treats every other image-text pair in the batch as a negative; small batches give few, easy negatives, so the contrastive task is too easy to drive fine-grained representation learning — accuracy scales strongly with batch size (32k+ in the original CLIP). SigLIP replaces the batch-wide softmax with a per-pair sigmoid loss, treating each (image, text) pair as an independent binary classification. This removes the dependence on a large pool of in-batch negatives (so SigLIP is competitive at small batch sizes) and avoids the cross-device communication needed to normalize a softmax over the full batch (so it’s more memory-efficient at very large batch sizes).</p>
+<hr>
+<p><strong>Q: Compare late, intermediate, and early fusion for vision-language models. When would you choose each?</strong></p>
+<p>Late fusion (CLIP, ALIGN) — two independent encoders combined only via a similarity score — is the only architecture that scales to retrieval over millions of images, since embeddings can be pre-computed offline. Early fusion (BEiT-3) — a single joint encoder over both modalities — gives the richest cross-modal interaction (best for VQA, reasoning) but every input pair requires a full joint forward pass, making it unsuitable for large-scale retrieval. Intermediate fusion (Flamingo, BLIP-2) — separate encoders connected by cross-attention — is a middle ground, commonly used in LMMs where a frozen LLM and frozen vision encoder are connected by a small trainable bridge.</p>
+<hr>
+<p><strong>Q: How do the Q-Former (BLIP-2) and Perceiver Resampler (Flamingo) compress visual information, and why is this compression necessary?</strong></p>
+<p>Both use a fixed, small set of learnable query tokens that cross-attend into the (potentially long) sequence of vision-encoder features, producing a fixed-size set of output tokens (e.g.&nbsp;64 for Flamingo) regardless of input resolution or, for video, frame count. This compression is necessary because feeding raw per-patch (and per-frame) vision features directly into the LLM would make the input sequence prohibitively long — especially for high-resolution images or video, where the token count scales with <span class="math inline">\(H \times W\)</span> (and <span class="math inline">\(\times T\)</span>).</p>
+<hr>
+<p><strong>Q: Why does BEiT-3’s masked-modeling objective allow much smaller batch sizes than CLIP’s contrastive objective?</strong></p>
+<p>Contrastive losses derive their training signal from in-batch negatives — the loss is only meaningful with many negatives per positive, requiring large batches. Masked-token prediction derives its signal per-masked-token, from a cross-entropy loss against the ground-truth token/patch — each training example provides a dense, self-contained supervision signal independent of batch composition. BEiT-3 uses batches of ~6K total samples vs.&nbsp;32k+ for CLIP-style training.</p>
+<hr>
+<p><strong>Q: What does it mean for an ability to be “emergent” in large VL models? Give an example.</strong></p>
+<p>An ability is emergent if it is absent (near chance performance) in smaller models but appears once model/data scale crosses some threshold — and was not an explicit training objective. Flamingo exhibits emergent few-shot abilities like implicit counting, arithmetic from images, celebrity recognition, and OCR — none of which were directly supervised, but which arise from the combination of a large frozen LLM’s priors and visual grounding.</p>
+<hr>
+<p><strong>Q: LLaVA’s instruction-tuning data is generated by a text-only GPT-4 that never sees the images. How is this possible, and what’s the risk?</strong></p>
+<p>GPT-4 is given the MS-COCO captions (typically 5 per image) as a dense textual proxy for the image content, and asked to generate conversations, detailed descriptions, and complex-reasoning questions consistent with those captions. The risk is that the generated instructions and answers can only be as accurate as the captions — any visual detail not captured in the captions cannot be reflected in the generated data, and caption errors or omissions propagate into the instruction-tuning set.</p>
+<hr>
+<p><strong>Q: Why is fine-grained alignment (FILIP) useful beyond global CLIP-style contrastive learning?</strong></p>
+<p>CLIP’s loss operates on a single pooled embedding per image and per caption, which can match on coarse, global similarity while missing whether specific objects or attributes mentioned in the caption are actually present and localized in the image. FILIP’s token-level max-similarity — matching each image patch to its closest text token, averaged over patches — forces the model to learn correspondences at the level of objects and words, giving denser supervision and a representation more useful for localization-sensitive downstream tasks.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const callouts = document.querySelectorAll('.callout-tip');
+    callouts.forEach(function(callout) {
+      callout.style.borderLeftColor = '#2196f3'; //#616161; //'#4caf50';
+      callout.style.color = 'ffffff'; // Dark purple-gray text
+    });
+  });
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../chapters/vision_language/_intro_vision_language.html" class="pagination-link" aria-label="Vision-Language">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Vision-Language</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../chapters/time_series/_intro_time_series.html" class="pagination-link" aria-label="Time Series">
+        <span class="nav-page-text">Time Series</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="../../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

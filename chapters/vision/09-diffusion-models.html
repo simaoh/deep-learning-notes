@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>9&nbsp; Diffusion Models – deep_learning_notes</title>
+<title>10&nbsp; Diffusion Models – deep_learning_notes</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -26,7 +26,61 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-</style>
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
 
 
 <script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
@@ -77,6 +131,35 @@ ul.task-list li input[type="checkbox"] {
 }</script>
 <style>html{ scroll-behavior: smooth; }</style>
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 <link rel="stylesheet" href="../../custom.css">
 </head>
@@ -90,7 +173,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/_intro-generative-models.html">Part IV: Generative Modeling</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/09-diffusion-models.html"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Diffusion Models</span></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/_intro-generative-models.html">Part IV: Generative Modeling</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/09-diffusion-models.html"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Diffusion Models</span></a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -121,29 +204,24 @@ ul.task-list li input[type="checkbox"] {
  <span class="menu-text">Preface</span></a>
   </div>
 </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
- <span class="menu-text">Part I: Foundations</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_intro_foundations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Foundations</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/01-neural-networks-and-optimization.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Neural Networks and Optimization</span></span></a>
   </div>
 </li>
-          <li class="sidebar-item">
+        <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/02-generalization-and-learning-theory.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Generalization and Learning Theory</span></span></a>
   </div>
 </li>
-      </ul>
-  </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/_intro_computer_vision.html" class="sidebar-item-text sidebar-link">
@@ -152,13 +230,13 @@ ul.task-list li input[type="checkbox"] {
 </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
  <span class="menu-text">Part II: Visual Understanding</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/03-cnns.html" class="sidebar-item-text sidebar-link">
@@ -177,34 +255,40 @@ ul.task-list li input[type="checkbox"] {
  <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Vision Transformers</span></span></a>
   </div>
 </li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
- <span class="menu-text">Part III: Self-Supervised Learning</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  <a href="../../chapters/vision/06-foundation-models-for-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Foundation Models for Segmentation</span></span></a>
   </div>
 </li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
- <span class="menu-text">Part IV: Generative Modeling</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Self-Supervised Learning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Generative Modeling</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/_intro-generative-models.html" class="sidebar-item-text sidebar-link">
@@ -214,19 +298,19 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/07-vaes.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/08-gans.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/09-diffusion-models.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -239,14 +323,198 @@ ul.task-list li input[type="checkbox"] {
   </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../intro.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Introduction</span></span></a>
+  <a href="../../chapters/video/_intro_video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Video</span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../summary.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Summary</span></span></a>
+  <a href="../../chapters/video/10-video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Video Fundamentals: Motion and Spatiotemporal Architectures</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/11-video-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Video Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/12-video-temporal-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Video Temporal Segmentation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/13-video-understanding-benchmarks.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Video Understanding Benchmarks</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/14-video-generation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Video Generation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/_intro_3d.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">3D Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/11-3d-data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">3D Data Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">3D Reconstruction</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/12-3d-reconstruction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">3D Reconstruction</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/13-gaussian-splatting.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">3D Gaussian Splatting</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Human Pose Estimation</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/human_pose_estimation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Human Pose Estimation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/_intro_nlp.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Natural Language Processing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/17-text-representation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Text Representation &amp; Word Embeddings</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/18-sequence-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Sequence Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/19-large-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Large Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/20-text-embeddings-evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Text Embedding Models &amp; Evaluation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/_intro_vision_language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Vision-Language</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/16-vision-language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Vision-Language Multimodal Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/_intro_time_series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Time Series</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/14-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">Time Series Fundamentals</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/15-deep-learning-for-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Deep Learning for Time Series</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/_intro_audio.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Audio</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/21-speech-representation-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Speech Representation Learning and Foundation Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/22-automatic-speech-recognition.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Automatic Speech Recognition</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/23-speaker-diarization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Speaker Diarization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/24-neural-audio-codecs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Neural Audio Codecs</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/25-speech-synthesis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">31</span>&nbsp; <span class="chapter-title">Speech Synthesis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/26-speech-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">32</span>&nbsp; <span class="chapter-title">Speech and Audio Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/27-audio-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">33</span>&nbsp; <span class="chapter-title">Audio Understanding Beyond Words</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
@@ -260,15 +528,81 @@ ul.task-list li input[type="checkbox"] {
 </nav>
 <div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
-        
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction-and-intuition" id="toc-introduction-and-intuition" class="nav-link active" data-scroll-target="#introduction-and-intuition"><span class="header-section-number">10.1</span> Introduction and Intuition</a></li>
+  <li><a href="#forward-diffusion-process" id="toc-forward-diffusion-process" class="nav-link" data-scroll-target="#forward-diffusion-process"><span class="header-section-number">10.2</span> Forward Diffusion Process</a>
+  <ul class="collapse">
+  <li><a href="#noise-schedule" id="toc-noise-schedule" class="nav-link" data-scroll-target="#noise-schedule"><span class="header-section-number">10.2.1</span> Noise Schedule</a></li>
+  <li><a href="#closed-form-forward-process" id="toc-closed-form-forward-process" class="nav-link" data-scroll-target="#closed-form-forward-process"><span class="header-section-number">10.2.2</span> Closed-Form Forward Process</a></li>
+  </ul></li>
+  <li><a href="#reverse-diffusion-process" id="toc-reverse-diffusion-process" class="nav-link" data-scroll-target="#reverse-diffusion-process"><span class="header-section-number">10.3</span> Reverse Diffusion Process</a>
+  <ul class="collapse">
+  <li><a href="#theory" id="toc-theory" class="nav-link" data-scroll-target="#theory"><span class="header-section-number">10.3.1</span> Theory</a></li>
+  <li><a href="#training" id="toc-training" class="nav-link" data-scroll-target="#training"><span class="header-section-number">10.3.2</span> Training</a></li>
+  <li><a href="#sampling" id="toc-sampling" class="nav-link" data-scroll-target="#sampling"><span class="header-section-number">10.3.3</span> Sampling</a></li>
+  <li><a href="#algorithms" id="toc-algorithms" class="nav-link" data-scroll-target="#algorithms"><span class="header-section-number">10.3.4</span> Algorithms</a></li>
+  </ul></li>
+  <li><a href="#improvements-and-variants" id="toc-improvements-and-variants" class="nav-link" data-scroll-target="#improvements-and-variants"><span class="header-section-number">10.4</span> Improvements and Variants</a>
+  <ul class="collapse">
+  <li><a href="#ddim-denoising-diffusion-implicit-models-2021" id="toc-ddim-denoising-diffusion-implicit-models-2021" class="nav-link" data-scroll-target="#ddim-denoising-diffusion-implicit-models-2021"><span class="header-section-number">10.4.1</span> DDIM (Denoising Diffusion Implicit Models, 2021)</a></li>
+  </ul></li>
+  <li><a href="#conditional-image-generation" id="toc-conditional-image-generation" class="nav-link" data-scroll-target="#conditional-image-generation"><span class="header-section-number">10.5</span> Conditional Image Generation</a>
+  <ul class="collapse">
+  <li><a href="#score-based-view" id="toc-score-based-view" class="nav-link" data-scroll-target="#score-based-view"><span class="header-section-number">10.5.1</span> Score-Based View</a></li>
+  <li><a href="#classifier-guidance" id="toc-classifier-guidance" class="nav-link" data-scroll-target="#classifier-guidance"><span class="header-section-number">10.5.2</span> Classifier Guidance</a></li>
+  <li><a href="#classifier-free-guidance" id="toc-classifier-free-guidance" class="nav-link" data-scroll-target="#classifier-free-guidance"><span class="header-section-number">10.5.3</span> Classifier-Free Guidance</a></li>
+  <li><a href="#classifier-free-guidance-2022" id="toc-classifier-free-guidance-2022" class="nav-link" data-scroll-target="#classifier-free-guidance-2022"><span class="header-section-number">10.5.4</span> Classifier-Free Guidance (2022)</a></li>
+  <li><a href="#latent-diffusion-models-stable-diffusion-2022" id="toc-latent-diffusion-models-stable-diffusion-2022" class="nav-link" data-scroll-target="#latent-diffusion-models-stable-diffusion-2022"><span class="header-section-number">10.5.5</span> Latent Diffusion Models (Stable Diffusion, 2022)</a></li>
+  <li><a href="#score-based-models-connection" id="toc-score-based-models-connection" class="nav-link" data-scroll-target="#score-based-models-connection"><span class="header-section-number">10.5.6</span> Score-Based Models Connection</a></li>
+  </ul></li>
+  <li><a href="#conditioning-and-control" id="toc-conditioning-and-control" class="nav-link" data-scroll-target="#conditioning-and-control"><span class="header-section-number">10.6</span> Conditioning and Control</a>
+  <ul class="collapse">
+  <li><a href="#text-to-image" id="toc-text-to-image" class="nav-link" data-scroll-target="#text-to-image"><span class="header-section-number">10.6.1</span> Text-to-Image</a></li>
+  <li><a href="#controlnet-2023" id="toc-controlnet-2023" class="nav-link" data-scroll-target="#controlnet-2023"><span class="header-section-number">10.6.2</span> ControlNet (2023)</a></li>
+  <li><a href="#ip-adapter-2023" id="toc-ip-adapter-2023" class="nav-link" data-scroll-target="#ip-adapter-2023"><span class="header-section-number">10.6.3</span> IP-Adapter (2023)</a></li>
+  </ul></li>
+  <li><a href="#comparison-with-gans-and-vaes" id="toc-comparison-with-gans-and-vaes" class="nav-link" data-scroll-target="#comparison-with-gans-and-vaes"><span class="header-section-number">10.7</span> Comparison with GANs and VAEs</a></li>
+  <li><a href="#practical-training-tips" id="toc-practical-training-tips" class="nav-link" data-scroll-target="#practical-training-tips"><span class="header-section-number">10.8</span> Practical Training Tips</a>
+  <ul class="collapse">
+  <li><a href="#hyperparameters" id="toc-hyperparameters" class="nav-link" data-scroll-target="#hyperparameters"><span class="header-section-number">10.8.1</span> Hyperparameters</a></li>
+  <li><a href="#sampling-strategies" id="toc-sampling-strategies" class="nav-link" data-scroll-target="#sampling-strategies"><span class="header-section-number">10.8.2</span> Sampling Strategies</a></li>
+  <li><a href="#monitoring-training" id="toc-monitoring-training" class="nav-link" data-scroll-target="#monitoring-training"><span class="header-section-number">10.8.3</span> Monitoring Training</a></li>
+  </ul></li>
+  <li><a href="#recent-advances-2023-2024" id="toc-recent-advances-2023-2024" class="nav-link" data-scroll-target="#recent-advances-2023-2024"><span class="header-section-number">10.9</span> Recent Advances (2023-2024)</a>
+  <ul class="collapse">
+  <li><a href="#dit-diffusion-transformer-2023" id="toc-dit-diffusion-transformer-2023" class="nav-link" data-scroll-target="#dit-diffusion-transformer-2023"><span class="header-section-number">10.9.1</span> DiT (Diffusion Transformer, 2023)</a></li>
+  <li><a href="#consistency-models-2023" id="toc-consistency-models-2023" class="nav-link" data-scroll-target="#consistency-models-2023"><span class="header-section-number">10.9.2</span> Consistency Models (2023)</a></li>
+  <li><a href="#flow-matching-2023" id="toc-flow-matching-2023" class="nav-link" data-scroll-target="#flow-matching-2023"><span class="header-section-number">10.9.3</span> Flow Matching (2023)</a></li>
+  <li><a href="#rectified-flow-2023" id="toc-rectified-flow-2023" class="nav-link" data-scroll-target="#rectified-flow-2023"><span class="header-section-number">10.9.4</span> Rectified Flow (2023)</a></li>
+  </ul></li>
+  <li><a href="#applications" id="toc-applications" class="nav-link" data-scroll-target="#applications"><span class="header-section-number">10.10</span> Applications</a>
+  <ul class="collapse">
+  <li><a href="#image-generation" id="toc-image-generation" class="nav-link" data-scroll-target="#image-generation"><span class="header-section-number">10.10.1</span> Image Generation</a></li>
+  <li><a href="#image-editing" id="toc-image-editing" class="nav-link" data-scroll-target="#image-editing"><span class="header-section-number">10.10.2</span> Image Editing</a></li>
+  <li><a href="#video-generation" id="toc-video-generation" class="nav-link" data-scroll-target="#video-generation"><span class="header-section-number">10.10.3</span> Video Generation</a></li>
+  <li><a href="#d-generation" id="toc-d-generation" class="nav-link" data-scroll-target="#d-generation"><span class="header-section-number">10.10.4</span> 3D Generation</a></li>
+  <li><a href="#audio" id="toc-audio" class="nav-link" data-scroll-target="#audio"><span class="header-section-number">10.10.5</span> Audio</a></li>
+  </ul></li>
+  <li><a href="#interview-preparation" id="toc-interview-preparation" class="nav-link" data-scroll-target="#interview-preparation"><span class="header-section-number">10.11</span> Interview Preparation</a>
+  <ul class="collapse">
+  <li><a href="#core-concepts-checklist" id="toc-core-concepts-checklist" class="nav-link" data-scroll-target="#core-concepts-checklist"><span class="header-section-number">10.11.1</span> Core Concepts Checklist</a></li>
+  <li><a href="#key-interview-questions" id="toc-key-interview-questions" class="nav-link" data-scroll-target="#key-interview-questions"><span class="header-section-number">10.11.2</span> Key Interview Questions</a></li>
+  <li><a href="#company-specific-context" id="toc-company-specific-context" class="nav-link" data-scroll-target="#company-specific-context"><span class="header-section-number">10.11.3</span> Company-Specific Context</a></li>
+  <li><a href="#further-reading" id="toc-further-reading" class="nav-link" data-scroll-target="#further-reading"><span class="header-section-number">10.11.4</span> Further Reading</a></li>
+  </ul></li>
+  </ul>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/_intro-generative-models.html">Part IV: Generative Modeling</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/09-diffusion-models.html"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Diffusion Models</span></a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/_intro-generative-models.html">Part IV: Generative Modeling</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/09-diffusion-models.html"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Diffusion Models</span></a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Diffusion Models</span></h1>
+<h1 class="title"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Diffusion Models</span></h1>
 </div>
 
 
@@ -285,8 +619,626 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
+<section id="introduction-and-intuition" class="level2" data-number="10.1">
+<h2 data-number="10.1" class="anchored" data-anchor-id="introduction-and-intuition"><span class="header-section-number">10.1</span> Introduction and Intuition</h2>
+<p><strong>Diffusion models</strong> generate data by learning to reverse a gradual noising process. Instead of directly mapping noise to data—as in GANs—or compressing and decoding data as in VAEs, diffusion models treat generation as a sequence of small denoising steps. Each step is simple, which makes the overall learning problem stable and well-behaved.</p>
+<p><strong>Core idea</strong>:</p>
+<ol type="1">
+<li><strong>Forward process</strong>: Add Gaussian noise to data over <span class="math inline">\(T\)</span> steps until it becomes nearly pure noise. This process is analytically tractable.</li>
+<li><strong>Reverse process</strong>: Train a model to remove small amounts of noise at each step, gradually reconstructing samples from the data distribution.</li>
+</ol>
+</section>
+<section id="forward-diffusion-process" class="level2" data-number="10.2">
+<h2 data-number="10.2" class="anchored" data-anchor-id="forward-diffusion-process"><span class="header-section-number">10.2</span> Forward Diffusion Process</h2>
+<section id="noise-schedule" class="level3" data-number="10.2.1">
+<h3 data-number="10.2.1" class="anchored" data-anchor-id="noise-schedule"><span class="header-section-number">10.2.1</span> Noise Schedule</h3>
+<p>Forward diffusion is a discretized stochastic Markov process with transition probability at time <span class="math inline">\(t\)</span> given by:</p>
+<p><span class="math display">\[q(x_t | x_{t-1}) = \mathcal{N}(x_t; \sqrt{1-\beta_t} x_{t-1}, \beta_t I)\]</span></p>
+<p>where <span class="math inline">\(\beta_t \in (0, 1)\)</span> is the <strong>noise schedule</strong>, controlling how much Gaussian noise is added at each step.</p>
+<p>Equivalently, using a reparameterization: <span class="math display">\[ \boxed{x_t = \sqrt{1-\beta_t} x_{t-1} + \sqrt{\beta_t} \epsilon_{t-1},
+\quad \, \mathbf{\epsilon_{t-1} \sim \mathcal{N}(0, I)}}\]</span></p>
+<p>Because each state depends only on the previous, the full forward process factorizes as a Markov chain: <span class="math display">\[q(x_{1:T} | x_0) = \prod_{t=1}^T q(x_t | x_{t-1})\]</span></p>
+<hr>
+</section>
+<section id="closed-form-forward-process" class="level3" data-number="10.2.2">
+<h3 data-number="10.2.2" class="anchored" data-anchor-id="closed-form-forward-process"><span class="header-section-number">10.2.2</span> Closed-Form Forward Process</h3>
+<p>The forward diffusion process allows <strong>direct sampling of <span class="math inline">\(\mathbf{x_t}\)</span> from <span class="math inline">\(\mathbf{x_0}\)</span></strong> in a single step — no need to iterate through all intermediate steps. Define: <span class="math display">\[\alpha_t = 1 - \beta_t \text{ and } \bar{\alpha}_t = \prod_{s=1}^t \alpha_s\]</span></p>
+<p><strong>Closed form</strong>: <span class="math display">\[q(x_t | x_0) = \mathcal{N}(x_t; \sqrt{\bar{\alpha}_t} x_0, (1 - \bar{\alpha}_t) I)\]</span></p>
+<p><strong>Reparameterization (sampling in one step)</strong>: <span class="math display">\[\boxed{x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t} \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)}\]</span></p>
+<p><strong>Intuition</strong>:</p>
+<ul>
+<li>As <span class="math inline">\(t \to T\)</span>, <span class="math inline">\(\bar{\alpha}_t \to 0\)</span>, so <span class="math inline">\(x_T \approx \mathcal{N}(0, I)\)</span> — i.e., pure noise.</li>
+<li>The forward process smoothly interpolates between the data <span class="math inline">\(x_0\)</span> and standard Gaussian noise.</li>
+</ul>
+<p><strong>Noise schedule design</strong>:</p>
+<ul>
+<li><strong>Linear</strong>: <span class="math inline">\(\beta_t = \beta_{\min} + (t/T)(\beta_{\max} - \beta_{\min})\)</span>, &nbsp; e.g., <span class="math inline">\(\beta_1 = 10^{-4}, \beta_T = 0.02\)</span></li>
+<li><strong>Cosine</strong>: Slower increase at endpoints, improved for high-resolution images</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="reverse-diffusion-process" class="level2" data-number="10.3">
+<h2 data-number="10.3" class="anchored" data-anchor-id="reverse-diffusion-process"><span class="header-section-number">10.3</span> Reverse Diffusion Process</h2>
+<section id="theory" class="level3" data-number="10.3.1">
+<h3 data-number="10.3.1" class="anchored" data-anchor-id="theory"><span class="header-section-number">10.3.1</span> Theory</h3>
+<p>The reverse diffusion process aims to invert the forward noising process.</p>
+<p>For sufficiently small <span class="math inline">\(\beta_t\)</span>, the reverse transition is approximately Gaussian: <span class="math display">\[p_\theta(x_{t-1} | x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t), \Sigma_\theta(x_t, t))\]</span></p>
+<p>The full reverse process is a Markov chain starting from pure noise: <span class="math display">\[p_\theta(x_{0:T}) = p(x_T) \prod_{t=1}^T p_\theta(x_{t-1} | x_t), \quad \text{where } p(x_T) = \mathcal{N}(0, I)\]</span></p>
+<hr>
+</section>
+<section id="training" class="level3" data-number="10.3.2">
+<h3 data-number="10.3.2" class="anchored" data-anchor-id="training"><span class="header-section-number">10.3.2</span> Training</h3>
+</section>
+<section id="ddpm-denoising-diffusion-probabilistic-model-2020" class="level3 unnumbered unlisted">
+<h3 class="unnumbered unlisted anchored" data-anchor-id="ddpm-denoising-diffusion-probabilistic-model-2020">DDPM (Denoising Diffusion Probabilistic Model, 2020)</h3>
+<p>The goal of training is to <strong>learn a network that can denoise</strong> <span class="math inline">\(x_t\)</span> and approximate the reverse process.</p>
+<p><strong>Intuition</strong>:</p>
+<ul>
+<li>At each timestep <span class="math inline">\(t\)</span>, we generate <span class="math inline">\(x_t\)</span> from <span class="math inline">\(x_0\)</span> by adding known Gaussian noise.</li>
+<li>The network <span class="math inline">\(\epsilon_\theta(x_t, t)\)</span> is trained to <strong>predict that exact noise.</strong></li>
+<li>Once we have this noise estimate, we can plug it into the analytic reverse-mean formula <span class="math inline">\(\mu_\theta(x_t, t)\)</span> to obtain a slightly denoised estimate of <span class="math inline">\(x_{t-1}\)</span> during sampling.</li>
+</ul>
+<p><strong>Reverse mean used in sampling:</strong>:</p>
+<p><span class="math display">\[
+\mu_\theta(x_t, t) = \frac{1}{\sqrt{\alpha_t}}\Big(x_t - \frac{\beta_t}{\sqrt{1-\bar{\alpha}_t}} \epsilon_\theta(x_t, t)\Big)
+\]</span></p>
+<p><strong>Training objective</strong>:</p>
+<ul>
+<li><p>Full ELBO objective (like in VAEs): <span class="math display">\[\mathcal{L}_{\text{VLB}} = \mathbb{E}_q\left[D_{\text{KL}}(q(x_T|x_0) \| p(x_T)) + \sum_{t=2}^T D_{\text{KL}}(q(x_{t-1}|x_t, x_0) \| p_\theta(x_{t-1}|x_t)) - \log p_\theta(x_0|x_1)\right]\]</span></p></li>
+<li><p>Simplified, practical objective (predict noise directly):</p></li>
+</ul>
+<p><span class="math display">\[\boxed{\mathcal{L}_{\text{simple}} = \mathbb{E}_{t \sim \text{Uniform}(1,T), x_0, \epsilon}\left[\|\epsilon - \epsilon_\theta(x_t, t)\|^2\right]}\]</span></p>
+<p>where <span class="math inline">\(x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1-\bar{\alpha}_t} \epsilon\)</span>.</p>
+<hr>
+</section>
+<section id="sampling" class="level3" data-number="10.3.3">
+<h3 data-number="10.3.3" class="anchored" data-anchor-id="sampling"><span class="header-section-number">10.3.3</span> Sampling</h3>
+<p>Once trained, the reverse process can generate samples by starting from pure Gaussian noise <span class="math inline">\(x_T \sim \mathcal{N}(0, I)\)</span> and iteratively applying the learned transitions: <span class="math display">\[
+x_{t-1} = \mu_\theta(x_t, t) + \sigma_t z, \quad z \sim \mathcal{N}(0, I)
+\]</span></p>
+<ul>
+<li><p>Repeat this from <span class="math inline">\(t=T\)</span> down to <span class="math inline">\(t=1\)</span> to obtain <span class="math inline">\(x_0\)</span>, a sample from the learned data distribution.</p></li>
+<li><p>Different noise schedules or accelerated samplers (e.g., DDIM) can be used to reduce the number of steps or improve sample quality.</p></li>
+</ul>
+<hr>
+</section>
+<section id="algorithms" class="level3" data-number="10.3.4">
+<h3 data-number="10.3.4" class="anchored" data-anchor-id="algorithms"><span class="header-section-number">10.3.4</span> Algorithms</h3>
+<p><strong>Training Algorithm</strong>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Training</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> x_0 <span class="kw">in</span> dataloader:</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Sample timestep and noise</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    t <span class="op">~</span> Uniform(<span class="dv">1</span>, T)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    ε <span class="op">~</span> N(<span class="dv">0</span>, I)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Forward process (closed form)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    x_t <span class="op">=</span> sqrt(α̅_t) <span class="op">*</span> x_0 <span class="op">+</span> sqrt(<span class="dv">1</span> <span class="op">-</span> α̅_t) <span class="op">*</span> ε</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Predict noise</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    ε_pred <span class="op">=</span> ε_θ(x_t, t)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Loss: MSE between true and predicted noise</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    loss <span class="op">=</span> <span class="op">||</span>ε <span class="op">-</span> ε_pred<span class="op">||</span>²</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Update network</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    θ ← θ <span class="op">-</span> η ∇_θ loss</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Network architecture</strong>: Typically a time-conditional U-Net with:</p>
+<ul>
+<li>Timestep embeddings (sinusoidal or learned)</li>
+<li>Self-attention at lower resolutions (16×16, 8×8)</li>
+<li>Residual blocks with group normalization</li>
+<li>Skip connections between encoder and decoder</li>
+</ul>
+<hr>
+<p><strong>Sampling Algorithm</strong>:</p>
+<p><span class="math display">\[x_{t-1} = \mu_\theta(x_t, t) + \sigma_t z, \quad z \sim \mathcal{N}(0, I)\]</span></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Sampling</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>x_T <span class="op">~</span> N(<span class="dv">0</span>, I)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> t <span class="op">=</span> T, T<span class="op">-</span><span class="dv">1</span>, ..., <span class="dv">1</span>:</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> t <span class="op">&gt;</span> <span class="dv">1</span>:</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        z <span class="op">~</span> N(<span class="dv">0</span>, I)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        z <span class="op">=</span> <span class="dv">0</span>  <span class="co"># No noise at final step</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Predict noise</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    ε_pred <span class="op">=</span> ε_θ(x_t, t)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Compute mean</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    μ <span class="op">=</span> (<span class="dv">1</span><span class="op">/</span>sqrt(α_t)) <span class="op">*</span> (x_t <span class="op">-</span> (β_t<span class="op">/</span>sqrt(<span class="dv">1</span><span class="op">-</span>α̅_t)) <span class="op">*</span> ε_pred)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Compute variance (can be learned or fixed)</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    σ_t <span class="op">=</span> sqrt(β_t)  <span class="co"># or sqrt(β̃_t) = sqrt((1-α̅_{t-1})/(1-α̅_t) * β_t)</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Sample x_{t-1}</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    x_{t<span class="op">-</span><span class="dv">1</span>} <span class="op">=</span> μ <span class="op">+</span> σ_t <span class="op">*</span> z</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> x_0</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Cost</strong>: Requires <span class="math inline">\(T\)</span> forward passes (typically <span class="math inline">\(T = 1000\)</span>) → slow compared to GANs (1 pass).</p>
+<hr>
+</section>
+</section>
+<section id="improvements-and-variants" class="level2" data-number="10.4">
+<h2 data-number="10.4" class="anchored" data-anchor-id="improvements-and-variants"><span class="header-section-number">10.4</span> Improvements and Variants</h2>
+<section id="ddim-denoising-diffusion-implicit-models-2021" class="level3" data-number="10.4.1">
+<h3 data-number="10.4.1" class="anchored" data-anchor-id="ddim-denoising-diffusion-implicit-models-2021"><span class="header-section-number">10.4.1</span> DDIM (Denoising Diffusion Implicit Models, 2021)</h3>
+<p><strong>Problem</strong>: DDPM requires many sampling steps (<span class="math inline">\(T \sim 1000\)</span>), making image generation quite slow.</p>
+<p><strong>Key idea</strong>: DDIM reformulates the reverse diffusion process to allow deterministic sampling and arbitrary timestep skipping, while preserving the same marginal distributions <span class="math inline">\(q(x_t \mid x_0)\)</span>.</p>
+<p><strong>Deterministic reverse sampling</strong> (setting <span class="math inline">\(\sigma_t = 0\)</span>): <span class="math display">\[x_{t-1} = \sqrt{\bar{\alpha}_{t-1}} \underbrace{\left(\frac{x_t
+- \sqrt{1-\bar{\alpha}_t}\epsilon_\theta(x_t, t)}{\sqrt{\bar{\alpha}_t}}\right)}_{\text{predicted } x_0}
++ \sqrt{1-\bar{\alpha}_{t-1}} \epsilon_\theta(x_t, t)\]</span></p>
+<ul>
+<li>Here, <span class="math inline">\(x_{t-1}\)</span> is expressed in terms of <span class="math inline">\(x_t\)</span> and the predicted <span class="math inline">\(\hat{x}_0\)</span>.</li>
+<li>This formulation makes it <strong>mathematically consistent</strong> to skip multiple timesteps (e.g., from <span class="math inline">\(t\)</span> to <span class="math inline">\(t-S\)</span>) without iterating through all intermediate steps.</li>
+</ul>
+<p><strong>Benefits</strong>:</p>
+<ul>
+<li><strong>Faster sampling</strong>: Can reduce the number of steps from <span class="math inline">\(T\)</span> to <span class="math inline">\(S \ll T\)</span> (e.g.&nbsp;50 instead of 1000 steps)</li>
+<li><strong>Deterministic</strong>: Same initial noise <span class="math inline">\(x_T\)</span> always produces the same final image</li>
+<li><strong>Inversion</strong>: Can encode images back into latent codes</li>
+</ul>
+<p><strong>Trade-offs</strong>:</p>
+<ul>
+<li><strong>Potential quality degradation</strong>: Skipping many steps may slightly reduce image fidelity compared to full-step DDPM.</li>
+<li><strong>Reduced stochastic diversity</strong>: Deterministic sampling eliminates randomness, so multiple runs produce the same image.</li>
+</ul>
+<p><strong>Optional tip</strong>: For partial stochasticity, a multiplicative factor <span class="math inline">\(\eta \in [0,1]\)</span> can scale the variance, allowing a <strong>continuum between fully deterministic (DDIM, <span class="math inline">\(\eta=0\)</span>) and stochastic DDPM (<span class="math inline">\(\eta=1\)</span>)</strong>.</p>
+<hr>
+</section>
+</section>
+<section id="conditional-image-generation" class="level2" data-number="10.5">
+<h2 data-number="10.5" class="anchored" data-anchor-id="conditional-image-generation"><span class="header-section-number">10.5</span> Conditional Image Generation</h2>
+<section id="score-based-view" class="level3" data-number="10.5.1">
+<h3 data-number="10.5.1" class="anchored" data-anchor-id="score-based-view"><span class="header-section-number">10.5.1</span> Score-Based View</h3>
+<p>Diffusion models can be interpreted as learning the <strong>score function</strong> <span class="math inline">\(\nabla_x \log p(x)\)</span> rather than the density itself. This connection enables principled conditioning approaches.</p>
+<p><strong>Score formulation</strong>: From the forward process, the unconditional score at timestep <span class="math inline">\(t\)</span> is: <span class="math display">\[\nabla_{x_t} \log p(x_t) = -\frac{1}{\sqrt{1-\bar{\alpha}_t}} \epsilon_\theta(x_t, t)\]</span></p>
+<p><strong>Conditional generation</strong>: To sample from <span class="math inline">\(p(x|y)\)</span> where <span class="math inline">\(y\)</span> is conditioning (class, text), we need the conditional score <span class="math inline">\(\nabla_x \log p(x|y)\)</span>. By <strong>Bayes’ theorem</strong>: <span class="math display">\[\nabla_x \log p(x|y) = \nabla_x \log p(x) + \nabla_x \log p(y|x)\]</span></p>
+<p>This suggests two different approaches for conditional generation: use a classifier to model <span class="math inline">\(p(y|x)\)</span> <strong>(classifier guidance)</strong>, or learn both terms jointly <strong>(classifier-free guidance)</strong>.</p>
+<hr>
+</section>
+<section id="classifier-guidance" class="level3" data-number="10.5.2">
+<h3 data-number="10.5.2" class="anchored" data-anchor-id="classifier-guidance"><span class="header-section-number">10.5.2</span> Classifier Guidance</h3>
+<p><strong>Method</strong> <span class="citation" data-cites="dhariwal2021diffusion">(<a href="../../references.html#ref-dhariwal2021diffusion" role="doc-biblioref">Dhariwal and Nichol 2021</a>)</span>: Train a separate classifier <span class="math inline">\(p_\phi(y|x_t)\)</span> on noisy images at all noise levels <span class="math inline">\(t\)</span>.</p>
+<p><strong>Guided score</strong>: <span class="math display">\[\nabla_{x_t} \log p(x_t|y) = \nabla_{x_t} \log p(x_t) + w \cdot \nabla_{x_t} \log p_\phi(y|x_t)\]</span></p>
+<p>where <span class="math inline">\(w\)</span> is the <strong>guidance scale</strong> controlling conditioning strength.</p>
+<p><strong>Training</strong>:</p>
+<ol type="1">
+<li>Train unconditional diffusion model <span class="math inline">\(\epsilon_\theta(x_t, t)\)</span></li>
+<li>Separately train classifier <span class="math inline">\(p_\phi(y|x_t)\)</span> on noisy images</li>
+<li><strong>At sampling</strong>, combine both using guidance scale <span class="math inline">\(w\)</span>. For noise prediction, the guided update is: <span class="math display">\[\boxed{\tilde{\epsilon}_\theta(x_t, t, y) = \epsilon_\theta(x_t, t) - w\sqrt{1-\bar{\alpha}_t} \nabla_{x_t} \log p_\phi(y|x_t)}\]</span></li>
+</ol>
+<p><strong>Limitations</strong>:</p>
+<ul>
+<li>Requires training a separate classifier robust to noisy inputs.</li>
+<li>Classifier must be trained for each noise level <span class="math inline">\(t\)</span>.</li>
+<li>Computationally expensive (extra gradient computation per step).</li>
+</ul>
+<hr>
+</section>
+<section id="classifier-free-guidance" class="level3" data-number="10.5.3">
+<h3 data-number="10.5.3" class="anchored" data-anchor-id="classifier-free-guidance"><span class="header-section-number">10.5.3</span> Classifier-Free Guidance</h3>
+<p><strong>Key insight</strong> <span class="citation" data-cites="ho2022classifier">(<a href="../../references.html#ref-ho2022classifier" role="doc-biblioref">Ho and Salimans 2022</a>)</span>: Learn both conditional and unconditional models <strong>jointly</strong> in a single network, eliminating the need for a separate classifier.</p>
+<p><strong>Derivation</strong>: Rewrite the conditional term from Bayes’ theorem: <span class="math display">\[\nabla_x \log p(y|x) = \nabla_x \log p(x|y) - \nabla_x \log p(x)\]</span></p>
+<p>Substituting into the conditional score: <span class="math display">\[\nabla_x \log p(x|y) = \nabla_x \log p(x) + w[\nabla_x \log p(x|y) - \nabla_x \log p(x)]\]</span></p>
+<p>Rearranging: <span class="math display">\[\nabla_x \log p(x|y) = (1-w)\nabla_x \log p(x) + w \nabla_x \log p(x|y)\]</span></p>
+<p><strong>In terms of noise prediction</strong>: <span class="math display">\[\boxed{\tilde{\epsilon}_\theta(x_t, t, y) = \epsilon_\theta(x_t, t, \emptyset) + w \cdot [\epsilon_\theta(x_t, t, y) - \epsilon_\theta(x_t, t, \emptyset)]}\]</span></p>
+<p>where <span class="math inline">\(\emptyset\)</span> denotes the unconditional (null) condition.</p>
+<p><strong>Training</strong>: Single model learns both conditional and unconditional generation by randomly dropping conditioning <span class="math inline">\(y\)</span> during training (typically 10-20% dropout rate): <span class="math display">\[\epsilon_\theta(x_t, t, c) \text{ where } c = \begin{cases} y &amp; \text{with prob. } 0.9 \\ \emptyset &amp; \text{with prob. } 0.1 \end{cases}\]</span></p>
+<p><strong>Guidance scale interpretation</strong>:</p>
+<ul>
+<li><span class="math inline">\(w = 0\)</span>: Unconditional generation</li>
+<li><span class="math inline">\(w = 1\)</span>: Standard conditional generation<br>
+</li>
+<li><span class="math inline">\(w &gt; 1\)</span>: <strong>Amplified conditioning</strong> (sharper, more aligned with <span class="math inline">\(y\)</span>, less diverse)</li>
+</ul>
+<p><strong>Advantages over classifier guidance</strong>:</p>
+<ul>
+<li>No separate classifier needed (simpler training pipeline)</li>
+<li>Better empirical results</li>
+<li>Single model handles both conditional and unconditional generation</li>
+</ul>
+<p>Classifier-free Guidance is the standard conditional generation approach in most modern text-to-image models (Stable Diffusion, DALL-E 2)</p>
+<hr>
+</section>
+<section id="classifier-free-guidance-2022" class="level3" data-number="10.5.4">
+<h3 data-number="10.5.4" class="anchored" data-anchor-id="classifier-free-guidance-2022"><span class="header-section-number">10.5.4</span> Classifier-Free Guidance (2022)</h3>
+<p><strong>Goal</strong>: Generate samples conditioned on class labels or text without training a separate classifier.</p>
+<p><strong>Method</strong>: Train a single model unconditionally and conditionally by randomly dropping conditioning <span class="math inline">\(c\)</span> during training:</p>
+<p><span class="math display">\[\epsilon_\theta(x_t, t, c) = \begin{cases}
+\epsilon_\theta(x_t, t, c) &amp; \text{with prob. } p \\
+\epsilon_\theta(x_t, t, \emptyset) &amp; \text{with prob. } 1-p
+\end{cases}\]</span></p>
+<p><strong>Guided sampling</strong>: Interpolate between conditional and unconditional predictions: <span class="math display">\[\tilde{\epsilon}_\theta(x_t, t, c) = \epsilon_\theta(x_t, t, \emptyset) + w \cdot (\epsilon_\theta(x_t, t, c) - \epsilon_\theta(x_t, t, \emptyset))\]</span></p>
+<p>where <span class="math inline">\(w\)</span> is the <strong>guidance scale</strong> (typically <span class="math inline">\(w = 7\)</span>-<span class="math inline">\(10\)</span>).</p>
+<p><strong>Effect</strong>: - <span class="math inline">\(w = 0\)</span>: Unconditional generation - <span class="math inline">\(w = 1\)</span>: Standard conditional generation - <span class="math inline">\(w &gt; 1\)</span>: Stronger conditioning (sharper, more aligned with condition, less diverse)</p>
+<p><strong>Why it works</strong>: Moves away from unconditional distribution toward conditional, amplifying the effect of conditioning.</p>
+<p><strong>Impact</strong>: Enables high-quality text-to-image generation (Stable Diffusion, DALL-E 2) without classifier networks.</p>
+<hr>
+</section>
+<section id="latent-diffusion-models-stable-diffusion-2022" class="level3" data-number="10.5.5">
+<h3 data-number="10.5.5" class="anchored" data-anchor-id="latent-diffusion-models-stable-diffusion-2022"><span class="header-section-number">10.5.5</span> Latent Diffusion Models (Stable Diffusion, 2022)</h3>
+<p><strong>Problem</strong>: Running diffusion on high-resolution images (<span class="math inline">\(512 \times 512 \times 3\)</span>) is computationally expensive.</p>
+<p><strong>Solution</strong>: Run diffusion in <strong>latent space</strong> of a pretrained autoencoder (VAE).</p>
+<p><strong>Architecture</strong>:</p>
+<ol type="1">
+<li><strong>Encoder</strong> <span class="math inline">\(\mathcal{E}\)</span>: Compress image to latent: <span class="math inline">\(z = \mathcal{E}(x)\)</span> (e.g., <span class="math inline">\(512^2 \times 3 \to 64^2 \times 4\)</span>)</li>
+<li><strong>Diffusion model</strong>: Operate on <span class="math inline">\(z\)</span> (much smaller)</li>
+<li><strong>Decoder</strong> <span class="math inline">\(\mathcal{D}\)</span>: Reconstruct image: <span class="math inline">\(\hat{x} = \mathcal{D}(z)\)</span></li>
+</ol>
+<p><strong>Training</strong>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Encode to latent space</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>z_0 <span class="op">=</span> Encoder(x)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Diffusion in latent space</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>t <span class="op">~</span> Uniform(<span class="dv">1</span>, T)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>ε <span class="op">~</span> N(<span class="dv">0</span>, I)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>z_t <span class="op">=</span> sqrt(α̅_t) <span class="op">*</span> z_0 <span class="op">+</span> sqrt(<span class="dv">1</span> <span class="op">-</span> α̅_t) <span class="op">*</span> ε</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Predict noise in latent space</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>ε_pred <span class="op">=</span> UNet(z_t, t, text_embedding)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Loss</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>loss <span class="op">=</span> <span class="op">||</span>ε <span class="op">-</span> ε_pred<span class="op">||</span>²</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Benefits</strong>:</p>
+<ul>
+<li><strong>8× memory reduction</strong> (64² vs 512² spatial dimensions)</li>
+<li><strong>Faster training and sampling</strong></li>
+<li><strong>Better quality</strong> (learned latent space is more structured)</li>
+</ul>
+<p><strong>Applications</strong>: Stable Diffusion, ImageGen, DALL-E 2 decoder.</p>
+<hr>
+</section>
+<section id="score-based-models-connection" class="level3" data-number="10.5.6">
+<h3 data-number="10.5.6" class="anchored" data-anchor-id="score-based-models-connection"><span class="header-section-number">10.5.6</span> Score-Based Models Connection</h3>
+<p><strong>Alternative view</strong>: Diffusion models learn the <strong>score function</strong> <span class="math inline">\(\nabla_{x_t} \log q(x_t)\)</span>.</p>
+<p><strong>Score matching</strong>: Train model <span class="math inline">\(s_\theta(x_t, t) \approx \nabla_{x_t} \log q(x_t)\)</span>.</p>
+<p><strong>Relation to noise prediction</strong>: <span class="math display">\[\nabla_{x_t} \log q(x_t | x_0) = -\frac{\epsilon}{\sqrt{1-\bar{\alpha}_t}}\]</span></p>
+<p>So predicting noise <span class="math inline">\(\epsilon_\theta\)</span> is equivalent to predicting score (up to scaling).</p>
+<p><strong>Continuous-time formulation</strong>: Stochastic differential equations (SDEs):</p>
+<ul>
+<li><strong>Forward SDE</strong>: <span class="math inline">\(dx = f(x, t)dt + g(t)dw\)</span></li>
+<li><strong>Reverse SDE</strong>: <span class="math inline">\(dx = [f(x, t) - g(t)^2 \nabla_x \log p_t(x)]dt + g(t)d\bar{w}\)</span></li>
+</ul>
+<p><strong>Benefits</strong>: Unified framework, flexible sampling (ODE/SDE), better theoretical understanding.</p>
+<p><strong>Key papers</strong>: Song et al.&nbsp;(2020) Score-Based Generative Modeling, Song et al.&nbsp;(2021) Score-Based SDEs.</p>
+<hr>
+</section>
+</section>
+<section id="conditioning-and-control" class="level2" data-number="10.6">
+<h2 data-number="10.6" class="anchored" data-anchor-id="conditioning-and-control"><span class="header-section-number">10.6</span> Conditioning and Control</h2>
+<section id="text-to-image" class="level3" data-number="10.6.1">
+<h3 data-number="10.6.1" class="anchored" data-anchor-id="text-to-image"><span class="header-section-number">10.6.1</span> Text-to-Image</h3>
+<p><strong>Method</strong>: Cross-attention between image features and text embeddings.</p>
+<p><strong>Architecture</strong> (Stable Diffusion):</p>
+<pre><code>Text → CLIP/T5 → text_embeddings
+
+UNet layers:
+  self_attention(image_features)
+  cross_attention(image_features, text_embeddings)  # Condition here
+  conv/resnet blocks</code></pre>
+<p><strong>Training</strong>: Condition diffusion model on text captions from large datasets (LAION-5B).</p>
+<hr>
+</section>
+<section id="controlnet-2023" class="level3" data-number="10.6.2">
+<h3 data-number="10.6.2" class="anchored" data-anchor-id="controlnet-2023"><span class="header-section-number">10.6.2</span> ControlNet (2023)</h3>
+<p><strong>Goal</strong>: Add spatial control (edges, pose, depth) to pretrained diffusion models <strong>without retraining from scratch</strong>.</p>
+<p><strong>Method</strong>: 1. Copy UNet encoder weights to create “control network” 2. Add conditioning image (edge map, pose, etc.) as input 3. Inject control features into main UNet via zero-initialized convolutions</p>
+<p><strong>Zero convolution trick</strong>: Initialize final layer with zeros, so initially ControlNet contributes nothing (preserves pretrained model).</p>
+<p><strong>Result</strong>: Precise spatial control while maintaining quality of pretrained model.</p>
+<p><strong>Applications</strong>: Sketch-to-image, pose-to-image, depth-to-image.</p>
+<hr>
+</section>
+<section id="ip-adapter-2023" class="level3" data-number="10.6.3">
+<h3 data-number="10.6.3" class="anchored" data-anchor-id="ip-adapter-2023"><span class="header-section-number">10.6.3</span> IP-Adapter (2023)</h3>
+<p><strong>Goal</strong>: Image conditioning via cross-attention (like text, but with images).</p>
+<p><strong>Method</strong>: Add image cross-attention layers parallel to text cross-attention.</p>
+<p><strong>Applications</strong>: Image variations, style transfer, composition.</p>
+<hr>
+</section>
+</section>
+<section id="comparison-with-gans-and-vaes" class="level2" data-number="10.7">
+<h2 data-number="10.7" class="anchored" data-anchor-id="comparison-with-gans-and-vaes"><span class="header-section-number">10.7</span> Comparison with GANs and VAEs</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 27%">
+<col style="width: 37%">
+<col style="width: 17%">
+<col style="width: 17%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Aspect</th>
+<th>Diffusion</th>
+<th>GAN</th>
+<th>VAE</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Sample quality</strong></td>
+<td>★★★★★ Excellent</td>
+<td>★★★★★ Excellent</td>
+<td>★★★☆☆ Blurry</td>
+</tr>
+<tr class="even">
+<td><strong>Training stability</strong></td>
+<td>★★★★☆ Stable</td>
+<td>★★☆☆☆ Difficult</td>
+<td>★★★★★ Very stable</td>
+</tr>
+<tr class="odd">
+<td><strong>Mode coverage</strong></td>
+<td>★★★★★ Excellent</td>
+<td>★★☆☆☆ Mode collapse</td>
+<td>★★★★★ Excellent</td>
+</tr>
+<tr class="even">
+<td><strong>Sampling speed</strong></td>
+<td>★☆☆☆☆ Very slow</td>
+<td>★★★★★ Fast (1 pass)</td>
+<td>★★★★★ Fast (1 pass)</td>
+</tr>
+<tr class="odd">
+<td><strong>Likelihood</strong></td>
+<td>✓ Tractable</td>
+<td>✗ Not computable</td>
+<td>✓ Lower bound</td>
+</tr>
+<tr class="even">
+<td><strong>Controllability</strong></td>
+<td>★★★★★ Excellent</td>
+<td>★★★☆☆ Good</td>
+<td>★★★★☆ Good</td>
+</tr>
+<tr class="odd">
+<td><strong>Latent space</strong></td>
+<td>✗ No explicit latent</td>
+<td>✓ Direct</td>
+<td>✓ Structured</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Current state (2024)</strong>: Diffusion models dominate image generation due to quality + diversity + controllability, despite slow sampling.</p>
+<hr>
+</section>
+<section id="practical-training-tips" class="level2" data-number="10.8">
+<h2 data-number="10.8" class="anchored" data-anchor-id="practical-training-tips"><span class="header-section-number">10.8</span> Practical Training Tips</h2>
+<section id="hyperparameters" class="level3" data-number="10.8.1">
+<h3 data-number="10.8.1" class="anchored" data-anchor-id="hyperparameters"><span class="header-section-number">10.8.1</span> Hyperparameters</h3>
+<p><strong>Noise schedule</strong>: - Linear: <span class="math inline">\(\beta_1 = 10^{-4}\)</span>, <span class="math inline">\(\beta_T = 0.02\)</span>, <span class="math inline">\(T = 1000\)</span> - Cosine: Better for high resolution, smoother at endpoints</p>
+<p><strong>Network</strong>: - U-Net with self-attention at 16×16, 8×8 resolutions - Timestep embedding: sinusoidal + 2-layer MLP - Channel multipliers: [1, 2, 4, 8] typical</p>
+<p><strong>Optimizer</strong>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>optimizer <span class="op">=</span> Adam(lr<span class="op">=</span><span class="fl">1e-4</span>)  <span class="co"># Or AdamW with weight decay</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>ema_model <span class="op">=</span> EMA(model, decay<span class="op">=</span><span class="fl">0.9999</span>)  <span class="co"># Use EMA for sampling</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>EMA (Exponential Moving Average)</strong>: Critical for good results. Use EMA weights for sampling, not training weights.</p>
+<hr>
+</section>
+<section id="sampling-strategies" class="level3" data-number="10.8.2">
+<h3 data-number="10.8.2" class="anchored" data-anchor-id="sampling-strategies"><span class="header-section-number">10.8.2</span> Sampling Strategies</h3>
+<p><strong>Trade-offs</strong>: - <strong>DDPM</strong> (1000 steps): High quality, diverse, slow - <strong>DDIM</strong> (50-100 steps): Faster, deterministic, slightly lower quality - <strong>DPM-Solver</strong> / <strong>UniPC</strong>: Fast ODE solvers (10-20 steps)</p>
+<p><strong>Guidance scale tuning</strong>: - Higher (<span class="math inline">\(w = 10\)</span>-<span class="math inline">\(15\)</span>): More aligned with prompt, less diverse - Lower (<span class="math inline">\(w = 5\)</span>-<span class="math inline">\(7\)</span>): More diverse, may drift from prompt</p>
+<hr>
+</section>
+<section id="monitoring-training" class="level3" data-number="10.8.3">
+<h3 data-number="10.8.3" class="anchored" data-anchor-id="monitoring-training"><span class="header-section-number">10.8.3</span> Monitoring Training</h3>
+<p><strong>What to track</strong>: 1. <strong>Loss curve</strong>: Should decrease steadily (easier than GANs) 2. <strong>Generated samples</strong>: Visual inspection at regular intervals 3. <strong>FID score</strong>: Quantitative quality metric</p>
+<p><strong>Validation</strong>: Generate samples at fixed noise seeds to track progress.</p>
+<p><strong>Training time</strong>: ~1 week on 8× A100 for high-quality models (ImageNet 256×256).</p>
+<hr>
+</section>
+</section>
+<section id="recent-advances-2023-2024" class="level2" data-number="10.9">
+<h2 data-number="10.9" class="anchored" data-anchor-id="recent-advances-2023-2024"><span class="header-section-number">10.9</span> Recent Advances (2023-2024)</h2>
+<section id="dit-diffusion-transformer-2023" class="level3" data-number="10.9.1">
+<h3 data-number="10.9.1" class="anchored" data-anchor-id="dit-diffusion-transformer-2023"><span class="header-section-number">10.9.1</span> DiT (Diffusion Transformer, 2023)</h3>
+<p><strong>Key idea</strong>: Replace U-Net with Vision Transformer architecture.</p>
+<p><strong>Architecture</strong>: - Patch embeddings + positional encodings - Standard transformer blocks - AdaLN (adaptive layer norm) for conditioning</p>
+<p><strong>Results</strong>: Scales better than U-Net, achieves state-of-the-art FID on ImageNet.</p>
+<hr>
+</section>
+<section id="consistency-models-2023" class="level3" data-number="10.9.2">
+<h3 data-number="10.9.2" class="anchored" data-anchor-id="consistency-models-2023"><span class="header-section-number">10.9.2</span> Consistency Models (2023)</h3>
+<p><strong>Problem</strong>: Diffusion requires many steps even with DDIM.</p>
+<p><strong>Solution</strong>: Train model to map any <span class="math inline">\(x_t\)</span> directly to <span class="math inline">\(x_0\)</span> (one-step generation).</p>
+<p><strong>Method</strong>: Enforce <strong>self-consistency</strong>: <span class="math inline">\(f_\theta(x_t, t) = f_\theta(x_{t'}, t')\)</span> for all <span class="math inline">\(t, t'\)</span> along same trajectory.</p>
+<p><strong>Result</strong>: Single-step generation with competitive quality.</p>
+<hr>
+</section>
+<section id="flow-matching-2023" class="level3" data-number="10.9.3">
+<h3 data-number="10.9.3" class="anchored" data-anchor-id="flow-matching-2023"><span class="header-section-number">10.9.3</span> Flow Matching (2023)</h3>
+<p><strong>Idea</strong>: Learn vector fields that transport noise to data via <strong>optimal transport</strong>.</p>
+<p><strong>Advantage</strong>: Simpler training (no noise schedule), faster sampling, better likelihood.</p>
+<p><strong>Relation</strong>: Generalizes diffusion models, connects to continuous normalizing flows.</p>
+<hr>
+</section>
+<section id="rectified-flow-2023" class="level3" data-number="10.9.4">
+<h3 data-number="10.9.4" class="anchored" data-anchor-id="rectified-flow-2023"><span class="header-section-number">10.9.4</span> Rectified Flow (2023)</h3>
+<p><strong>Improvement</strong>: Use straight-line paths in probability space (not curved SDEs).</p>
+<p><strong>Benefit</strong>: Fewer sampling steps needed, better for distillation.</p>
+<hr>
+</section>
+</section>
+<section id="applications" class="level2" data-number="10.10">
+<h2 data-number="10.10" class="anchored" data-anchor-id="applications"><span class="header-section-number">10.10</span> Applications</h2>
+<section id="image-generation" class="level3" data-number="10.10.1">
+<h3 data-number="10.10.1" class="anchored" data-anchor-id="image-generation"><span class="header-section-number">10.10.1</span> Image Generation</h3>
+<ul>
+<li><strong>Stable Diffusion</strong>: Text-to-image (latent diffusion + CLIP)</li>
+<li><strong>DALL-E 2/3</strong>: Text-to-image (cascaded diffusion)</li>
+<li><strong>Midjourney</strong>: Commercial text-to-image</li>
+<li><strong>Imagen</strong>: Text-to-image with T5 text encoder</li>
+</ul>
+</section>
+<section id="image-editing" class="level3" data-number="10.10.2">
+<h3 data-number="10.10.2" class="anchored" data-anchor-id="image-editing"><span class="header-section-number">10.10.2</span> Image Editing</h3>
+<ul>
+<li><strong>Instruct-Pix2Pix</strong>: Edit images via text instructions</li>
+<li><strong>ControlNet</strong>: Spatial control (edges, pose, depth)</li>
+<li><strong>Inpainting</strong>: Fill masked regions</li>
+<li><strong>Outpainting</strong>: Extend images beyond boundaries</li>
+</ul>
+</section>
+<section id="video-generation" class="level3" data-number="10.10.3">
+<h3 data-number="10.10.3" class="anchored" data-anchor-id="video-generation"><span class="header-section-number">10.10.3</span> Video Generation</h3>
+<ul>
+<li><strong>Make-A-Video</strong>: Text-to-video</li>
+<li><strong>Imagen Video</strong>: High-quality video synthesis</li>
+<li><strong>Runway Gen-2</strong>: Video editing</li>
+</ul>
+</section>
+<section id="d-generation" class="level3" data-number="10.10.4">
+<h3 data-number="10.10.4" class="anchored" data-anchor-id="d-generation"><span class="header-section-number">10.10.4</span> 3D Generation</h3>
+<ul>
+<li><strong>DreamFusion</strong>: Text-to-3D via Score Distillation Sampling (SDS)</li>
+<li><strong>Point-E</strong>: 3D point cloud generation</li>
+</ul>
+</section>
+<section id="audio" class="level3" data-number="10.10.5">
+<h3 data-number="10.10.5" class="anchored" data-anchor-id="audio"><span class="header-section-number">10.10.5</span> Audio</h3>
+<ul>
+<li><strong>AudioLDM</strong>: Text-to-audio</li>
+<li><strong>DiffWave</strong>: Speech synthesis</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="interview-preparation" class="level2" data-number="10.11">
+<h2 data-number="10.11" class="anchored" data-anchor-id="interview-preparation"><span class="header-section-number">10.11</span> Interview Preparation</h2>
+<section id="core-concepts-checklist" class="level3" data-number="10.11.1">
+<h3 data-number="10.11.1" class="anchored" data-anchor-id="core-concepts-checklist"><span class="header-section-number">10.11.1</span> Core Concepts Checklist</h3>
+<p><strong>Mathematical Foundation</strong>: - [ ] Derive forward process closed form: <span class="math inline">\(x_t = \sqrt{\bar{\alpha}_t}x_0 + \sqrt{1-\bar{\alpha}_t}\epsilon\)</span> - [ ] Explain why we predict noise instead of mean - [ ] Understand score matching connection - [ ] Derive reverse process from forward</p>
+<p><strong>Training and Sampling</strong>: - [ ] DDPM training algorithm - [ ] DDIM vs DDPM sampling differences - [ ] Classifier-free guidance mechanism - [ ] Latent diffusion advantages</p>
+<p><strong>Advanced Topics</strong>: - [ ] ControlNet architecture - [ ] Score-based SDE formulation - [ ] Flow matching basics</p>
+<hr>
+</section>
+<section id="key-interview-questions" class="level3" data-number="10.11.2">
+<h3 data-number="10.11.2" class="anchored" data-anchor-id="key-interview-questions"><span class="header-section-number">10.11.2</span> Key Interview Questions</h3>
+<p><strong>Q1: “Explain the forward and reverse diffusion process. Why is the forward process useful?”</strong></p>
+<p><strong>Answer</strong>:</p>
+<p><strong>Forward process</strong>: Gradually add Gaussian noise over <span class="math inline">\(T\)</span> steps: <span class="math display">\[q(x_t | x_{t-1}) = \mathcal{N}(x_t; \sqrt{1-\beta_t}x_{t-1}, \beta_t I)\]</span></p>
+<p><strong>Key property</strong>: Has closed form—can sample <span class="math inline">\(x_t\)</span> directly from <span class="math inline">\(x_0\)</span>: <span class="math display">\[x_t = \sqrt{\bar{\alpha}_t}x_0 + \sqrt{1-\bar{\alpha}_t}\epsilon, \quad \epsilon \sim \mathcal{N}(0,I)\]</span></p>
+<p><strong>Reverse process</strong>: Learn to denoise step-by-step: <span class="math display">\[p_\theta(x_{t-1}|x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t,t), \Sigma_\theta(x_t,t))\]</span></p>
+<p><strong>Why forward process is useful</strong>: 1. Closed form enables efficient training (sample any <span class="math inline">\(t\)</span> directly) 2. Provides training targets (known true noise <span class="math inline">\(\epsilon\)</span>) 3. Ensures <span class="math inline">\(x_T \approx \mathcal{N}(0,I)\)</span> (tractable starting point for sampling)</p>
+<hr>
+<p><strong>Q2: “Why do we predict noise <span class="math inline">\(\epsilon\)</span> instead of directly predicting <span class="math inline">\(x_0\)</span> or the mean <span class="math inline">\(\mu\)</span>?”</strong></p>
+<p><strong>Answer</strong>:</p>
+<p><strong>Theoretical reason</strong>: Equivalent formulations have different gradient properties. Predicting noise <span class="math inline">\(\epsilon\)</span> gives the best loss weighting across timesteps.</p>
+<p><strong>From forward process</strong>: <span class="math inline">\(x_t = \sqrt{\bar{\alpha}_t}x_0 + \sqrt{1-\bar{\alpha}_t}\epsilon\)</span></p>
+<p>Can rearrange to get mean: <span class="math display">\[\mu(x_t, t) = \frac{1}{\sqrt{\alpha_t}}\left(x_t - \frac{\beta_t}{\sqrt{1-\bar{\alpha}_t}}\epsilon\right)\]</span></p>
+<p><strong>Predicting noise advantages</strong>: 1. Single network output works for all timesteps (noise is same distribution) 2. Empirically more stable training 3. Naturally weighted—loss is uniform in <span class="math inline">\(\epsilon\)</span>, but implied loss on <span class="math inline">\(x_0\)</span> varies by <span class="math inline">\(t\)</span></p>
+<p><strong>Equivalence</strong>: Predicting <span class="math inline">\(\epsilon\)</span>, <span class="math inline">\(x_0\)</span>, or <span class="math inline">\(\mu\)</span> are mathematically equivalent (can convert between them), but <span class="math inline">\(\epsilon\)</span> trains best.</p>
+<hr>
+<p><strong>Q3: “Explain DDIM. How does it achieve faster sampling?”</strong></p>
+<p><strong>Answer</strong>:</p>
+<p><strong>Key insight</strong>: DDPM’s forward process is not unique. Can design different forward processes with <strong>same marginals</strong> <span class="math inline">\(q(x_t|x_0)\)</span> but different conditionals <span class="math inline">\(q(x_{t-1}|x_t,x_0)\)</span>.</p>
+<p><strong>DDIM forward</strong>: Non-Markovian—<span class="math inline">\(q(x_{t-1}|x_t,x_0)\)</span> depends on <span class="math inline">\(x_0\)</span>, not just <span class="math inline">\(x_t\)</span>.</p>
+<p><strong>Sampling update</strong> (deterministic when <span class="math inline">\(\sigma=0\)</span>): <span class="math display">\[x_{t-1} = \sqrt{\bar{\alpha}_{t-1}}\underbrace{\left(\frac{x_t - \sqrt{1-\bar{\alpha}_t}\epsilon_\theta(x_t,t)}{\sqrt{\bar{\alpha}_t}}\right)}_{\text{predicted }x_0} + \sqrt{1-\bar{\alpha}_{t-1}}\epsilon_\theta(x_t,t)\]</span></p>
+<p><strong>Why faster</strong>: - Can skip timesteps (subsample <span class="math inline">\(\{t_1, t_2, ..., t_S\}\)</span> where <span class="math inline">\(S \ll T\)</span>) - Each step is deterministic, not stochastic - Typically 50-100 steps vs 1000 for DDPM</p>
+<p><strong>Trade-off</strong>: Slightly less diverse samples than DDPM (deterministic), but much faster.</p>
+<hr>
+<p><strong>Q4: “What is classifier-free guidance and why is it important?”</strong></p>
+<p><strong>Answer</strong>:</p>
+<p><strong>Goal</strong>: Generate samples strongly aligned with conditioning (class/text) without training separate classifier.</p>
+<p><strong>Method</strong>: Train single model with conditioning randomly dropped: - Train unconditional <span class="math inline">\(\epsilon_\theta(x_t, t, \emptyset)\)</span> and conditional <span class="math inline">\(\epsilon_\theta(x_t, t, c)\)</span> jointly</p>
+<p><strong>Sampling</strong>: Interpolate predictions: <span class="math display">\[\tilde{\epsilon}_\theta(x_t, t, c) = \epsilon_\theta(x_t, t, \emptyset) + w \cdot (\epsilon_\theta(x_t, t, c) - \epsilon_\theta(x_t, t, \emptyset))\]</span></p>
+<p><strong>Intuition</strong>: - Difference <span class="math inline">\((\epsilon_c - \epsilon_\emptyset)\)</span> points toward conditional distribution - Scale <span class="math inline">\(w &gt; 1\)</span> amplifies this direction - Moves sample away from unconditional, toward conditional</p>
+<p><strong>Impact</strong>: - Enables high-quality text-to-image (Stable Diffusion, DALL-E) - No need for separate classifier network (simpler) - Controllable trade-off between alignment and diversity via <span class="math inline">\(w\)</span></p>
+<p><strong>Typical values</strong>: <span class="math inline">\(w = 7\)</span>-<span class="math inline">\(10\)</span> for text-to-image.</p>
+<hr>
+<p><strong>Q5: “Explain latent diffusion. Why is it better than pixel-space diffusion?”</strong></p>
+<p><strong>Answer</strong>:</p>
+<p><strong>Idea</strong>: Run diffusion in latent space of pretrained autoencoder (VAE), not pixel space.</p>
+<p><strong>Architecture</strong>: 1. Encoder <span class="math inline">\(\mathcal{E}\)</span>: <span class="math inline">\(x \to z\)</span> (e.g., <span class="math inline">\(512^2 \times 3 \to 64^2 \times 4\)</span>) 2. Diffusion: Operate on <span class="math inline">\(z\)</span> 3. Decoder <span class="math inline">\(\mathcal{D}\)</span>: <span class="math inline">\(z \to \hat{x}\)</span></p>
+<p><strong>Advantages</strong>: 1. <strong>Efficiency</strong>: 8× smaller spatial dimensions → 64× less memory 2. <strong>Speed</strong>: Faster training and sampling 3. <strong>Quality</strong>: Learned latent space is more semantically structured 4. <strong>Perceptual loss implicitly included</strong> (VAE decoder trained with perceptual objectives)</p>
+<p><strong>Trade-off</strong>: Adds VAE reconstruction artifacts (usually minor).</p>
+<p><strong>Impact</strong>: Enabled open-source high-resolution generation (Stable Diffusion on consumer GPUs).</p>
+<hr>
+<p><strong>Q6: “Compare diffusion models to GANs and VAEs. When would you use each?”</strong></p>
+<p><strong>Answer</strong>:</p>
+<p><strong>Diffusion</strong>: - <strong>Pros</strong>: Best quality + diversity, stable training, excellent mode coverage - <strong>Cons</strong>: Very slow sampling (50-1000 steps) - <strong>Use when</strong>: Quality and diversity critical, generation time acceptable</p>
+<p><strong>GAN</strong>: - <strong>Pros</strong>: Fast sampling (1 step), high quality - <strong>Cons</strong>: Training instability, mode collapse, no likelihood - <strong>Use when</strong>: Real-time generation needed, willing to handle training difficulty</p>
+<p><strong>VAE</strong>: - <strong>Pros</strong>: Fast, stable training, explicit latent space, likelihood - <strong>Cons</strong>: Blurry samples (posterior collapse) - <strong>Use when</strong>: Need latent manipulation, representation learning, anomaly detection</p>
+<p><strong>Current trend (2024)</strong>: - Diffusion dominant for image generation (quality + diversity) - GANs still used in latent diffusion VAE decoders - Research on fast diffusion samplers (consistency models, flow matching)</p>
+<hr>
+<p><strong>Q7: “How would you speed up diffusion model sampling?”</strong></p>
+<p><strong>Answer</strong>:</p>
+<p><strong>Approaches</strong> (in order of ease):</p>
+<p><strong>1. DDIM sampling</strong> (easiest): - Use 50-100 steps instead of 1000 - Deterministic sampling allows step skipping - Minimal quality loss</p>
+<p><strong>2. Better ODE/SDE solvers</strong>: - DPM-Solver, UniPC: 10-20 steps - Leverage numerical methods from differential equations</p>
+<p><strong>3. Distillation</strong>: - Train student model to match teacher in fewer steps - Progressive distillation: 1000 → 500 → 250 → … → 4 steps - Consistency models: Single-step generation</p>
+<p><strong>4. Latent diffusion</strong>: - Operate in compressed latent space (8× speedup) - Stable Diffusion approach</p>
+<p><strong>5. Architectural improvements</strong>: - DiT (transformer-based): Better scaling - Efficient attention mechanisms</p>
+<p><strong>Trade-offs</strong>: - Fewer steps → faster but slightly lower quality/diversity - Distillation → fast but requires teacher model - Latent space → efficient but VAE artifacts</p>
+<p><strong>Practical recommendation</strong>: Start with DDIM (50 steps), then explore DPM-Solver if need faster.</p>
+<hr>
+<p><strong>Q8: “What is ControlNet and how does it work without retraining the base model?”</strong></p>
+<p><strong>Answer</strong>:</p>
+<p><strong>Goal</strong>: Add spatial control (edges, pose, depth) to pretrained diffusion model without full retraining.</p>
+<p><strong>Architecture</strong>: 1. <strong>Copy</strong> pretrained UNet encoder → “control network” 2. <strong>Add</strong> conditioning image as input to control network 3. <strong>Inject</strong> control features into main UNet via <strong>zero-initialized</strong> convolutions</p>
+<p><strong>Zero convolution trick</strong>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialize final convolution layer with zeros</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>control_output <span class="op">=</span> zero_conv(control_features)  <span class="co"># Initially outputs 0</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>main_features <span class="op">=</span> main_features <span class="op">+</span> control_output</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Initially contributes nothing (preserves pretrained model), gradually learns control.</p>
+<p><strong>Training</strong>: Only train control network + zero conv layers (freeze main UNet).</p>
+<p><strong>Why it works</strong>: - Preserves pretrained model’s quality - Zero initialization ensures smooth learning - Encoder copy provides good features for control</p>
+<p><strong>Applications</strong>: Canny edges, pose skeletons, depth maps, semantic segmentation → image.</p>
+<hr>
+<p><strong>Q9: “Explain the connection between diffusion models and score-based models.”</strong></p>
+<p><strong>Answer</strong>:</p>
+<p><strong>Score function</strong>: <span class="math inline">\(\nabla_x \log p(x)\)</span> (gradient of log probability).</p>
+<p><strong>Key insight</strong>: Diffusion models implicitly learn scores.</p>
+<p><strong>Connection</strong>: From forward process, can derive: <span class="math display">\[\nabla_{x_t} \log q(x_t|x_0) = -\frac{x_t - \sqrt{\bar{\alpha}_t}x_0}{1-\bar{\alpha}_t} = -\frac{\epsilon}{\sqrt{1-\bar{\alpha}_t}}\]</span></p>
+<p>So predicting noise <span class="math inline">\(\epsilon_\theta\)</span> is equivalent to predicting score <span class="math inline">\(s_\theta\)</span> (up to scaling): <span class="math display">\[s_\theta(x_t, t) = -\frac{\epsilon_\theta(x_t, t)}{\sqrt{1-\bar{\alpha}_t}}\]</span></p>
+<p><strong>Score-based view</strong>: Train model to estimate <span class="math inline">\(\nabla_x \log p_t(x)\)</span> at all noise levels <span class="math inline">\(t\)</span>.</p>
+<p><strong>Continuous time</strong>: Formulate as Stochastic Differential Equations (SDEs): - Forward SDE adds noise continuously - Reverse SDE removes noise using learned scores</p>
+<p><strong>Advantages of score view</strong>: - Unified theoretical framework - Flexible sampling (ODE vs SDE) - Connection to Langevin dynamics</p>
+<p><strong>Practical impact</strong>: Mostly equivalent, but score perspective enables better samplers (DPM-Solver, flow matching).</p>
+<hr>
+<p><strong>Q10: “You’re training a diffusion model but samples are blurry. What could be wrong?”</strong></p>
+<p><strong>Answer</strong>:</p>
+<p><strong>Likely causes</strong>:</p>
+<p><strong>1. Not using EMA model</strong> (most common): - EMA (exponential moving average) critical for quality - Use EMA weights for sampling, not training weights</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>ema_model <span class="op">=</span> EMA(model, decay<span class="op">=</span><span class="fl">0.9999</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Sample with ema_model, not model</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>2. Too few sampling steps</strong>: - Try increasing from 50 to 250-1000 steps - DDIM needs more steps for high quality</p>
+<p><strong>3. Poor noise schedule</strong>: - Linear schedule may not be optimal for high resolution - Try cosine schedule (smoother at endpoints)</p>
+<p><strong>4. Model undertrained</strong>: - Diffusion needs long training (days on GPUs) - Check if loss still decreasing</p>
+<p><strong>5. Variance schedule wrong</strong>: - If predicting variance, check initialization - Can fix variance to <span class="math inline">\(\beta_t\)</span> or <span class="math inline">\(\tilde{\beta}_t\)</span> initially</p>
+<p><strong>6. Conditioning issues</strong> (if conditional): - Check cross-attention is working - Verify text embeddings have correct dimensionality</p>
+<p><strong>Debugging steps</strong>: 1. Verify EMA is enabled 2. Generate with more steps (1000) 3. Check training loss curve 4. Compare to pretrained model samples</p>
+<hr>
+</section>
+<section id="company-specific-context" class="level3" data-number="10.11.3">
+<h3 data-number="10.11.3" class="anchored" data-anchor-id="company-specific-context"><span class="header-section-number">10.11.3</span> Company-Specific Context</h3>
+<p><strong>Anthropic</strong>: - Focus on safety, controllability, interpretability - Diffusion useful for: data augmentation, understanding representations - Interest in: controllable generation, alignment</p>
+<p><strong>OpenAI</strong>: - DALL-E 2/3 (cascaded diffusion + CLIP) - Focus on text-to-image, safety, prompt alignment</p>
+<p><strong>Stability AI</strong>: - Stable Diffusion (open-source latent diffusion) - Focus on efficiency, democratization</p>
+<p><strong>NVIDIA</strong>: - DiT (diffusion transformers) - Focus on efficiency, GPU optimization, fast sampling</p>
+<p><strong>Google DeepMind</strong>: - Imagen (high-quality text-to-image) - Research on theoretical foundations, SDE formulations</p>
+<hr>
+</section>
+<section id="further-reading" class="level3" data-number="10.11.4">
+<h3 data-number="10.11.4" class="anchored" data-anchor-id="further-reading"><span class="header-section-number">10.11.4</span> Further Reading</h3>
+<p><strong>Foundational Papers</strong>: - <a href="https://arxiv.org/abs/2006.11239">Denoising Diffusion Probabilistic Models</a> (DDPM, Ho et al., 2020) - <a href="https://arxiv.org/abs/2010.02502">Denoising Diffusion Implicit Models</a> (DDIM, Song et al., 2021) - <a href="https://arxiv.org/abs/2011.13456">Score-Based Generative Modeling through SDEs</a> (Song et al., 2021)</p>
+<p><strong>Key Improvements</strong>: - <a href="https://arxiv.org/abs/2207.12598">Classifier-Free Guidance</a> (Ho &amp; Salimans, 2022) - <a href="https://arxiv.org/abs/2112.10752">High-Resolution Image Synthesis with Latent Diffusion</a> (Stable Diffusion, Rombach et al., 2022) - <a href="https://arxiv.org/abs/2212.09748">Scalable Diffusion Models with Transformers</a> (DiT, Peebles &amp; Xie, 2023)</p>
+<p><strong>Control and Conditioning</strong>: - <a href="https://arxiv.org/abs/2302.05543">Adding Conditional Control to Text-to-Image Diffusion</a> (ControlNet, Zhang et al., 2023) - <a href="https://arxiv.org/abs/2208.01626">Prompt-to-Prompt Image Editing</a> (Hertz et al., 2022)</p>
+<p><strong>Fast Sampling</strong>: - <a href="https://arxiv.org/abs/2303.01469">Consistency Models</a> (Song et al., 2023) - <a href="https://arxiv.org/abs/2210.02747">Flow Matching for Generative Modeling</a> (Lipman et al., 2023)</p>
+<hr>
+<p>This chapter provides a rigorous yet intuitive understanding of diffusion models, covering theory, training, key innovations, and practical considerations for research roles in top AI labs.</p>
 
 
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-dhariwal2021diffusion" class="csl-entry" role="listitem">
+Dhariwal, Prafulla, and Alex Nichol. 2021. <span>“Diffusion Models Beat GANs on Image Synthesis.”</span> <em>arXiv Preprint arXiv:2105.05233</em>. <a href="https://arxiv.org/abs/2105.05233">https://arxiv.org/abs/2105.05233</a>.
+</div>
+<div id="ref-ho2022classifier" class="csl-entry" role="listitem">
+Ho, Jonathan, and Tim Salimans. 2022. <span>“Classifier-Free Diffusion Guidance.”</span> <em>arXiv Preprint arXiv:2207.12598</em>. <a href="https://arxiv.org/abs/2207.12598">https://arxiv.org/abs/2207.12598</a>.
+</div>
+</div>
+</section>
+</section>
 
 </main> <!-- /main -->
 <script>
@@ -701,7 +1653,7 @@ ul.task-list li input[type="checkbox"] {
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
       <a href="../../chapters/vision/08-gans.html" class="pagination-link" aria-label="Generative Adversarial Networks (GANs)">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span>
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">

@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>11&nbsp; Video Fundamentals: Motion and Spatiotemporal Architectures – deep_learning_notes</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../chapters/video/11-video-understanding.html" rel="next">
+<link href="../../chapters/video/_intro_video.html" rel="prev">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-fd0503e23dce65854c81c5baaade3bdf.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../custom.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/video/10-video.html"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Video Fundamentals: Motion and Spatiotemporal Architectures</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../">deep_learning_notes</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_intro_foundations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Foundations</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/01-neural-networks-and-optimization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Neural Networks and Optimization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/02-generalization-and-learning-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Generalization and Learning Theory</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro_computer_vision.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Computer Vision</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Visual Understanding</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/03-cnns.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Convolutional Neural Networks</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/04-object-detection-and-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Detection and Segmentation</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/05-vision-transformers.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Vision Transformers</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-foundation-models-for-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Foundation Models for Segmentation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Self-Supervised Learning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Generative Modeling</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Models</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/07-vaes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/08-gans.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/09-diffusion-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_conclusion-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Conclusion</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/_intro_video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Video</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/10-video.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Video Fundamentals: Motion and Spatiotemporal Architectures</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/11-video-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Video Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/12-video-temporal-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Video Temporal Segmentation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/13-video-understanding-benchmarks.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Video Understanding Benchmarks</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/14-video-generation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Video Generation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/_intro_3d.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">3D Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/11-3d-data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">3D Data Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">3D Reconstruction</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/12-3d-reconstruction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">3D Reconstruction</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/13-gaussian-splatting.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">3D Gaussian Splatting</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Human Pose Estimation</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/human_pose_estimation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Human Pose Estimation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/_intro_nlp.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Natural Language Processing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/17-text-representation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Text Representation &amp; Word Embeddings</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/18-sequence-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Sequence Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/19-large-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Large Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/20-text-embeddings-evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Text Embedding Models &amp; Evaluation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/_intro_vision_language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Vision-Language</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/16-vision-language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Vision-Language Multimodal Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/_intro_time_series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Time Series</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/14-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">Time Series Fundamentals</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/15-deep-learning-for-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Deep Learning for Time Series</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/_intro_audio.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Audio</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/21-speech-representation-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Speech Representation Learning and Foundation Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/22-automatic-speech-recognition.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Automatic Speech Recognition</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/23-speaker-diarization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Speaker Diarization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/24-neural-audio-codecs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Neural Audio Codecs</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/25-speech-synthesis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">31</span>&nbsp; <span class="chapter-title">Speech Synthesis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/26-speech-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">32</span>&nbsp; <span class="chapter-title">Speech and Audio Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/27-audio-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">33</span>&nbsp; <span class="chapter-title">Audio Understanding Beyond Words</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#video-as-a-spatiotemporal-signal" id="toc-video-as-a-spatiotemporal-signal" class="nav-link active" data-scroll-target="#video-as-a-spatiotemporal-signal"><span class="header-section-number">11.1</span> Video as a Spatiotemporal Signal</a></li>
+  <li><a href="#optical-flow" id="toc-optical-flow" class="nav-link" data-scroll-target="#optical-flow"><span class="header-section-number">11.2</span> Optical Flow</a>
+  <ul class="collapse">
+  <li><a href="#the-optical-flow-constraint" id="toc-the-optical-flow-constraint" class="nav-link" data-scroll-target="#the-optical-flow-constraint"><span class="header-section-number">11.2.1</span> The Optical Flow Constraint</a></li>
+  <li><a href="#classical-methods" id="toc-classical-methods" class="nav-link" data-scroll-target="#classical-methods"><span class="header-section-number">11.2.2</span> Classical Methods</a></li>
+  <li><a href="#deep-optical-flow" id="toc-deep-optical-flow" class="nav-link" data-scroll-target="#deep-optical-flow"><span class="header-section-number">11.2.3</span> Deep Optical Flow</a></li>
+  <li><a href="#using-optical-flow-in-deep-video-models" id="toc-using-optical-flow-in-deep-video-models" class="nav-link" data-scroll-target="#using-optical-flow-in-deep-video-models"><span class="header-section-number">11.2.4</span> Using Optical Flow in Deep Video Models</a></li>
+  </ul></li>
+  <li><a href="#video-understanding" id="toc-video-understanding" class="nav-link" data-scroll-target="#video-understanding"><span class="header-section-number">11.3</span> Video Understanding</a>
+  <ul class="collapse">
+  <li><a href="#temporal-modeling-a-taxonomy" id="toc-temporal-modeling-a-taxonomy" class="nav-link" data-scroll-target="#temporal-modeling-a-taxonomy"><span class="header-section-number">11.3.1</span> Temporal Modeling: A Taxonomy</a></li>
+  <li><a href="#d-convolutional-networks" id="toc-d-convolutional-networks" class="nav-link" data-scroll-target="#d-convolutional-networks"><span class="header-section-number">11.3.2</span> 3D Convolutional Networks</a></li>
+  <li><a href="#video-transformers" id="toc-video-transformers" class="nav-link" data-scroll-target="#video-transformers"><span class="header-section-number">11.3.3</span> Video Transformers</a></li>
+  </ul></li>
+  <li><a href="#self-supervised-learning-for-video" id="toc-self-supervised-learning-for-video" class="nav-link" data-scroll-target="#self-supervised-learning-for-video"><span class="header-section-number">11.4</span> Self-Supervised Learning for Video</a>
+  <ul class="collapse">
+  <li><a href="#masked-video-modeling-videomae-2022" id="toc-masked-video-modeling-videomae-2022" class="nav-link" data-scroll-target="#masked-video-modeling-videomae-2022"><span class="header-section-number">11.4.1</span> Masked Video Modeling: VideoMAE (2022)</a></li>
+  <li><a href="#contrastive-and-distillation-approaches" id="toc-contrastive-and-distillation-approaches" class="nav-link" data-scroll-target="#contrastive-and-distillation-approaches"><span class="header-section-number">11.4.2</span> Contrastive and Distillation Approaches</a></li>
+  </ul></li>
+  <li><a href="#practical-considerations" id="toc-practical-considerations" class="nav-link" data-scroll-target="#practical-considerations"><span class="header-section-number">11.5</span> Practical Considerations</a></li>
+  <li><a href="#interview-questions" id="toc-interview-questions" class="nav-link" data-scroll-target="#interview-questions"><span class="header-section-number">11.6</span> Interview Questions</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Video Fundamentals: Motion and Spatiotemporal Architectures</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="video-as-a-spatiotemporal-signal" class="level2" data-number="11.1">
+<h2 data-number="11.1" class="anchored" data-anchor-id="video-as-a-spatiotemporal-signal"><span class="header-section-number">11.1</span> Video as a Spatiotemporal Signal</h2>
+<p><strong>Formal Representation</strong>: A video is a spatiotemporal signal <span class="math inline">\(I: \Omega \times [0, T] \to \mathbb{R}^C\)</span>, where:</p>
+<ul>
+<li><span class="math inline">\(\Omega \subset \mathbb{R}^2\)</span> is the spatial domain (the image plane),</li>
+<li><span class="math inline">\([0, T]\)</span> is the temporal axis,</li>
+<li><span class="math inline">\(C\)</span> is the number of channels (e.g.&nbsp;<span class="math inline">\(C=3\)</span> for RGB).</li>
+</ul>
+<p>In the discrete setting, a video is represented as a tensor: <span class="math display">\[\mathbf{V} \in \mathbb{R}^{T \times H \times W \times C}\]</span> with <span class="math inline">\(T\)</span> frames, each of spatial resolution <span class="math inline">\(H \times W\)</span> and <span class="math inline">\(C\)</span> color channels.</p>
+<p><strong>Key Challenges</strong> relative to image processing:</p>
+<ol type="1">
+<li><strong>Temporal redundancy</strong>: Adjacent frames are highly correlated; naively treating all <span class="math inline">\(T \times H \times W\)</span> positions independently is prohibitively expensive.</li>
+<li><strong>Motion</strong>: Understanding video requires capturing <em>how</em> the scene changes, not just <em>what</em> it looks like.</li>
+<li><strong>Long-range dependencies</strong>: Actions and events unfold over many frames; local temporal context is often insufficient.</li>
+<li><strong>Computational cost</strong>: A 10-second clip at 30 fps and 224×224 resolution is a <span class="math inline">\(300 \times 224 \times 224 \times 3\)</span> tensor—roughly 45M values per clip.</li>
+</ol>
+<p><strong>Core Tasks</strong>:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Task</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Action recognition</td>
+<td>Clip <span class="math inline">\(\mathbf{V}\)</span></td>
+<td>Class label <span class="math inline">\(y\)</span></td>
+</tr>
+<tr class="even">
+<td>Temporal action localization</td>
+<td>Long video</td>
+<td>Start/end times + class</td>
+</tr>
+<tr class="odd">
+<td>Video object detection/tracking</td>
+<td>Clip</td>
+<td>Bounding boxes per frame</td>
+</tr>
+<tr class="even">
+<td>Video generation</td>
+<td>Text prompt / noise</td>
+<td>Clip <span class="math inline">\(\hat{\mathbf{V}}\)</span></td>
+</tr>
+<tr class="odd">
+<td>Video captioning</td>
+<td>Clip</td>
+<td>Natural language description</td>
+</tr>
+</tbody>
+</table>
+<p>This chapter focuses on the <em>encoder</em> side: representing motion and building spatiotemporal architectures. Vision-language models for captioning, QA, retrieval, and temporal grounding are covered in the next chapter; video generation (the rightmost column above) gets its own chapter.</p>
+<hr>
+</section>
+<section id="optical-flow" class="level2" data-number="11.2">
+<h2 data-number="11.2" class="anchored" data-anchor-id="optical-flow"><span class="header-section-number">11.2</span> Optical Flow</h2>
+<p>Optical flow captures the <em>motion</em> in a scene: for each pixel and each time step, it estimates the displacement vector between consecutive frames.</p>
+<section id="the-optical-flow-constraint" class="level3" data-number="11.2.1">
+<h3 data-number="11.2.1" class="anchored" data-anchor-id="the-optical-flow-constraint"><span class="header-section-number">11.2.1</span> The Optical Flow Constraint</h3>
+<p><strong>Definition</strong>: The optical flow field is a mapping: <span class="math display">\[\mathbf{v}: \Omega \times \mathbb{R} \to \mathbb{R}^2, \quad (x, y, t) \mapsto (u, v)\]</span> where <span class="math inline">\((u, v)\)</span> denote the horizontal and vertical displacement of the pixel at <span class="math inline">\((x, y)\)</span> between frames <span class="math inline">\(t\)</span> and <span class="math inline">\(t+1\)</span>.</p>
+<p><strong>Brightness Constancy Assumption</strong>: The intensity of a moving pixel is approximately preserved across frames: <span class="math display">\[I(x + u,\; y + v,\; t + 1) = I(x, y, t)\]</span></p>
+<p><strong>Linearization</strong> (first-order Taylor expansion for small displacements): <span class="math display">\[I(x+u, y+v, t+1) \approx I(x,y,t) + I_x u + I_y v + I_t\]</span></p>
+<p>Substituting into the brightness constancy assumption yields the <strong>optical flow constraint equation</strong>: <span class="math display">\[\boxed{I_x u + I_y v + I_t = 0}\]</span> where <span class="math inline">\(I_x = \partial I/\partial x\)</span>, <span class="math inline">\(I_y = \partial I/\partial y\)</span>, <span class="math inline">\(I_t = \partial I/\partial t\)</span> are spatiotemporal image gradients.</p>
+<p><strong>The Aperture Problem</strong>: At each pixel, the OFC gives <strong>1 equation with 2 unknowns</strong> <span class="math inline">\((u, v)\)</span>. Only the component of motion parallel to the image gradient is recoverable from local measurements—motion along isoluminance contours (perpendicular to the gradient) remains ambiguous. Additional constraints are required to recover the full flow field.</p>
+<hr>
+</section>
+<section id="classical-methods" class="level3" data-number="11.2.2">
+<h3 data-number="11.2.2" class="anchored" data-anchor-id="classical-methods"><span class="header-section-number">11.2.2</span> Classical Methods</h3>
+<p>Both classical methods impose extra constraints to resolve the aperture problem.</p>
+<section id="lucaskanade-1981" class="level4" data-number="11.2.2.1">
+<h4 data-number="11.2.2.1" class="anchored" data-anchor-id="lucaskanade-1981"><span class="header-section-number">11.2.2.1</span> Lucas–Kanade (1981)</h4>
+<p><strong>Assumption</strong>: Flow is <strong>locally constant</strong> within a spatial window <span class="math inline">\(\mathcal{W}\)</span> centered on each pixel.</p>
+<p>Lucas-Kanade finds <span class="math inline">\((u,v)\)</span> that minimizes the sum of squared OFC residuals over the window: <span class="math display">\[\min_{u,v} \sum_{(x,y) \in \mathcal{W}} \left(I_x u + I_y v + I_t\right)^2\]</span></p>
+<p>Collecting the OFC equation at every pixel <span class="math inline">\((x_i, y_i) \in \mathcal{W}\)</span>: <span class="math display">\[\mathbf{A} \begin{bmatrix} u \\ v \end{bmatrix} = -\mathbf{b}, \quad \mathbf{A} = \begin{bmatrix} I_x(x_1) &amp; I_y(x_1) \\ \vdots &amp; \vdots \\ I_x(x_n) &amp; I_y(x_n) \end{bmatrix}, \quad \mathbf{b} = \begin{bmatrix} I_t(x_1) \\ \vdots \\ I_t(x_n) \end{bmatrix}\]</span></p>
+<p>This overdetermined system (<span class="math inline">\(n \gg 2\)</span>) is solved in the least-squares sense: <span class="math display">\[\begin{bmatrix} u \\ v \end{bmatrix} = -(\mathbf{A}^\top \mathbf{A})^{-1} \mathbf{A}^\top \mathbf{b}\]</span></p>
+<p>The <span class="math inline">\(2 \times 2\)</span> matrix <span class="math inline">\(\mathbf{A}^\top \mathbf{A}\)</span> is the <strong>structure tensor</strong> (also used in the Harris corner detector). The system is well-conditioned only when both eigenvalues are large—meaning the window contains gradients in multiple directions. This is exactly the condition for a well-defined corner.</p>
+<p><strong>Limitation</strong>: Fails for large displacements (linearization breaks down) and at motion discontinuities (where the constant-flow assumption is violated). Addressed in practice via image pyramids (coarse-to-fine refinement).</p>
+<hr>
+</section>
+<section id="hornschunck-1981" class="level4" data-number="11.2.2.2">
+<h4 data-number="11.2.2.2" class="anchored" data-anchor-id="hornschunck-1981"><span class="header-section-number">11.2.2.2</span> Horn–Schunck (1981)</h4>
+<p><strong>Assumption</strong>: The flow field is <strong>globally smooth</strong>—motion should vary slowly across the image.</p>
+<p>Minimize the energy functional: <span class="math display">\[E(u, v) = \iint_\Omega \underbrace{\left(I_x u + I_y v + I_t\right)^2}_{\text{data term}} + \lambda^2 \underbrace{\left(|\nabla u|^2 + |\nabla v|^2\right)}_{\text{smoothness term}} \; dx \, dy\]</span></p>
+<p>The Euler–Lagrange equations for <span class="math inline">\(u\)</span> and <span class="math inline">\(v\)</span> yield a coupled system of PDEs solved iteratively via Gauss-Seidel or Jacobi updates.</p>
+<p><strong>Trade-off</strong>: <span class="math inline">\(\lambda\)</span> controls the smoothness–accuracy balance. Large <span class="math inline">\(\lambda\)</span> → smoother flow; small <span class="math inline">\(\lambda\)</span> → more faithful to the brightness constancy assumption, but noisier at motion discontinuities.</p>
+<p><strong>Limitation</strong>: Global smoothness is physically incorrect at object boundaries, where flow should be discontinuous.</p>
+<hr>
+</section>
+</section>
+<section id="deep-optical-flow" class="level3" data-number="11.2.3">
+<h3 data-number="11.2.3" class="anchored" data-anchor-id="deep-optical-flow"><span class="header-section-number">11.2.3</span> Deep Optical Flow</h3>
+<p>Modern methods learn optical flow end-to-end from paired data <span class="math inline">\(\{(I_t, I_{t+1}, \mathbf{v}^*)\}\)</span>.</p>
+<p><strong>FlowNet (2015)</strong>: First CNN for optical flow. Two variants: - <strong>FlowNetS</strong> (Simple): Concatenate both frames, pass through encoder–decoder U-Net. - <strong>FlowNetC</strong> (Correlation): Compute feature correlation volume <span class="math inline">\(C(\mathbf{f}_1, \mathbf{f}_2)\)</span> explicitly at bottleneck, then decode.</p>
+<p><strong>RAFT (2020)</strong>: Recurrent All-Pairs Field Transforms. Current state-of-the-art approach:</p>
+<ol type="1">
+<li><strong>Feature extraction</strong>: Shared encoder produces feature maps <span class="math inline">\(\mathbf{g}_1, \mathbf{g}_2 \in \mathbb{R}^{H/8 \times W/8 \times D}\)</span>.</li>
+<li><strong>All-pairs correlation</strong>: Compute 4D correlation volume <span class="math inline">\(\mathbf{C} \in \mathbb{R}^{H \times W \times H \times W}\)</span>: <span class="math display">\[\mathbf{C}(\mathbf{g}_1, \mathbf{g}_2)_{ijkl} = \langle \mathbf{g}_1[i,j],\, \mathbf{g}_2[k,l] \rangle\]</span> Pool over multiple scales to handle large displacements.</li>
+<li><strong>Recurrent update</strong>: A ConvGRU iteratively refines the flow estimate <span class="math inline">\(\mathbf{v}^{(r)}\)</span> using correlation lookups: <span class="math display">\[\mathbf{v}^{(r+1)} = \mathbf{v}^{(r)} + \Delta\mathbf{v}^{(r)}, \quad \Delta\mathbf{v}^{(r)} = f_\theta(\mathbf{h}^{(r)}, \mathbf{C}(\mathbf{v}^{(r)}))\]</span></li>
+</ol>
+<p><strong>Training</strong>: Supervised on FlyingChairs, FlyingThings3D synthetic datasets; fine-tuned on real data (Sintel, KITTI).</p>
+<p><strong>Interview Insight</strong>: “Why a correlation volume?” Lucas-Kanade is essentially computing local correlation between templates. RAFT computes <em>all</em> pairwise correlations globally, then lets a recurrent module learn which correlations to use given the current flow estimate.</p>
+<hr>
+</section>
+<section id="using-optical-flow-in-deep-video-models" class="level3" data-number="11.2.4">
+<h3 data-number="11.2.4" class="anchored" data-anchor-id="using-optical-flow-in-deep-video-models"><span class="header-section-number">11.2.4</span> Using Optical Flow in Deep Video Models</h3>
+<p>Optical flow and raw frames are complementary:</p>
+<ul>
+<li><strong>Frames</strong> → appearance (texture, color, object identity)</li>
+<li><strong>Flow</strong> → dynamics (motion, trajectories, temporal consistency)</li>
+</ul>
+<p><strong>Integration strategies</strong>:</p>
+<ol type="1">
+<li><p><strong>Two-Stream Networks</strong> (Simonyan &amp; Zisserman, 2014): Independent spatial stream (RGB) and temporal stream (stacked optical flow <span class="math inline">\([u_t, v_t, \ldots, u_{t+L}, v_{t+L}]\)</span>). Late fusion via score averaging.</p></li>
+<li><p><strong>Flow as warping operator</strong>: Given flow <span class="math inline">\(\mathbf{v}(x,y,t) = (u,v)\)</span>, warp frame <span class="math inline">\(I_t\)</span> to predict <span class="math inline">\(I_{t+1}\)</span>: <span class="math display">\[\hat{I}_{t+1}(x, y) = I_t(x + u,\; y + v)\]</span> Used in video prediction, tracking, and temporal consistency constraints.</p></li>
+<li><p><strong>Self-supervision signal</strong>: Optical flow provides geometric constraints without labels:</p>
+<ul>
+<li><strong>Temporal consistency loss</strong>: <span class="math inline">\(\|F_t(x,y) - F_{t+1}(x+u, y+v)\|\)</span>, encouraging features to move consistently with the scene.</li>
+<li><strong>Future frame prediction</strong>: Predict <span class="math inline">\(I_{t+1}\)</span> from <span class="math inline">\(I_t\)</span> via flow; minimize reconstruction error.</li>
+</ul></li>
+</ol>
+<p><strong>Practical note</strong>: Computing optical flow per-frame is expensive ($$100ms per pair with RAFT on GPU). Modern architectures increasingly learn motion implicitly via 3D convolutions or temporal attention, avoiding explicit flow. Optical flow is most valuable when motion is the primary discriminative cue (e.g., subtle human pose changes) or when labeled data is scarce.</p>
+<hr>
+</section>
+</section>
+<section id="video-understanding" class="level2" data-number="11.3">
+<h2 data-number="11.3" class="anchored" data-anchor-id="video-understanding"><span class="header-section-number">11.3</span> Video Understanding</h2>
+<section id="temporal-modeling-a-taxonomy" class="level3" data-number="11.3.1">
+<h3 data-number="11.3.1" class="anchored" data-anchor-id="temporal-modeling-a-taxonomy"><span class="header-section-number">11.3.1</span> Temporal Modeling: A Taxonomy</h3>
+<p>Four main strategies for incorporating temporal information:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 18%">
+<col style="width: 33%">
+<col style="width: 31%">
+<col style="width: 16%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Approach</th>
+<th>Temporal Modeling</th>
+<th>Spatial Modeling</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>2D CNN + pooling</strong></td>
+<td>Late temporal aggregation</td>
+<td>2D convolution</td>
+<td>ResNet + average pooling</td>
+</tr>
+<tr class="even">
+<td><strong>Two-Stream</strong></td>
+<td>Separate flow stream</td>
+<td>2D convolution</td>
+<td>Two-Stream CNN</td>
+</tr>
+<tr class="odd">
+<td><strong>3D CNN</strong></td>
+<td>Joint spatiotemporal convolution</td>
+<td>3D convolution</td>
+<td>C3D, I3D</td>
+</tr>
+<tr class="even">
+<td><strong>Transformer</strong></td>
+<td>Temporal self-attention</td>
+<td>Spatial attention</td>
+<td>TimeSformer, ViViT</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="d-convolutional-networks" class="level3" data-number="11.3.2">
+<h3 data-number="11.3.2" class="anchored" data-anchor-id="d-convolutional-networks"><span class="header-section-number">11.3.2</span> 3D Convolutional Networks</h3>
+<section id="c3d-2015" class="level4" data-number="11.3.2.1">
+<h4 data-number="11.3.2.1" class="anchored" data-anchor-id="c3d-2015"><span class="header-section-number">11.3.2.1</span> C3D (2015)</h4>
+<p><strong>Core idea</strong>: Replace 2D convolutions with 3D convolutions that jointly model space and time.</p>
+<p>A <strong>3D convolution</strong> with kernel <span class="math inline">\(\mathbf{K} \in \mathbb{R}^{k_t \times k \times k \times c_\text{in} \times c_\text{out}}\)</span> applied to a volume <span class="math inline">\(\mathbf{X} \in \mathbb{R}^{T' \times H' \times W' \times c_\text{in}}\)</span>: <span class="math display">\[\mathbf{Y}[\tau, i, j, c] = \sum_{c'} \sum_{p=0}^{k_t-1} \sum_{q=0}^{k-1} \sum_{r=0}^{k-1} \mathbf{X}[\tau+p, i+q, j+r, c'] \cdot \mathbf{K}[p,q,r,c',c]\]</span></p>
+<p><strong>C3D Architecture</strong>: VGG-like network with 3×3×3 kernels throughout. Pre-trained on Sports-1M.</p>
+<p><strong>Limitation</strong>: 3D convolutions are computationally expensive ($$3× the FLOPs of 2D) and cannot leverage 2D ImageNet pretrained weights.</p>
+<hr>
+</section>
+<section id="two-stream-networks-2014" class="level4" data-number="11.3.2.2">
+<h4 data-number="11.3.2.2" class="anchored" data-anchor-id="two-stream-networks-2014"><span class="header-section-number">11.3.2.2</span> Two-Stream Networks (2014)</h4>
+<p><strong>Motivation</strong>: Decouple appearance and motion modeling.</p>
+<pre><code>RGB frames ──► Spatial CNN ──► Spatial scores ──┐
+                                                 ├──► Fusion ──► Action class
+Optical flow ─► Temporal CNN ──► Temporal scores─┘</code></pre>
+<p><strong>Temporal stream input</strong>: Stack of <span class="math inline">\(L\)</span> consecutive flow fields <span class="math inline">\([u_t, v_t, u_{t+1}, v_{t+1}, \ldots, u_{t+L-1}, v_{t+L-1}] \in \mathbb{R}^{H \times W \times 2L}\)</span>, treated as a multi-channel image.</p>
+<p><strong>Fusion strategies</strong>: Late fusion (score-level averaging) outperforms early fusion in practice. The temporal stream alone achieves $<span class="math inline">\(85\%\)</span> of the full model’s accuracy on UCF-101.</p>
+<p><strong>Interview Insight</strong>: “Why stack flow fields rather than feed them frame-by-frame?” The stack gives the temporal stream a wider temporal context in a single forward pass—it sees <span class="math inline">\(L\)</span> consecutive motions simultaneously, allowing it to reason about motion trajectories rather than instantaneous displacements.</p>
+<hr>
+</section>
+<section id="i3d-inflated-3d-2017" class="level4" data-number="11.3.2.3">
+<h4 data-number="11.3.2.3" class="anchored" data-anchor-id="i3d-inflated-3d-2017"><span class="header-section-number">11.3.2.3</span> I3D: Inflated 3D (2017)</h4>
+<p><strong>Core idea</strong>: Bootstrap 3D CNNs from 2D ImageNet pretrained weights by “inflating” 2D convolutions to 3D.</p>
+<p><strong>Inflation procedure</strong>: For a 2D kernel <span class="math inline">\(\mathbf{K}^{2D} \in \mathbb{R}^{k \times k \times c_\text{in} \times c_\text{out}}\)</span>, construct a 3D kernel <span class="math inline">\(\mathbf{K}^{3D} \in \mathbb{R}^{k_t \times k \times k \times c_\text{in} \times c_\text{out}}\)</span> by repeating and rescaling: <span class="math display">\[\mathbf{K}^{3D}[p, :, :, :, :] = \frac{1}{k_t} \mathbf{K}^{2D}, \quad p = 0, \ldots, k_t - 1\]</span></p>
+<p>This ensures that at initialization, the 3D conv collapses to the 2D conv when applied to a video with identical frames — so the pretrained ImageNet performance is preserved.</p>
+<p><strong>Two-Stream I3D</strong>: Apply the inflation independently to the spatial (RGB) and temporal (flow) streams. At the time of publication, Two-Stream I3D achieved state-of-the-art on Kinetics-400.</p>
+<p><strong>Why it works</strong>: ImageNet pretraining provides strong appearance priors. Inflation provides a meaningful initialization for temporal filters rather than random initialization from scratch.</p>
+<hr>
+</section>
+<section id="r21d-factorized-spatiotemporal-convolutions-2018" class="level4" data-number="11.3.2.4">
+<h4 data-number="11.3.2.4" class="anchored" data-anchor-id="r21d-factorized-spatiotemporal-convolutions-2018"><span class="header-section-number">11.3.2.4</span> R(2+1)D: Factorized Spatiotemporal Convolutions (2018)</h4>
+<p><strong>Core idea</strong>: Decompose a 3D convolution into a 2D spatial convolution followed by a 1D temporal convolution.</p>
+<p>A <span class="math inline">\(t \times d \times d\)</span> 3D convolution is replaced by: 1. <span class="math inline">\(1 \times d \times d\)</span> spatial convolution: <span class="math inline">\(\mathbf{X} \in \mathbb{R}^{T \times H \times W \times c_\text{in}} \to \mathbb{R}^{T \times H' \times W' \times M}\)</span> 2. <span class="math inline">\(t \times 1 \times 1\)</span> temporal convolution: <span class="math inline">\(\mathbb{R}^{T \times H' \times W' \times M} \to \mathbb{R}^{T' \times H' \times W' \times c_\text{out}}\)</span></p>
+<p>where <span class="math inline">\(M\)</span> is an intermediate channel count chosen to match the parameter count of the original 3D convolution.</p>
+<p><strong>Advantages over full 3D convolution</strong>: - An additional non-linearity between the two convolutions doubles the number of nonlinearities. - Easier optimization (closer to 2D pretrained initialization). - Factorized structure aids interpretability.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Model</th>
+<th>Kinetics-400 Top-1</th>
+<th>FLOPs (per clip)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>C3D</td>
+<td>56.1%</td>
+<td>38.5G</td>
+</tr>
+<tr class="even">
+<td>I3D (Two-Stream)</td>
+<td>75.7%</td>
+<td>108G</td>
+</tr>
+<tr class="odd">
+<td>R(2+1)D</td>
+<td>72.0%</td>
+<td>152G</td>
+</tr>
+<tr class="even">
+<td>SlowFast R50</td>
+<td>77.0%</td>
+<td>36.1G</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="slowfast-networks-2019" class="level4" data-number="11.3.2.5">
+<h4 data-number="11.3.2.5" class="anchored" data-anchor-id="slowfast-networks-2019"><span class="header-section-number">11.3.2.5</span> SlowFast Networks (2019)</h4>
+<p><strong>Core idea</strong>: Use two pathway networks operating at different temporal resolutions to separately capture spatial semantics and temporal dynamics.</p>
+<ul>
+<li><strong>Slow Pathway</strong>: Low frame rate (e.g., 4 fps), high spatial resolution, large channel capacity → captures spatial semantics.</li>
+<li><strong>Fast Pathway</strong>: High frame rate (e.g., 32 fps), low spatial resolution, small channel capacity ($$1/8 of Slow channels) → captures fine-grained motion.</li>
+</ul>
+<p><strong>Lateral connections</strong>: Fuse Fast-to-Slow at multiple stages via time-strided convolution (to match temporal dimensions): <span class="math display">\[F^{\ell}_\text{fused} = \text{Concat}\left[F^{\ell}_\text{Slow},\; \text{Conv}(F^{\ell}_\text{Fast})\right]\]</span></p>
+<p><strong>Rationale</strong>: Not all video information requires temporal detail. Object identity and scene context can be determined from a few frames; subtle motions (hand gestures, facial expressions) need high temporal resolution. SlowFast allocates compute accordingly.</p>
+<p><strong>Interview Insight</strong>: “What does the Fast pathway actually learn?” Visualization shows that Fast pathway channels respond primarily to motion rather than appearance—they exhibit low selectivity for object classes but high sensitivity to temporal differences. This supports the design intuition.</p>
+<hr>
+</section>
+</section>
+<section id="video-transformers" class="level3" data-number="11.3.3">
+<h3 data-number="11.3.3" class="anchored" data-anchor-id="video-transformers"><span class="header-section-number">11.3.3</span> Video Transformers</h3>
+<p>Self-attention over space and time enables global context modeling but requires careful management of the quadratic cost.</p>
+<p>For a video with <span class="math inline">\(T\)</span> frames and <span class="math inline">\(N = (H/P)^2\)</span> patches per frame, the sequence length is <span class="math inline">\(TN\)</span>. Naive full spatiotemporal attention has complexity: <span class="math display">\[\mathcal{O}\left((TN)^2 \cdot D\right)\]</span></p>
+<p>For <span class="math inline">\(T=8\)</span>, <span class="math inline">\(N=196\)</span>, <span class="math inline">\(D=768\)</span>: <span class="math inline">\((8 \times 196)^2 \times 768 \approx 1.5 \times 10^{12}\)</span> operations per layer.</p>
+<p>The practical methods below all propose factorized or windowed attention to reduce this cost.</p>
+<hr>
+<section id="timesformer-2021" class="level4" data-number="11.3.3.1">
+<h4 data-number="11.3.3.1" class="anchored" data-anchor-id="timesformer-2021"><span class="header-section-number">11.3.3.1</span> TimeSformer (2021)</h4>
+<p><strong>Approach</strong>: Divide the full spatiotemporal attention into separate spatial and temporal attention operations applied sequentially at each layer — “Divided Space-Time Attention”.</p>
+<p>Within each Transformer block, for token <span class="math inline">\((t, i)\)</span> (frame <span class="math inline">\(t\)</span>, patch <span class="math inline">\(i\)</span>):</p>
+<ol type="1">
+<li><p><strong>Temporal attention</strong>: attend over all frames at the <em>same spatial position</em>: <span class="math display">\[\mathbf{z}'^{(t,i)} = \text{Attn}\!\left(\mathbf{z}^{(t,i)},\; \{\mathbf{z}^{(t',i)}\}_{t'=1}^T\right)\]</span></p></li>
+<li><p><strong>Spatial attention</strong>: attend over all patches in the <em>same frame</em>: <span class="math display">\[\mathbf{z}''^{(t,i)} = \text{Attn}\!\left(\mathbf{z}'^{(t,i)},\; \{\mathbf{z}'^{(t,j)}\}_{j=1}^N\right)\]</span></p></li>
+</ol>
+<p><strong>Complexity</strong>: <span class="math inline">\(\mathcal{O}(T^2 N D + TN^2 D)\)</span> — linear in <span class="math inline">\(TN\)</span> rather than quadratic.</p>
+<p><strong>Initialization</strong>: Weights from pretrained ViT. Temporal attention weights initialized to zero (so at initialization, the model reduces to a spatial-only ViT — a well-conditioned starting point).</p>
+<hr>
+</section>
+<section id="video-swin-transformer-2021" class="level4" data-number="11.3.3.2">
+<h4 data-number="11.3.3.2" class="anchored" data-anchor-id="video-swin-transformer-2021"><span class="header-section-number">11.3.3.2</span> Video Swin Transformer (2021)</h4>
+<p><strong>Approach</strong>: Extend the shifted window mechanism from Swin Transformer to 3D — compute attention within local <strong>3D windows</strong> of size <span class="math inline">\(P_t \times P_h \times P_w\)</span> tokens.</p>
+<p>Each attention operation is restricted to a local window of <span class="math inline">\(P_t \times P_h \times P_w\)</span> spatiotemporal tokens: <span class="math display">\[\mathcal{O}(T H W \cdot P_t P_h P_w \cdot D)\]</span></p>
+<p>which is linear in <span class="math inline">\(THW\)</span> for fixed window sizes.</p>
+<p><strong>Cyclic shifting</strong>: Alternate window partitions between layers (identical to 2D Swin) to enable cross-window communication without added cost.</p>
+<p><strong>Result</strong>: Strong performance on Kinetics and Something-Something with better compute efficiency than TimeSformer.</p>
+<hr>
+</section>
+<section id="vivit-2021-google" class="level4" data-number="11.3.3.3">
+<h4 data-number="11.3.3.3" class="anchored" data-anchor-id="vivit-2021-google"><span class="header-section-number">11.3.3.3</span> ViViT (2021, Google)</h4>
+<p>Proposes four factorization strategies; the best-performing:</p>
+<p><strong>Model 2 — Factorised Encoder</strong>: First apply spatial Transformer (ViT) to each frame independently → get <span class="math inline">\(T\)</span> frame-level tokens. Then apply temporal Transformer over these <span class="math inline">\(T\)</span> tokens.</p>
+<p><span class="math display">\[\text{ViViT: } \mathbf{V} \xrightarrow{\text{Spatial ViT per frame}} \{z_1, \ldots, z_T\} \xrightarrow{\text{Temporal Transformer}} y\]</span></p>
+<p>This decouples spatial and temporal pretraining — the spatial ViT can be initialized from ViT-pretrained weights directly.</p>
+<p><strong>Interview Insight</strong>: “How do you choose between TimeSformer, Video Swin, and ViViT?” At equal scale: Video Swin is most efficient (locality bias reduces compute); TimeSformer is simpler to implement and flexible; ViViT’s factorized encoder is cleanest for transfer from image models. For standard benchmarks (Kinetics), Video Swin and ViViT are broadly comparable.</p>
+<hr>
+</section>
+</section>
+</section>
+<section id="self-supervised-learning-for-video" class="level2" data-number="11.4">
+<h2 data-number="11.4" class="anchored" data-anchor-id="self-supervised-learning-for-video"><span class="header-section-number">11.4</span> Self-Supervised Learning for Video</h2>
+<p>The same paradigms from image SSL (§6 in this book) extend naturally to video, with temporal structure providing additional self-supervision signals.</p>
+<section id="masked-video-modeling-videomae-2022" class="level3" data-number="11.4.1">
+<h3 data-number="11.4.1" class="anchored" data-anchor-id="masked-video-modeling-videomae-2022"><span class="header-section-number">11.4.1</span> Masked Video Modeling: VideoMAE (2022)</h3>
+<p><strong>Core idea</strong>: Extend Masked Autoencoders (MAE) to video. Given a video clip, mask a large fraction of spatiotemporal patches and train a Transformer encoder-decoder to reconstruct the masked patches.</p>
+<p><strong>High masking ratio</strong>: VideoMAE uses <span class="math inline">\(90\%\)</span> masking (vs.&nbsp;<span class="math inline">\(75\%\)</span> for image MAE). This is motivated by the high redundancy in video—adjacent patches are strongly correlated. Aggressive masking forces the model to reason about long-range spatiotemporal structure rather than copying neighboring patches.</p>
+<p><strong>Tube masking</strong>: Masks are sampled as <em>spatiotemporal tubes</em> — the same spatial positions are masked across all frames. This prevents the trivial solution of copying visible patches from adjacent frames at the same location.</p>
+<p><span class="math display">\[\text{Mask} \in \{0,1\}^{T \times N}, \quad \text{Mask}[t, i] = \text{Mask}[t', i] \;\forall t, t'\]</span></p>
+<p><strong>Training objective</strong>: Pixel-level MSE reconstruction on masked patches (same as MAE): <span class="math display">\[\mathcal{L} = \mathbb{E}\left[\frac{1}{|\mathcal{M}|} \sum_{(t,i) \in \mathcal{M}} \|\hat{\mathbf{x}}_{t,i} - \mathbf{x}_{t,i}\|^2\right]\]</span></p>
+<p><strong>Efficiency</strong>: Because <span class="math inline">\(90\%\)</span> of tokens are masked, the encoder only processes <span class="math inline">\(10\%\)</span> of tokens → the computational cost of SSL pre-training is comparable to supervised training.</p>
+<p><strong>Result</strong>: VideoMAE pre-trained representations transfer competitively with or surpass fully supervised training on Kinetics-400 when fine-tuned.</p>
+<hr>
+</section>
+<section id="contrastive-and-distillation-approaches" class="level3" data-number="11.4.2">
+<h3 data-number="11.4.2" class="anchored" data-anchor-id="contrastive-and-distillation-approaches"><span class="header-section-number">11.4.2</span> Contrastive and Distillation Approaches</h3>
+<p><strong>Video contrastive learning</strong>: Extend image contrastive methods (SimCLR, MoCo) by defining temporal augmentations as additional views: - Two temporally-distant clips from the same video → positive pair - Clips from different videos → negative pairs</p>
+<p><strong>V-JEPA (2024, Meta)</strong>: Extends I-JEPA to video. Predict representations of masked spatiotemporal regions using context regions <em>in feature space</em> (not pixel space), avoiding the need to reconstruct high-frequency details. This encourages the model to learn semantic rather than textural features.</p>
+<p><strong>Interview Insight</strong>: “Why does VideoMAE use such a high masking ratio?” The spatial redundancy in video is much higher than in images — nearby pixels and frames are nearly identical. Low masking ratios allow the decoder to reconstruct patches from adjacent visible neighbors without learning meaningful semantics. High masking forces global reasoning.</p>
+<hr>
+</section>
+</section>
+<section id="practical-considerations" class="level2" data-number="11.5">
+<h2 data-number="11.5" class="anchored" data-anchor-id="practical-considerations"><span class="header-section-number">11.5</span> Practical Considerations</h2>
+<p><strong>Clip sampling</strong>: Random temporal sampling of clips (not the full video) at training time is standard. Uniform sampling at test time (e.g.&nbsp;5–10 clips), then averaging predictions.</p>
+<p><strong>Frame rate vs.&nbsp;resolution trade-off</strong>: At fixed compute, higher temporal resolution (more frames) means lower spatial resolution. SlowFast’s dual-pathway design is an explicit solution to this trade-off.</p>
+<p><strong>Optical flow cost</strong>: Precomputing flow with RAFT for the full training set is expensive but reusable. Flow is increasingly replaced by temporal convolutions / attention that learn motion implicitly.</p>
+<p><strong>Temporal augmentation</strong>: Temporal jittering (random clip start), temporal flipping, and playback speed perturbation are standard. Speed perturbation is especially useful for action recognition since the same action can appear at different speeds.</p>
+<p><strong>Pre-training strategy</strong>: Pre-train on large-scale datasets (Kinetics-400/700, Something-Something-v2); fine-tune on smaller domain-specific datasets. VideoMAE-style SSL pre-training is competitive with supervised Kinetics pre-training for many downstream tasks.</p>
+<p><strong>Memory during training</strong>: A single batch of 8 clips × 16 frames × 224×224 × 3 channels in float32 ≈ 1.8 GB. Mixed precision (fp16) and gradient checkpointing are necessary for video Transformers.</p>
+<hr>
+</section>
+<section id="interview-questions" class="level2" data-number="11.6">
+<h2 data-number="11.6" class="anchored" data-anchor-id="interview-questions"><span class="header-section-number">11.6</span> Interview Questions</h2>
+<p><strong>Q: What is the aperture problem in optical flow, and why does it matter?</strong></p>
+<p>At a single pixel, the OFC gives one equation in two unknowns <span class="math inline">\((u, v)\)</span>. Only the component of motion along the image gradient is observable — motion parallel to an edge is invisible from that point alone. Lucas-Kanade resolves this by assuming constant flow over a window; Horn-Schunck by assuming globally smooth flow. In deep optical flow (RAFT), the correlation volume provides global matching context that implicitly resolves the aperture problem.</p>
+<hr>
+<p><strong>Q: Why inflate 2D convolutions to 3D in I3D instead of initializing 3D CNNs from scratch?</strong></p>
+<p>ImageNet pretraining provides strong appearance priors that are directly transferable to video. A randomly-initialized 3D CNN requires much more video data and compute to reach the same performance. The inflation trick ensures that at initialization the model reduces to the pretrained 2D model on static frames, preserving this prior while allowing temporal filters to be learned from video data.</p>
+<hr>
+<p><strong>Q: Explain the trade-off between temporal and spatial resolution in video models. How does SlowFast address it?</strong></p>
+<p>High temporal resolution is needed to capture fast motions (e.g., sports actions); high spatial resolution is needed for visual recognition of fine-grained details. Joint high-resolution modeling is computationally prohibitive. SlowFast uses two pathways: a Slow pathway with low temporal resolution and high spatial/channel capacity for semantics, and a Fast pathway with high temporal resolution and low spatial/channel capacity for motion. The asymmetric compute allocation (Fast uses $$20% of total FLOPs) makes this practical.</p>
+<hr>
+<p><strong>Q: How do video Transformers avoid the quadratic cost of full spatiotemporal attention?</strong></p>
+<p>Three main strategies: (1) <strong>Factorized attention</strong> (TimeSformer): separate temporal and spatial attention sequentially — <span class="math inline">\(\mathcal{O}(T^2 N + TN^2)\)</span> rather than <span class="math inline">\(\mathcal{O}(T^2 N^2)\)</span>. (2) <strong>Local 3D windowed attention</strong> (Video Swin): restrict attention to local spatiotemporal windows — <span class="math inline">\(\mathcal{O}(T H W)\)</span> linear in sequence length. (3) <strong>Factorized encoder</strong> (ViViT): apply spatial ViT per-frame then temporal Transformer over frame tokens — decouples spatial and temporal processing entirely.</p>
+<hr>
+<p><strong>Q: Why does VideoMAE use 90% masking instead of the 75% used for image MAE?</strong></p>
+<p>Video has far higher spatial and temporal redundancy than images: adjacent pixels are correlated, and consecutive frames are nearly identical. At 75% masking, the decoder can reconstruct masked video patches by interpolating from nearby unmasked neighbors in adjacent frames without learning useful semantics. The 90% ratio, combined with tube masking (masking the same spatial positions across all frames), prevents this shortcut and forces the model to learn long-range spatiotemporal structure.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const callouts = document.querySelectorAll('.callout-tip');
+    callouts.forEach(function(callout) {
+      callout.style.borderLeftColor = '#2196f3'; //#616161; //'#4caf50';
+      callout.style.color = 'ffffff'; // Dark purple-gray text
+    });
+  });
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../chapters/video/_intro_video.html" class="pagination-link" aria-label="Video">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Video</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../chapters/video/11-video-understanding.html" class="pagination-link" aria-label="Video Understanding">
+        <span class="nav-page-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Video Understanding</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="../../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

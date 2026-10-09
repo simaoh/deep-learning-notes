@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>8&nbsp; Generative Adversarial Networks (GANs) – deep_learning_notes</title>
+<title>9&nbsp; Generative Adversarial Networks (GANs) – deep_learning_notes</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -154,7 +154,7 @@ window.Quarto = {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/_intro-generative-models.html">Part IV: Generative Modeling</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/08-gans.html"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/_intro-generative-models.html">Part IV: Generative Modeling</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/08-gans.html"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -185,29 +185,24 @@ window.Quarto = {
  <span class="menu-text">Preface</span></a>
   </div>
 </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
- <span class="menu-text">Part I: Foundations</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_intro_foundations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Foundations</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/01-neural-networks-and-optimization.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Neural Networks and Optimization</span></span></a>
   </div>
 </li>
-          <li class="sidebar-item">
+        <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/02-generalization-and-learning-theory.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Generalization and Learning Theory</span></span></a>
   </div>
 </li>
-      </ul>
-  </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/_intro_computer_vision.html" class="sidebar-item-text sidebar-link">
@@ -216,13 +211,13 @@ window.Quarto = {
 </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
  <span class="menu-text">Part II: Visual Understanding</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/03-cnns.html" class="sidebar-item-text sidebar-link">
@@ -241,34 +236,40 @@ window.Quarto = {
  <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Vision Transformers</span></span></a>
   </div>
 </li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
- <span class="menu-text">Part III: Self-Supervised Learning</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  <a href="../../chapters/vision/06-foundation-models-for-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Foundation Models for Segmentation</span></span></a>
   </div>
 </li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
- <span class="menu-text">Part IV: Generative Modeling</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Self-Supervised Learning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Generative Modeling</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/_intro-generative-models.html" class="sidebar-item-text sidebar-link">
@@ -278,19 +279,19 @@ window.Quarto = {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/07-vaes.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/08-gans.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../chapters/vision/09-diffusion-models.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -303,14 +304,198 @@ window.Quarto = {
   </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../intro.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Introduction</span></span></a>
+  <a href="../../chapters/video/_intro_video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Video</span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../summary.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Summary</span></span></a>
+  <a href="../../chapters/video/10-video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Video Fundamentals: Motion and Spatiotemporal Architectures</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/11-video-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Video Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/12-video-temporal-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Video Temporal Segmentation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/13-video-understanding-benchmarks.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Video Understanding Benchmarks</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/14-video-generation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Video Generation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/_intro_3d.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">3D Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/11-3d-data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">3D Data Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">3D Reconstruction</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/12-3d-reconstruction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">3D Reconstruction</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/13-gaussian-splatting.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">3D Gaussian Splatting</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Human Pose Estimation</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/human_pose_estimation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Human Pose Estimation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/_intro_nlp.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Natural Language Processing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/17-text-representation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Text Representation &amp; Word Embeddings</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/18-sequence-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Sequence Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/19-large-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Large Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/20-text-embeddings-evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Text Embedding Models &amp; Evaluation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/_intro_vision_language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Vision-Language</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/16-vision-language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Vision-Language Multimodal Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/_intro_time_series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Time Series</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/14-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">Time Series Fundamentals</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/15-deep-learning-for-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Deep Learning for Time Series</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/_intro_audio.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Audio</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/21-speech-representation-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Speech Representation Learning and Foundation Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/22-automatic-speech-recognition.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Automatic Speech Recognition</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/23-speaker-diarization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Speaker Diarization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/24-neural-audio-codecs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Neural Audio Codecs</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/25-speech-synthesis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">31</span>&nbsp; <span class="chapter-title">Speech Synthesis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/26-speech-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">32</span>&nbsp; <span class="chapter-title">Speech and Audio Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/27-audio-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">33</span>&nbsp; <span class="chapter-title">Audio Understanding Beyond Words</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
@@ -329,49 +514,49 @@ window.Quarto = {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">8.1</span> Introduction</a>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">9.1</span> Introduction</a>
   <ul class="collapse">
-  <li><a href="#minmax-game-formulation" id="toc-minmax-game-formulation" class="nav-link" data-scroll-target="#minmax-game-formulation"><span class="header-section-number">8.1.1</span> Minmax Game Formulation</a></li>
-  <li><a href="#architecture-components" id="toc-architecture-components" class="nav-link" data-scroll-target="#architecture-components"><span class="header-section-number">8.1.2</span> Architecture Components</a></li>
-  <li><a href="#training-algorithm" id="toc-training-algorithm" class="nav-link" data-scroll-target="#training-algorithm"><span class="header-section-number">8.1.3</span> Training Algorithm</a></li>
+  <li><a href="#minmax-game-formulation" id="toc-minmax-game-formulation" class="nav-link" data-scroll-target="#minmax-game-formulation"><span class="header-section-number">9.1.1</span> Minmax Game Formulation</a></li>
+  <li><a href="#architecture-components" id="toc-architecture-components" class="nav-link" data-scroll-target="#architecture-components"><span class="header-section-number">9.1.2</span> Architecture Components</a></li>
+  <li><a href="#training-algorithm" id="toc-training-algorithm" class="nav-link" data-scroll-target="#training-algorithm"><span class="header-section-number">9.1.3</span> Training Algorithm</a></li>
   </ul></li>
-  <li><a href="#unconditional-image-generation" id="toc-unconditional-image-generation" class="nav-link" data-scroll-target="#unconditional-image-generation"><span class="header-section-number">8.2</span> Unconditional Image Generation</a>
+  <li><a href="#unconditional-image-generation" id="toc-unconditional-image-generation" class="nav-link" data-scroll-target="#unconditional-image-generation"><span class="header-section-number">9.2</span> Unconditional Image Generation</a>
   <ul class="collapse">
-  <li><a href="#dcgan-deep-convolutional-gan-2015" id="toc-dcgan-deep-convolutional-gan-2015" class="nav-link" data-scroll-target="#dcgan-deep-convolutional-gan-2015"><span class="header-section-number">8.2.1</span> DCGAN (Deep Convolutional GAN, 2015)</a></li>
-  <li><a href="#wgan-wasserstein-gan-2017" id="toc-wgan-wasserstein-gan-2017" class="nav-link" data-scroll-target="#wgan-wasserstein-gan-2017"><span class="header-section-number">8.2.2</span> WGAN (Wasserstein GAN ,2017)</a></li>
-  <li><a href="#wgan-gp-2017" id="toc-wgan-gp-2017" class="nav-link" data-scroll-target="#wgan-gp-2017"><span class="header-section-number">8.2.3</span> WGAN-GP (2017)</a></li>
+  <li><a href="#dcgan-deep-convolutional-gan-2015" id="toc-dcgan-deep-convolutional-gan-2015" class="nav-link" data-scroll-target="#dcgan-deep-convolutional-gan-2015"><span class="header-section-number">9.2.1</span> DCGAN (Deep Convolutional GAN, 2015)</a></li>
+  <li><a href="#wgan-wasserstein-gan-2017" id="toc-wgan-wasserstein-gan-2017" class="nav-link" data-scroll-target="#wgan-wasserstein-gan-2017"><span class="header-section-number">9.2.2</span> WGAN (Wasserstein GAN ,2017)</a></li>
+  <li><a href="#wgan-gp-2017" id="toc-wgan-gp-2017" class="nav-link" data-scroll-target="#wgan-gp-2017"><span class="header-section-number">9.2.3</span> WGAN-GP (2017)</a></li>
   </ul></li>
-  <li><a href="#conditional-image-generation" id="toc-conditional-image-generation" class="nav-link" data-scroll-target="#conditional-image-generation"><span class="header-section-number">8.3</span> Conditional Image Generation</a>
+  <li><a href="#conditional-image-generation" id="toc-conditional-image-generation" class="nav-link" data-scroll-target="#conditional-image-generation"><span class="header-section-number">9.3</span> Conditional Image Generation</a>
   <ul class="collapse">
-  <li><a href="#conditional-gan-cgan-2014" id="toc-conditional-gan-cgan-2014" class="nav-link" data-scroll-target="#conditional-gan-cgan-2014"><span class="header-section-number">8.3.1</span> Conditional GAN (cGAN, 2014)</a></li>
-  <li><a href="#progressive-gan-2017" id="toc-progressive-gan-2017" class="nav-link" data-scroll-target="#progressive-gan-2017"><span class="header-section-number">8.3.2</span> Progressive GAN (2017)</a></li>
-  <li><a href="#stylegan-2018-2019" id="toc-stylegan-2018-2019" class="nav-link" data-scroll-target="#stylegan-2018-2019"><span class="header-section-number">8.3.3</span> StyleGAN (2018-2019)</a></li>
+  <li><a href="#conditional-gan-cgan-2014" id="toc-conditional-gan-cgan-2014" class="nav-link" data-scroll-target="#conditional-gan-cgan-2014"><span class="header-section-number">9.3.1</span> Conditional GAN (cGAN, 2014)</a></li>
+  <li><a href="#progressive-gan-2017" id="toc-progressive-gan-2017" class="nav-link" data-scroll-target="#progressive-gan-2017"><span class="header-section-number">9.3.2</span> Progressive GAN (2017)</a></li>
+  <li><a href="#stylegan-2018-2019" id="toc-stylegan-2018-2019" class="nav-link" data-scroll-target="#stylegan-2018-2019"><span class="header-section-number">9.3.3</span> StyleGAN (2018-2019)</a></li>
   </ul></li>
-  <li><a href="#image-to-image-translation" id="toc-image-to-image-translation" class="nav-link" data-scroll-target="#image-to-image-translation"><span class="header-section-number">8.4</span> Image-to-Image Translation</a>
+  <li><a href="#image-to-image-translation" id="toc-image-to-image-translation" class="nav-link" data-scroll-target="#image-to-image-translation"><span class="header-section-number">9.4</span> Image-to-Image Translation</a>
   <ul class="collapse">
-  <li><a href="#pix2pix-2016-paired-translation" id="toc-pix2pix-2016-paired-translation" class="nav-link" data-scroll-target="#pix2pix-2016-paired-translation"><span class="header-section-number">8.4.1</span> Pix2Pix (2016) — <em>Paired Translation</em></a></li>
-  <li><a href="#cyclegan-2017-unpaired-translation" id="toc-cyclegan-2017-unpaired-translation" class="nav-link" data-scroll-target="#cyclegan-2017-unpaired-translation"><span class="header-section-number">8.4.2</span> CycleGAN (2017) — <em>Unpaired Translation</em></a></li>
+  <li><a href="#pix2pix-2016-paired-translation" id="toc-pix2pix-2016-paired-translation" class="nav-link" data-scroll-target="#pix2pix-2016-paired-translation"><span class="header-section-number">9.4.1</span> Pix2Pix (2016) — <em>Paired Translation</em></a></li>
+  <li><a href="#cyclegan-2017-unpaired-translation" id="toc-cyclegan-2017-unpaired-translation" class="nav-link" data-scroll-target="#cyclegan-2017-unpaired-translation"><span class="header-section-number">9.4.2</span> CycleGAN (2017) — <em>Unpaired Translation</em></a></li>
   </ul></li>
-  <li><a href="#evaluation-metrics" id="toc-evaluation-metrics" class="nav-link" data-scroll-target="#evaluation-metrics"><span class="header-section-number">8.5</span> Evaluation Metrics</a>
+  <li><a href="#evaluation-metrics" id="toc-evaluation-metrics" class="nav-link" data-scroll-target="#evaluation-metrics"><span class="header-section-number">9.5</span> Evaluation Metrics</a>
   <ul class="collapse">
-  <li><a href="#inception-score-is" id="toc-inception-score-is" class="nav-link" data-scroll-target="#inception-score-is"><span class="header-section-number">8.5.1</span> Inception Score (IS)</a></li>
-  <li><a href="#fréchet-inception-distance-fid" id="toc-fréchet-inception-distance-fid" class="nav-link" data-scroll-target="#fréchet-inception-distance-fid"><span class="header-section-number">8.5.2</span> Fréchet Inception Distance (FID)</a></li>
-  <li><a href="#precision-and-recall" id="toc-precision-and-recall" class="nav-link" data-scroll-target="#precision-and-recall"><span class="header-section-number">8.5.3</span> Precision and Recall</a></li>
+  <li><a href="#inception-score-is" id="toc-inception-score-is" class="nav-link" data-scroll-target="#inception-score-is"><span class="header-section-number">9.5.1</span> Inception Score (IS)</a></li>
+  <li><a href="#fréchet-inception-distance-fid" id="toc-fréchet-inception-distance-fid" class="nav-link" data-scroll-target="#fréchet-inception-distance-fid"><span class="header-section-number">9.5.2</span> Fréchet Inception Distance (FID)</a></li>
+  <li><a href="#precision-and-recall" id="toc-precision-and-recall" class="nav-link" data-scroll-target="#precision-and-recall"><span class="header-section-number">9.5.3</span> Precision and Recall</a></li>
   </ul></li>
-  <li><a href="#training-challenges" id="toc-training-challenges" class="nav-link" data-scroll-target="#training-challenges"><span class="header-section-number">8.6</span> Training Challenges</a>
+  <li><a href="#training-challenges" id="toc-training-challenges" class="nav-link" data-scroll-target="#training-challenges"><span class="header-section-number">9.6</span> Training Challenges</a>
   <ul class="collapse">
-  <li><a href="#mode-collapse" id="toc-mode-collapse" class="nav-link" data-scroll-target="#mode-collapse"><span class="header-section-number">8.6.1</span> Mode Collapse</a></li>
-  <li><a href="#vanishing-gradients" id="toc-vanishing-gradients" class="nav-link" data-scroll-target="#vanishing-gradients"><span class="header-section-number">8.6.2</span> Vanishing Gradients</a></li>
-  <li><a href="#training-instability" id="toc-training-instability" class="nav-link" data-scroll-target="#training-instability"><span class="header-section-number">8.6.3</span> Training Instability</a></li>
+  <li><a href="#mode-collapse" id="toc-mode-collapse" class="nav-link" data-scroll-target="#mode-collapse"><span class="header-section-number">9.6.1</span> Mode Collapse</a></li>
+  <li><a href="#vanishing-gradients" id="toc-vanishing-gradients" class="nav-link" data-scroll-target="#vanishing-gradients"><span class="header-section-number">9.6.2</span> Vanishing Gradients</a></li>
+  <li><a href="#training-instability" id="toc-training-instability" class="nav-link" data-scroll-target="#training-instability"><span class="header-section-number">9.6.3</span> Training Instability</a></li>
   </ul></li>
-  <li><a href="#training-monitoring" id="toc-training-monitoring" class="nav-link" data-scroll-target="#training-monitoring"><span class="header-section-number">8.7</span> Training Monitoring</a></li>
-  <li><a href="#comparison-gan-vs-vae-vs-diffusion" id="toc-comparison-gan-vs-vae-vs-diffusion" class="nav-link" data-scroll-target="#comparison-gan-vs-vae-vs-diffusion"><span class="header-section-number">8.8</span> Comparison: GAN vs VAE vs Diffusion</a></li>
-  <li><a href="#interview-preparation" id="toc-interview-preparation" class="nav-link" data-scroll-target="#interview-preparation"><span class="header-section-number">8.9</span> Interview Preparation</a>
+  <li><a href="#training-monitoring" id="toc-training-monitoring" class="nav-link" data-scroll-target="#training-monitoring"><span class="header-section-number">9.7</span> Training Monitoring</a></li>
+  <li><a href="#comparison-gan-vs-vae-vs-diffusion" id="toc-comparison-gan-vs-vae-vs-diffusion" class="nav-link" data-scroll-target="#comparison-gan-vs-vae-vs-diffusion"><span class="header-section-number">9.8</span> Comparison: GAN vs VAE vs Diffusion</a></li>
+  <li><a href="#interview-preparation" id="toc-interview-preparation" class="nav-link" data-scroll-target="#interview-preparation"><span class="header-section-number">9.9</span> Interview Preparation</a>
   <ul class="collapse">
-  <li><a href="#core-concepts-checklist" id="toc-core-concepts-checklist" class="nav-link" data-scroll-target="#core-concepts-checklist"><span class="header-section-number">8.9.1</span> Core Concepts Checklist</a></li>
-  <li><a href="#key-interview-questions" id="toc-key-interview-questions" class="nav-link" data-scroll-target="#key-interview-questions"><span class="header-section-number">8.9.2</span> Key Interview Questions</a></li>
-  <li><a href="#company-context" id="toc-company-context" class="nav-link" data-scroll-target="#company-context"><span class="header-section-number">8.9.3</span> Company Context</a></li>
-  <li><a href="#further-reading" id="toc-further-reading" class="nav-link" data-scroll-target="#further-reading"><span class="header-section-number">8.9.4</span> Further Reading</a></li>
+  <li><a href="#core-concepts-checklist" id="toc-core-concepts-checklist" class="nav-link" data-scroll-target="#core-concepts-checklist"><span class="header-section-number">9.9.1</span> Core Concepts Checklist</a></li>
+  <li><a href="#key-interview-questions" id="toc-key-interview-questions" class="nav-link" data-scroll-target="#key-interview-questions"><span class="header-section-number">9.9.2</span> Key Interview Questions</a></li>
+  <li><a href="#company-context" id="toc-company-context" class="nav-link" data-scroll-target="#company-context"><span class="header-section-number">9.9.3</span> Company Context</a></li>
+  <li><a href="#further-reading" id="toc-further-reading" class="nav-link" data-scroll-target="#further-reading"><span class="header-section-number">9.9.4</span> Further Reading</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -379,9 +564,9 @@ window.Quarto = {
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/_intro-generative-models.html">Part IV: Generative Modeling</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/08-gans.html"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/vision/_intro-generative-models.html">Part IV: Generative Modeling</a></li><li class="breadcrumb-item"><a href="../../chapters/vision/08-gans.html"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></h1>
+<h1 class="title"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></h1>
 </div>
 
 
@@ -398,8 +583,8 @@ window.Quarto = {
 </header>
 
 
-<section id="introduction" class="level2" data-number="8.1">
-<h2 data-number="8.1" class="anchored" data-anchor-id="introduction"><span class="header-section-number">8.1</span> Introduction</h2>
+<section id="introduction" class="level2" data-number="9.1">
+<h2 data-number="9.1" class="anchored" data-anchor-id="introduction"><span class="header-section-number">9.1</span> Introduction</h2>
 <p><strong>Generative Adversarial Networks</strong> (GANs) learn to generate data through a two-player game between competing neural networks. Unlike VAEs which use explicit density modeling, GANs learn an implicit generative model through adversarial training.</p>
 <p><strong>Core Idea</strong>: Train two networks in opposition:</p>
 <ul>
@@ -408,8 +593,8 @@ window.Quarto = {
 </ul>
 <p><strong>Key Insight</strong>: The generator never sees real data directly—it only receives gradients from the discriminator’s judgment. This indirect supervision produces remarkably sharp, high-quality samples.</p>
 <hr>
-<section id="minmax-game-formulation" class="level3" data-number="8.1.1">
-<h3 data-number="8.1.1" class="anchored" data-anchor-id="minmax-game-formulation"><span class="header-section-number">8.1.1</span> Minmax Game Formulation</h3>
+<section id="minmax-game-formulation" class="level3" data-number="9.1.1">
+<h3 data-number="9.1.1" class="anchored" data-anchor-id="minmax-game-formulation"><span class="header-section-number">9.1.1</span> Minmax Game Formulation</h3>
 <p>Generator and discriminator play a minimax game with value function <span class="math inline">\(V(G, D)\)</span>:</p>
 <p><span class="math display">\[\min_G \max_D V(D, G) = \min_G \max_D \Big(\mathbb{E}_{x \sim p_{\text{data}}(x)}[\log D(x)] + \mathbb{E}_{z \sim p_z(z)}[\log(1 - D(G(z)))]\Big)\]</span></p>
 <p><strong>Discriminator’s objective</strong>:<br>
@@ -418,8 +603,8 @@ Maximize <span class="math inline">\(V(D, G)\)</span>; &nbsp; by correctly class
 Minimize <span class="math inline">\(V(D, G)\)</span>; &nbsp; by fooling the discriminator (<span class="math inline">\(D(G(z)) \to 0\)</span>).</p>
 <hr>
 </section>
-<section id="architecture-components" class="level3" data-number="8.1.2">
-<h3 data-number="8.1.2" class="anchored" data-anchor-id="architecture-components"><span class="header-section-number">8.1.2</span> Architecture Components</h3>
+<section id="architecture-components" class="level3" data-number="9.1.2">
+<h3 data-number="9.1.2" class="anchored" data-anchor-id="architecture-components"><span class="header-section-number">9.1.2</span> Architecture Components</h3>
 <p><strong>Generator</strong> <span class="math inline">\(G: \mathcal{Z} \to \mathcal{X}\)</span>:</p>
 <ul>
 <li>Input: Latent code <span class="math inline">\(z \sim p(z) = \mathcal{N}(0, I)\)</span> (typically)</li>
@@ -436,8 +621,8 @@ Minimize <span class="math inline">\(V(D, G)\)</span>; &nbsp; by fooling the dis
 <p><span class="math display">\[x \to \text{Conv} \times N \to \text{Flatten} \to \text{FC} \to \text{Sigmoid} \to D(x)\]</span></p>
 <hr>
 </section>
-<section id="training-algorithm" class="level3" data-number="8.1.3">
-<h3 data-number="8.1.3" class="anchored" data-anchor-id="training-algorithm"><span class="header-section-number">8.1.3</span> Training Algorithm</h3>
+<section id="training-algorithm" class="level3" data-number="9.1.3">
+<h3 data-number="9.1.3" class="anchored" data-anchor-id="training-algorithm"><span class="header-section-number">9.1.3</span> Training Algorithm</h3>
 <p><strong>Alternating optimization</strong>—train discriminator and generator in turns:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> epoch <span class="kw">in</span> epochs:</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Train Discriminator (k steps, typically k=1)</span></span>
@@ -468,10 +653,10 @@ Minimize <span class="math inline">\(V(D, G)\)</span>; &nbsp; by fooling the dis
 <hr>
 </section>
 </section>
-<section id="unconditional-image-generation" class="level2" data-number="8.2">
-<h2 data-number="8.2" class="anchored" data-anchor-id="unconditional-image-generation"><span class="header-section-number">8.2</span> Unconditional Image Generation</h2>
-<section id="dcgan-deep-convolutional-gan-2015" class="level3" data-number="8.2.1">
-<h3 data-number="8.2.1" class="anchored" data-anchor-id="dcgan-deep-convolutional-gan-2015"><span class="header-section-number">8.2.1</span> DCGAN (Deep Convolutional GAN, 2015)</h3>
+<section id="unconditional-image-generation" class="level2" data-number="9.2">
+<h2 data-number="9.2" class="anchored" data-anchor-id="unconditional-image-generation"><span class="header-section-number">9.2</span> Unconditional Image Generation</h2>
+<section id="dcgan-deep-convolutional-gan-2015" class="level3" data-number="9.2.1">
+<h3 data-number="9.2.1" class="anchored" data-anchor-id="dcgan-deep-convolutional-gan-2015"><span class="header-section-number">9.2.1</span> DCGAN (Deep Convolutional GAN, 2015)</h3>
 <p><strong>Key contribution</strong>: Stable architecture guidelines for training GANs on images.</p>
 <p><strong>Architecture principles</strong>: 1. Replace pooling layers with strided convolutions (discriminator) and transposed convolutions (generator) 2. Use batch normalization in both networks (except generator output and discriminator input) 3. Remove fully connected hidden layers 4. Use ReLU in generator (except output: Tanh) 5. Use LeakyReLU in discriminator</p>
 <p><strong>Generator architecture</strong> (for 64×64 images):</p>
@@ -483,8 +668,8 @@ Minimize <span class="math inline">\(V(D, G)\)</span>; &nbsp; by fooling the dis
 <p><strong>Impact</strong>: Enabled stable training, became foundation for future GAN research.</p>
 <hr>
 </section>
-<section id="wgan-wasserstein-gan-2017" class="level3" data-number="8.2.2">
-<h3 data-number="8.2.2" class="anchored" data-anchor-id="wgan-wasserstein-gan-2017"><span class="header-section-number">8.2.2</span> WGAN (Wasserstein GAN ,2017)</h3>
+<section id="wgan-wasserstein-gan-2017" class="level3" data-number="9.2.2">
+<h3 data-number="9.2.2" class="anchored" data-anchor-id="wgan-wasserstein-gan-2017"><span class="header-section-number">9.2.2</span> WGAN (Wasserstein GAN ,2017)</h3>
 <p><strong>Motivation</strong>: Address training instability through better distance metric.</p>
 <p><strong>Key idea</strong>: Instead of Jensen-Shannon divergence, use <strong>Wasserstein distance</strong> (Earth Mover’s Distance):</p>
 <p><span class="math display">\[W(p_r, p_g) = \sup_{\|f\|_L \leq 1} \mathbb{E}_{x \sim p_r}[f(x)] - \mathbb{E}_{x \sim p_g}[f(x)]\]</span></p>
@@ -534,8 +719,8 @@ Minimize <span class="math inline">\(V(D, G)\)</span>; &nbsp; by fooling the dis
 </ul>
 <hr>
 </section>
-<section id="wgan-gp-2017" class="level3" data-number="8.2.3">
-<h3 data-number="8.2.3" class="anchored" data-anchor-id="wgan-gp-2017"><span class="header-section-number">8.2.3</span> WGAN-GP (2017)</h3>
+<section id="wgan-gp-2017" class="level3" data-number="9.2.3">
+<h3 data-number="9.2.3" class="anchored" data-anchor-id="wgan-gp-2017"><span class="header-section-number">9.2.3</span> WGAN-GP (2017)</h3>
 <p><strong>Improvement</strong>: Replace weight clipping with gradient penalty.</p>
 <p><strong>Gradient penalty</strong>: <span class="math display">\[\lambda \mathbb{E}_{\hat{x} \sim p_{\hat{x}}}[(\|\nabla_{\hat{x}} D(\hat{x})\|_2 - 1)^2]\]</span></p>
 <p>for any interpolated point <span class="math inline">\(\hat{x}\)</span> between a real data sample and a generated sample<br>
@@ -546,10 +731,10 @@ Minimize <span class="math inline">\(V(D, G)\)</span>; &nbsp; by fooling the dis
 <hr>
 </section>
 </section>
-<section id="conditional-image-generation" class="level2" data-number="8.3">
-<h2 data-number="8.3" class="anchored" data-anchor-id="conditional-image-generation"><span class="header-section-number">8.3</span> Conditional Image Generation</h2>
-<section id="conditional-gan-cgan-2014" class="level3" data-number="8.3.1">
-<h3 data-number="8.3.1" class="anchored" data-anchor-id="conditional-gan-cgan-2014"><span class="header-section-number">8.3.1</span> Conditional GAN (cGAN, 2014)</h3>
+<section id="conditional-image-generation" class="level2" data-number="9.3">
+<h2 data-number="9.3" class="anchored" data-anchor-id="conditional-image-generation"><span class="header-section-number">9.3</span> Conditional Image Generation</h2>
+<section id="conditional-gan-cgan-2014" class="level3" data-number="9.3.1">
+<h3 data-number="9.3.1" class="anchored" data-anchor-id="conditional-gan-cgan-2014"><span class="header-section-number">9.3.1</span> Conditional GAN (cGAN, 2014)</h3>
 <p><strong>Idea</strong>: Condition both networks on labels <span class="math inline">\(y\)</span>:</p>
 <p><span class="math display">\[\min_G \max_D \mathbb{E}_{x,y}[\log D(x|y)] + \mathbb{E}_{z,y}[\log(1 - D(G(z|y)|y))]\]</span></p>
 <p><strong>Implementation</strong>:</p>
@@ -573,8 +758,8 @@ Minimize <span class="math inline">\(V(D, G)\)</span>; &nbsp; by fooling the dis
 <hr>
 <p>Prior to StyleGAN, <strong>Progressive GAN</strong> introduced progressive growing — a key technique that allowed stable training at very high resolutions (up to 1024×1024), and was later adopted in early versions of StyleGAN.</p>
 </section>
-<section id="progressive-gan-2017" class="level3" data-number="8.3.2">
-<h3 data-number="8.3.2" class="anchored" data-anchor-id="progressive-gan-2017"><span class="header-section-number">8.3.2</span> Progressive GAN (2017)</h3>
+<section id="progressive-gan-2017" class="level3" data-number="9.3.2">
+<h3 data-number="9.3.2" class="anchored" data-anchor-id="progressive-gan-2017"><span class="header-section-number">9.3.2</span> Progressive GAN (2017)</h3>
 <p><strong>Key idea:</strong> Train generator &amp; discriminator by gradually increasing resolution<br>
 (4×4 → 8×8 → 16×16 → … → 1024×1024)</p>
 <p><strong>Fade-in mechanism:</strong> Smooth transition when adding layers</p>
@@ -589,8 +774,8 @@ Minimize <span class="math inline">\(V(D, G)\)</span>; &nbsp; by fooling the dis
 </ul>
 <hr>
 </section>
-<section id="stylegan-2018-2019" class="level3" data-number="8.3.3">
-<h3 data-number="8.3.3" class="anchored" data-anchor-id="stylegan-2018-2019"><span class="header-section-number">8.3.3</span> StyleGAN (2018-2019)</h3>
+<section id="stylegan-2018-2019" class="level3" data-number="9.3.3">
+<h3 data-number="9.3.3" class="anchored" data-anchor-id="stylegan-2018-2019"><span class="header-section-number">9.3.3</span> StyleGAN (2018-2019)</h3>
 <p><strong>Key innovation</strong>: Style-based generator with explicit control over image features at different scales.</p>
 <p><strong>Architecture overview</strong>:</p>
 <p><strong>1. Mapping Network</strong> <span class="math inline">\(f: \mathcal{Z} \to \mathcal{W}\)</span>:</p>
@@ -619,15 +804,15 @@ Minimize <span class="math inline">\(V(D, G)\)</span>; &nbsp; by fooling the dis
 <hr>
 </section>
 </section>
-<section id="image-to-image-translation" class="level2" data-number="8.4">
-<h2 data-number="8.4" class="anchored" data-anchor-id="image-to-image-translation"><span class="header-section-number">8.4</span> Image-to-Image Translation</h2>
+<section id="image-to-image-translation" class="level2" data-number="9.4">
+<h2 data-number="9.4" class="anchored" data-anchor-id="image-to-image-translation"><span class="header-section-number">9.4</span> Image-to-Image Translation</h2>
 <p><strong>Goal:</strong> Learn a mapping between two visual domains <span class="math inline">\(X\)</span> and <span class="math inline">\(Y\)</span>. Given input <span class="math inline">\(x \in X\)</span>, generate <span class="math inline">\(y \in Y\)</span>.</p>
 <ul>
 <li><strong>Paired setting</strong>: explicit aligned pairs <span class="math inline">\((x_i, y_i)\)</span> are available</li>
 <li><strong>Unpaired setting</strong>: only samples from each distribution, no direct correspondences</li>
 </ul>
-<section id="pix2pix-2016-paired-translation" class="level3" data-number="8.4.1">
-<h3 data-number="8.4.1" class="anchored" data-anchor-id="pix2pix-2016-paired-translation"><span class="header-section-number">8.4.1</span> Pix2Pix (2016) — <em>Paired Translation</em></h3>
+<section id="pix2pix-2016-paired-translation" class="level3" data-number="9.4.1">
+<h3 data-number="9.4.1" class="anchored" data-anchor-id="pix2pix-2016-paired-translation"><span class="header-section-number">9.4.1</span> Pix2Pix (2016) — <em>Paired Translation</em></h3>
 <p><strong>Setting:</strong> Learn <span class="math inline">\((G: X \rightarrow Y)\)</span> with paired examples <span class="math inline">\((x, y)\)</span>.</p>
 <ul>
 <li><strong>Generator:</strong> U-Net (skip connections preserve spatial details)</li>
@@ -647,8 +832,8 @@ Minimize <span class="math inline">\(V(D, G)\)</span>; &nbsp; by fooling the dis
 <li>super-resolution</li>
 </ul>
 </section>
-<section id="cyclegan-2017-unpaired-translation" class="level3" data-number="8.4.2">
-<h3 data-number="8.4.2" class="anchored" data-anchor-id="cyclegan-2017-unpaired-translation"><span class="header-section-number">8.4.2</span> CycleGAN (2017) — <em>Unpaired Translation</em></h3>
+<section id="cyclegan-2017-unpaired-translation" class="level3" data-number="9.4.2">
+<h3 data-number="9.4.2" class="anchored" data-anchor-id="cyclegan-2017-unpaired-translation"><span class="header-section-number">9.4.2</span> CycleGAN (2017) — <em>Unpaired Translation</em></h3>
 <p><strong>Setting:</strong> Unsupervised translation (no paired data). Learn mappings both ways: <span class="math display">\[
 G: X \rightarrow Y, \quad F: Y \rightarrow X
 \]</span></p>
@@ -690,11 +875,11 @@ F(G(x)) \approx x, \quad G(F(y)) \approx y
 <hr>
 </section>
 </section>
-<section id="evaluation-metrics" class="level2" data-number="8.5">
-<h2 data-number="8.5" class="anchored" data-anchor-id="evaluation-metrics"><span class="header-section-number">8.5</span> Evaluation Metrics</h2>
+<section id="evaluation-metrics" class="level2" data-number="9.5">
+<h2 data-number="9.5" class="anchored" data-anchor-id="evaluation-metrics"><span class="header-section-number">9.5</span> Evaluation Metrics</h2>
 <p>Evaluating generative models is challenging because we cannot compute exact likelihoods for GANs. Instead, we rely on proxy metrics that measure different aspects of generation quality.</p>
-<section id="inception-score-is" class="level3" data-number="8.5.1">
-<h3 data-number="8.5.1" class="anchored" data-anchor-id="inception-score-is"><span class="header-section-number">8.5.1</span> Inception Score (IS)</h3>
+<section id="inception-score-is" class="level3" data-number="9.5.1">
+<h3 data-number="9.5.1" class="anchored" data-anchor-id="inception-score-is"><span class="header-section-number">9.5.1</span> Inception Score (IS)</h3>
 <p><strong>Motivation</strong>: Good generated images should satisfy two properties:</p>
 <ol type="1">
 <li><strong>Sharpness</strong>: Each image should clearly belong to one class → <span class="math inline">\(p(y|x)\)</span> has low entropy</li>
@@ -744,8 +929,8 @@ A generator could game a high IS by:
 </ul>
 <hr>
 </section>
-<section id="fréchet-inception-distance-fid" class="level3" data-number="8.5.2">
-<h3 data-number="8.5.2" class="anchored" data-anchor-id="fréchet-inception-distance-fid"><span class="header-section-number">8.5.2</span> Fréchet Inception Distance (FID)</h3>
+<section id="fréchet-inception-distance-fid" class="level3" data-number="9.5.2">
+<h3 data-number="9.5.2" class="anchored" data-anchor-id="fréchet-inception-distance-fid"><span class="header-section-number">9.5.2</span> Fréchet Inception Distance (FID)</h3>
 <p>Measure distance between real and generated distributions in feature space.</p>
 <p><strong>Key difference</strong>:</p>
 <ul>
@@ -780,8 +965,8 @@ A generator could game a high IS by:
 <p><strong>Best practice</strong>: Use FID as primary metric (measures distance to real distribution), IS for quick checks only.</p>
 <hr>
 </section>
-<section id="precision-and-recall" class="level3" data-number="8.5.3">
-<h3 data-number="8.5.3" class="anchored" data-anchor-id="precision-and-recall"><span class="header-section-number">8.5.3</span> Precision and Recall</h3>
+<section id="precision-and-recall" class="level3" data-number="9.5.3">
+<h3 data-number="9.5.3" class="anchored" data-anchor-id="precision-and-recall"><span class="header-section-number">9.5.3</span> Precision and Recall</h3>
 <p>FID is a single number that doesn’t distinguish between quality and diversity failures.<br>
 Precision and Recall separately measure <strong>quality from diversity</strong>:</p>
 <ul>
@@ -809,10 +994,10 @@ Precision and Recall separately measure <strong>quality from diversity</strong>:
 <hr>
 </section>
 </section>
-<section id="training-challenges" class="level2" data-number="8.6">
-<h2 data-number="8.6" class="anchored" data-anchor-id="training-challenges"><span class="header-section-number">8.6</span> Training Challenges</h2>
-<section id="mode-collapse" class="level3" data-number="8.6.1">
-<h3 data-number="8.6.1" class="anchored" data-anchor-id="mode-collapse"><span class="header-section-number">8.6.1</span> Mode Collapse</h3>
+<section id="training-challenges" class="level2" data-number="9.6">
+<h2 data-number="9.6" class="anchored" data-anchor-id="training-challenges"><span class="header-section-number">9.6</span> Training Challenges</h2>
+<section id="mode-collapse" class="level3" data-number="9.6.1">
+<h3 data-number="9.6.1" class="anchored" data-anchor-id="mode-collapse"><span class="header-section-number">9.6.1</span> Mode Collapse</h3>
 <p><strong>Problem</strong>: Generator produces limited variety, ignoring parts of data distribution.</p>
 <p><strong>Symptoms</strong>:</p>
 <ul>
@@ -828,8 +1013,8 @@ Precision and Recall separately measure <strong>quality from diversity</strong>:
 </ul>
 <hr>
 </section>
-<section id="vanishing-gradients" class="level3" data-number="8.6.2">
-<h3 data-number="8.6.2" class="anchored" data-anchor-id="vanishing-gradients"><span class="header-section-number">8.6.2</span> Vanishing Gradients</h3>
+<section id="vanishing-gradients" class="level3" data-number="9.6.2">
+<h3 data-number="9.6.2" class="anchored" data-anchor-id="vanishing-gradients"><span class="header-section-number">9.6.2</span> Vanishing Gradients</h3>
 <p><strong>Problem</strong>: Discriminator becomes too strong → generator receives tiny or zero gradients.</p>
 <p><strong>Why it happens:</strong><br>
 In the vanilla GAN objective, when <span class="math inline">\(D(G(z)) \to 0, \,\, \nabla_G \log (1 - D(G(z))) \to 0\)</span>.</p>
@@ -841,8 +1026,8 @@ In the vanilla GAN objective, when <span class="math inline">\(D(G(z)) \to 0, \,
 </ul>
 <hr>
 </section>
-<section id="training-instability" class="level3" data-number="8.6.3">
-<h3 data-number="8.6.3" class="anchored" data-anchor-id="training-instability"><span class="header-section-number">8.6.3</span> Training Instability</h3>
+<section id="training-instability" class="level3" data-number="9.6.3">
+<h3 data-number="9.6.3" class="anchored" data-anchor-id="training-instability"><span class="header-section-number">9.6.3</span> Training Instability</h3>
 <p><strong>Problem</strong>: GANs optimize a min–max game, not a single objective → unstable fixed point behavior. Training dynamics can oscillate wildly and the minmax game may fail to converge.</p>
 <p><strong>Symptoms</strong>:</p>
 <ul>
@@ -874,8 +1059,8 @@ In the vanilla GAN objective, when <span class="math inline">\(D(G(z)) \to 0, \,
 <hr>
 </section>
 </section>
-<section id="training-monitoring" class="level2" data-number="8.7">
-<h2 data-number="8.7" class="anchored" data-anchor-id="training-monitoring"><span class="header-section-number">8.7</span> Training Monitoring</h2>
+<section id="training-monitoring" class="level2" data-number="9.7">
+<h2 data-number="9.7" class="anchored" data-anchor-id="training-monitoring"><span class="header-section-number">9.7</span> Training Monitoring</h2>
 <p><strong>What to plot</strong>:</p>
 <p><strong>1. Losses</strong> (but interpret carefully):</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Discriminator loss should be stable, not too low</span></span>
@@ -910,8 +1095,8 @@ In the vanilla GAN objective, when <span class="math inline">\(D(G(z)) \to 0, \,
 </ul>
 <hr>
 </section>
-<section id="comparison-gan-vs-vae-vs-diffusion" class="level2" data-number="8.8">
-<h2 data-number="8.8" class="anchored" data-anchor-id="comparison-gan-vs-vae-vs-diffusion"><span class="header-section-number">8.8</span> Comparison: GAN vs VAE vs Diffusion</h2>
+<section id="comparison-gan-vs-vae-vs-diffusion" class="level2" data-number="9.8">
+<h2 data-number="9.8" class="anchored" data-anchor-id="comparison-gan-vs-vae-vs-diffusion"><span class="header-section-number">9.8</span> Comparison: GAN vs VAE vs Diffusion</h2>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -963,10 +1148,10 @@ In the vanilla GAN objective, when <span class="math inline">\(D(G(z)) \to 0, \,
 <p><strong>Current trend</strong>: Diffusion models dominating image generation, but GANs still used where speed matters.</p>
 <hr>
 </section>
-<section id="interview-preparation" class="level2" data-number="8.9">
-<h2 data-number="8.9" class="anchored" data-anchor-id="interview-preparation"><span class="header-section-number">8.9</span> Interview Preparation</h2>
-<section id="core-concepts-checklist" class="level3" data-number="8.9.1">
-<h3 data-number="8.9.1" class="anchored" data-anchor-id="core-concepts-checklist"><span class="header-section-number">8.9.1</span> Core Concepts Checklist</h3>
+<section id="interview-preparation" class="level2" data-number="9.9">
+<h2 data-number="9.9" class="anchored" data-anchor-id="interview-preparation"><span class="header-section-number">9.9</span> Interview Preparation</h2>
+<section id="core-concepts-checklist" class="level3" data-number="9.9.1">
+<h3 data-number="9.9.1" class="anchored" data-anchor-id="core-concepts-checklist"><span class="header-section-number">9.9.1</span> Core Concepts Checklist</h3>
 <ul class="task-list">
 <li><label><input type="checkbox">GAN minimax objective and Nash equilibrium</label></li>
 <li><label><input type="checkbox">Non-saturating loss vs saturating loss</label></li>
@@ -978,8 +1163,8 @@ In the vanilla GAN objective, when <span class="math inline">\(D(G(z)) \to 0, \,
 </ul>
 <hr>
 </section>
-<section id="key-interview-questions" class="level3" data-number="8.9.2">
-<h3 data-number="8.9.2" class="anchored" data-anchor-id="key-interview-questions"><span class="header-section-number">8.9.2</span> Key Interview Questions</h3>
+<section id="key-interview-questions" class="level3" data-number="9.9.2">
+<h3 data-number="9.9.2" class="anchored" data-anchor-id="key-interview-questions"><span class="header-section-number">9.9.2</span> Key Interview Questions</h3>
 <p><strong>Q1: “What is mode collapse and how do you prevent it?”</strong></p>
 <p><strong>Answer</strong>: Mode collapse is when generator produces limited variety, ignoring parts of data distribution. Generator finds samples that fool discriminator and exploits these without exploring other modes.</p>
 <p><strong>Detection</strong>: Visual inspection (similar samples), low Recall metric, oscillating discriminator loss.</p>
@@ -1081,8 +1266,8 @@ since it always measures the “cost” of moving probability mass from <span cl
 <p><strong>Best practice</strong>: FID + visual inspection + Precision/Recall for diagnosis.</p>
 <hr>
 </section>
-<section id="company-context" class="level3" data-number="8.9.3">
-<h3 data-number="8.9.3" class="anchored" data-anchor-id="company-context"><span class="header-section-number">8.9.3</span> Company Context</h3>
+<section id="company-context" class="level3" data-number="9.9.3">
+<h3 data-number="9.9.3" class="anchored" data-anchor-id="company-context"><span class="header-section-number">9.9.3</span> Company Context</h3>
 <p><strong>Anthropic</strong>:</p>
 <ul>
 <li>Focus is on safety &amp; interpretability</li>
@@ -1107,8 +1292,8 @@ since it always measures the “cost” of moving probability mass from <span cl
 </ul>
 <hr>
 </section>
-<section id="further-reading" class="level3" data-number="8.9.4">
-<h3 data-number="8.9.4" class="anchored" data-anchor-id="further-reading"><span class="header-section-number">8.9.4</span> Further Reading</h3>
+<section id="further-reading" class="level3" data-number="9.9.4">
+<h3 data-number="9.9.4" class="anchored" data-anchor-id="further-reading"><span class="header-section-number">9.9.4</span> Further Reading</h3>
 <p><strong>Foundational Papers</strong>:</p>
 <ul>
 <li><a href="https://arxiv.org/abs/1406.2661">Generative Adversarial Networks</a> (GAN, Goodfellow et al., 2014)</li>
@@ -1548,12 +1733,12 @@ since it always measures the “cost” of moving probability mass from <span cl
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
       <a href="../../chapters/vision/07-vaes.html" class="pagination-link" aria-label="Variational Autoencoders (VAEs)">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span>
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
       <a href="../../chapters/vision/09-diffusion-models.html" class="pagination-link" aria-label="Diffusion Models">
-        <span class="nav-page-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span> <i class="bi bi-arrow-right-short"></i>
+        <span class="nav-page-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

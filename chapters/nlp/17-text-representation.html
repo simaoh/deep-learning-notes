@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>20&nbsp; Text Representation &amp; Word Embeddings – deep_learning_notes</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../chapters/nlp/18-sequence-models.html" rel="next">
+<link href="../../chapters/nlp/_intro_nlp.html" rel="prev">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-fd0503e23dce65854c81c5baaade3bdf.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../custom.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/nlp/17-text-representation.html"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Text Representation &amp; Word Embeddings</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../">deep_learning_notes</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_intro_foundations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Foundations</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/01-neural-networks-and-optimization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Neural Networks and Optimization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/02-generalization-and-learning-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Generalization and Learning Theory</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro_computer_vision.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Computer Vision</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Visual Understanding</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/03-cnns.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Convolutional Neural Networks</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/04-object-detection-and-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Detection and Segmentation</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/05-vision-transformers.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Vision Transformers</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-foundation-models-for-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Foundation Models for Segmentation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Self-Supervised Learning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Generative Modeling</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Models</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/07-vaes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/08-gans.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/09-diffusion-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_conclusion-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Conclusion</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/_intro_video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Video</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/10-video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Video Fundamentals: Motion and Spatiotemporal Architectures</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/11-video-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Video Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/12-video-temporal-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Video Temporal Segmentation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/13-video-understanding-benchmarks.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Video Understanding Benchmarks</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/14-video-generation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Video Generation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/_intro_3d.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">3D Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/11-3d-data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">3D Data Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">3D Reconstruction</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/12-3d-reconstruction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">3D Reconstruction</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/13-gaussian-splatting.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">3D Gaussian Splatting</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Human Pose Estimation</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/human_pose_estimation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Human Pose Estimation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/_intro_nlp.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Natural Language Processing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/17-text-representation.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Text Representation &amp; Word Embeddings</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/18-sequence-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Sequence Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/19-large-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Large Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/20-text-embeddings-evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Text Embedding Models &amp; Evaluation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/_intro_vision_language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Vision-Language</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/16-vision-language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Vision-Language Multimodal Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/_intro_time_series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Time Series</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/14-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">Time Series Fundamentals</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/15-deep-learning-for-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Deep Learning for Time Series</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/_intro_audio.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Audio</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/21-speech-representation-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Speech Representation Learning and Foundation Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/22-automatic-speech-recognition.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Automatic Speech Recognition</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/23-speaker-diarization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Speaker Diarization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/24-neural-audio-codecs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Neural Audio Codecs</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/25-speech-synthesis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">31</span>&nbsp; <span class="chapter-title">Speech Synthesis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/26-speech-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">32</span>&nbsp; <span class="chapter-title">Speech and Audio Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/27-audio-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">33</span>&nbsp; <span class="chapter-title">Audio Understanding Beyond Words</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#sparse-text-representations" id="toc-sparse-text-representations" class="nav-link active" data-scroll-target="#sparse-text-representations"><span class="header-section-number">20.1</span> Sparse Text Representations</a>
+  <ul class="collapse">
+  <li><a href="#bag-of-words-and-term-frequency" id="toc-bag-of-words-and-term-frequency" class="nav-link" data-scroll-target="#bag-of-words-and-term-frequency"><span class="header-section-number">20.1.1</span> Bag-of-Words and Term Frequency</a></li>
+  <li><a href="#tf-idf" id="toc-tf-idf" class="nav-link" data-scroll-target="#tf-idf"><span class="header-section-number">20.1.2</span> TF-IDF</a></li>
+  <li><a href="#bm25" id="toc-bm25" class="nav-link" data-scroll-target="#bm25"><span class="header-section-number">20.1.3</span> BM25</a></li>
+  </ul></li>
+  <li><a href="#word-embeddings" id="toc-word-embeddings" class="nav-link" data-scroll-target="#word-embeddings"><span class="header-section-number">20.2</span> Word Embeddings</a>
+  <ul class="collapse">
+  <li><a href="#word2vec" id="toc-word2vec" class="nav-link" data-scroll-target="#word2vec"><span class="header-section-number">20.2.1</span> Word2Vec</a></li>
+  <li><a href="#glove" id="toc-glove" class="nav-link" data-scroll-target="#glove"><span class="header-section-number">20.2.2</span> GloVe</a></li>
+  </ul></li>
+  <li><a href="#properties-and-uses-of-word-embeddings" id="toc-properties-and-uses-of-word-embeddings" class="nav-link" data-scroll-target="#properties-and-uses-of-word-embeddings"><span class="header-section-number">20.3</span> Properties and Uses of Word Embeddings</a>
+  <ul class="collapse">
+  <li><a href="#semantic-similarity-and-analogy-reasoning" id="toc-semantic-similarity-and-analogy-reasoning" class="nav-link" data-scroll-target="#semantic-similarity-and-analogy-reasoning"><span class="header-section-number">20.3.1</span> Semantic Similarity and Analogy Reasoning</a></li>
+  <li><a href="#bias-and-debiasing" id="toc-bias-and-debiasing" class="nav-link" data-scroll-target="#bias-and-debiasing"><span class="header-section-number">20.3.2</span> Bias and Debiasing</a></li>
+  <li><a href="#bag-of-words-classifier" id="toc-bag-of-words-classifier" class="nav-link" data-scroll-target="#bag-of-words-classifier"><span class="header-section-number">20.3.3</span> Bag-of-Words Classifier</a></li>
+  </ul></li>
+  <li><a href="#interview-questions" id="toc-interview-questions" class="nav-link" data-scroll-target="#interview-questions"><span class="header-section-number">20.4</span> Interview Questions</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Text Representation &amp; Word Embeddings</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="sparse-text-representations" class="level2" data-number="20.1">
+<h2 data-number="20.1" class="anchored" data-anchor-id="sparse-text-representations"><span class="header-section-number">20.1</span> Sparse Text Representations</h2>
+<section id="bag-of-words-and-term-frequency" class="level3" data-number="20.1.1">
+<h3 data-number="20.1.1" class="anchored" data-anchor-id="bag-of-words-and-term-frequency"><span class="header-section-number">20.1.1</span> Bag-of-Words and Term Frequency</h3>
+<p>The <strong>bag-of-words (BoW) model</strong> represents a document as an unordered multiset of its words, discarding grammar and word order. Despite its simplicity, it remains effective for tasks like spam detection or topic classification.</p>
+<p>In its basic form, BoW represents a document <span class="math inline">\(d\)</span> as a vector of <strong>term frequencies</strong>: <span class="math display">\[\text{tf}(t,d) = f_{t,d}\]</span> where <span class="math inline">\(f_{t,d}\)</span> is the raw count of term <span class="math inline">\(t\)</span> in document <span class="math inline">\(d\)</span>. For example, in “<em>the cat sat on the mat</em>”, <span class="math inline">\(\text{tf}(\text{the}, d) = 2\)</span> and <span class="math inline">\(\text{tf}(\text{cat}, d) = 1\)</span>.</p>
+<p>This representation is biased: frequent function words (<em>the</em>, <em>and</em>) dominate the vector even though they carry little semantic information.</p>
+</section>
+<section id="tf-idf" class="level3" data-number="20.1.2">
+<h3 data-number="20.1.2" class="anchored" data-anchor-id="tf-idf"><span class="header-section-number">20.1.2</span> TF-IDF</h3>
+<p>The <strong>term frequency–inverse document frequency (TF-IDF)</strong> scheme corrects for this by down-weighting terms that are common across the whole corpus: <span class="math display">\[w_{t,d} = \text{tf}(t,d) \cdot \underbrace{\log\frac{N}{n_t}}_{\text{idf}(t)}\]</span> where <span class="math inline">\(N\)</span> is the total number of documents and <span class="math inline">\(n_t\)</span> is the number of documents containing <span class="math inline">\(t\)</span>. A term that occurs frequently in <span class="math inline">\(d\)</span> but rarely elsewhere gets a high weight.</p>
+<p><strong>TF-IDF vectors can be used directly for retrieval</strong>: embed the query as a TF-IDF vector and retrieve documents with the highest cosine similarity to precomputed corpus vectors.</p>
+</section>
+<section id="bm25" class="level3" data-number="20.1.3">
+<h3 data-number="20.1.3" class="anchored" data-anchor-id="bm25"><span class="header-section-number">20.1.3</span> BM25</h3>
+<p>TF-IDF still assumes each additional occurrence of a term contributes <em>linearly</em> to relevance — but intuitively, the first occurrence of a query term is far more informative than its tenth. <strong>BM25</strong> addresses this with a <strong>saturating transform</strong> of term frequency plus <strong>document-length normalization</strong>: <span class="math display">\[\boxed{w_{t,d} = \text{idf}(t) \cdot \frac{f_{t,d}\,(k+1)}{f_{t,d} + k\left(1 - b + b\,\dfrac{|d|}{\text{avgdl}}\right)}}\]</span> where <span class="math inline">\(|d|\)</span> is the document length, <span class="math inline">\(\text{avgdl}\)</span> the average document length across the corpus, and <span class="math inline">\(k, b\)</span> are hyperparameters (commonly <span class="math inline">\(k \approx 1.2\)</span>, <span class="math inline">\(b \approx 0.75\)</span>). The weight grows with <span class="math inline">\(f_{t,d}\)</span> but saturates quickly (diminishing returns per extra occurrence), while long documents are penalized relative to short ones to avoid favoring verbosity. To score a document against a query, sum <span class="math inline">\(w_{t,d}\)</span> over all query terms <span class="math inline">\(t\)</span>.</p>
+<p><strong>Interview Insight</strong>: “Why does BM25 outperform raw TF-IDF for search?” Two reasons: (1) the saturating <span class="math inline">\(f_{t,d}/(f_{t,d}+k(\cdots))\)</span> term means a word appearing 10 times isn’t 10× as relevant as one appearing once — it caps out — making the score robust to keyword stuffing; (2) length normalization prevents long documents from accumulating higher scores purely by containing more words. BM25 remains the default <em>lexical</em> (sparse) scorer in modern <strong>hybrid search</strong> systems, where it is combined with dense vector retrieval.</p>
+<p>Despite these refinements, BoW, TF-IDF, and BM25 all treat words as independent, mutually orthogonal dimensions — <em>car</em> and <em>automobile</em> share no signal even though they are near-synonyms. Capturing such relationships requires moving from sparse counts to dense <strong>word embeddings</strong>.</p>
+<hr>
+</section>
+</section>
+<section id="word-embeddings" class="level2" data-number="20.2">
+<h2 data-number="20.2" class="anchored" data-anchor-id="word-embeddings"><span class="header-section-number">20.2</span> Word Embeddings</h2>
+<p>A vocabulary can be represented with <strong>one-hot vectors</strong>, but these are high-dimensional and encode no semantic similarity — any two distinct words are equally (maximally) far apart. <strong>Dense, low-dimensional embeddings</strong> (e.g., <span class="math inline">\(d=512\)</span>) instead place semantically related words close together in a continuous space. Two classic approaches for learning such embeddings from a corpus are <strong>Word2Vec</strong> (a predictive, local-context model) and <strong>GloVe</strong> (a count-based, global-statistics model).</p>
+<section id="word2vec" class="level3" data-number="20.2.1">
+<h3 data-number="20.2.1" class="anchored" data-anchor-id="word2vec"><span class="header-section-number">20.2.1</span> Word2Vec</h3>
+<p>Word2Vec trains a shallow (two-layer) feedforward network on word co-occurrence within a sliding context window, under one of two objectives:</p>
+<div id="fig-word2vec" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-word2vec-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/nlp/word2vec_architectures.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:70.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-word2vec-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;20.1: Word2Vec architectures: CBOW averages the embeddings of the context words <span class="math inline">\(w_{t-2},\dots,w_{t+2}\)</span> to predict the center word <span class="math inline">\(w_t\)</span>; Skip-gram uses the center word <span class="math inline">\(w_t\)</span> to predict each context word individually.
+</figcaption>
+</figure>
+</div>
+<p><strong>CBOW (Continuous Bag of Words)</strong> predicts the target word <span class="math inline">\(t\)</span> from its context <span class="math inline">\(C\)</span>. Let <span class="math inline">\(v_C\)</span> be the average of the input embeddings of the context words, and <span class="math inline">\(u_w\)</span> the output embedding of word <span class="math inline">\(w\)</span>: <span class="math display">\[P(t \mid C) = \frac{\exp(u_t^\top v_C)}{\sum_{w \in V} \exp(u_w^\top v_C)}\]</span></p>
+<p><strong>Skip-gram</strong> uses the target word <span class="math inline">\(t\)</span> to predict each surrounding context word <span class="math inline">\(c\)</span> independently: <span class="math display">\[P(c \mid t) = \frac{\exp(u_c^\top v_t)}{\sum_{w \in V} \exp(u_w^\top v_t)}\]</span></p>
+<p>Both are trained by maximizing the average log-probability of the (target, context) pairs observed in a sliding window of radius <span class="math inline">\(c\)</span> over the corpus. Skip-gram produces more training pairs per pass and tends to do better on rare words; CBOW trains faster and tends to do better on frequent words.</p>
+<section id="efficient-softmax-computation" class="level4" data-number="20.2.1.1">
+<h4 data-number="20.2.1.1" class="anchored" data-anchor-id="efficient-softmax-computation"><span class="header-section-number">20.2.1.1</span> Efficient Softmax Computation</h4>
+<p>Both objectives require a softmax over the entire vocabulary <span class="math inline">\(V\)</span> — for <span class="math inline">\(|V| \approx 100{,}000\)</span>, computing <span class="math inline">\(\sum_{w\in V}\exp(\cdot)\)</span> at every step is prohibitive. Two approximations are used in practice:</p>
+<p><strong>Hierarchical Softmax</strong> arranges the vocabulary as leaves of a binary (Huffman) tree, with internal nodes acting as binary classifiers — common words near the root, rare words deeper. This replaces one <span class="math inline">\(|V|\)</span>-way classification with <span class="math inline">\(O(\log_2 |V|)\)</span> binary classifications.</p>
+<div id="fig-hierarchical-softmax" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-hierarchical-softmax-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/nlp/hierarchical_softmax.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:35.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-hierarchical-softmax-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;20.2: Hierarchical softmax: the vocabulary is organized as a binary tree; <span class="math inline">\(P(t \mid C)\)</span> is the product of binary decisions along the path from the root to the leaf for <span class="math inline">\(t\)</span>, so only <span class="math inline">\(O(\log_2 |V|)\)</span> classifiers are evaluated per prediction.
+</figcaption>
+</figure>
+</div>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>Standard Softmax</th>
+<th>Hierarchical Softmax</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Computation for <span class="math inline">\(\lvert V\rvert = 100{,}000\)</span></td>
+<td><span class="math inline">\(O(\lvert V\rvert) \approx 100{,}000\)</span></td>
+<td><span class="math inline">\(O(\log_2 \lvert V\rvert) \approx 17\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>Leaf nodes have no embeddings of their own — only the internal-node classifier weights are learned. The word embedding for a target word remains the standard input-layer vector fed into the tree.</p>
+<p><strong>Negative Sampling</strong> avoids the tree entirely. For each observed (target, context) pair <span class="math inline">\((w, c)\)</span>, sample <span class="math inline">\(K\)</span> “negative” words <span class="math inline">\(w_1,\dots,w_K\)</span> from a noise distribution <span class="math inline">\(P_n\)</span> (typically unigram frequency raised to the <span class="math inline">\(3/4\)</span> power), and train binary logistic classifiers to separate the true pair from the negatives: <span class="math display">\[\boxed{\mathcal{L}_{\text{NEG}} = -\log\sigma\!\left(u_c^\top v_w\right) - \sum_{k=1}^{K} \mathbb{E}_{w_k \sim P_n}\left[\log\sigma\!\left(-u_c^\top v_{w_k}\right)\right]}\]</span> All classifiers share a single output weight matrix (one column per vocabulary word); at each step, only the columns for the true context word and the <span class="math inline">\(K\)</span> negatives are updated, alongside the input embedding <span class="math inline">\(v_w\)</span>. This gives the model access to <span class="math inline">\(|V|\)</span> potential classifiers while keeping per-step computation constant (<span class="math inline">\(O(K)\)</span>, typically <span class="math inline">\(K \in [5, 20]\)</span>).</p>
+<p><strong>Interview Insight</strong>: At inference / downstream use, the <strong>hidden-layer activations — i.e., the input embeddings <span class="math inline">\(v_w\)</span></strong> — are taken as the word embeddings; the output matrix <span class="math inline">\(u\)</span> is discarded (or occasionally averaged with <span class="math inline">\(v\)</span>).</p>
+</section>
+</section>
+<section id="glove" class="level3" data-number="20.2.2">
+<h3 data-number="20.2.2" class="anchored" data-anchor-id="glove"><span class="header-section-number">20.2.2</span> GloVe</h3>
+<p><strong>GloVe (Global Vectors)</strong> instead starts from a global <strong>word–context co-occurrence matrix</strong> <span class="math inline">\(X\)</span>, where <span class="math inline">\(X_{ij}\)</span> counts how often word <span class="math inline">\(j\)</span> appears in the context window of word <span class="math inline">\(i\)</span>, aggregated over the whole corpus. GloVe then factorizes this matrix into low-dimensional word (<span class="math inline">\(w_i\)</span>) and context (<span class="math inline">\(\tilde w_j\)</span>) vectors:</p>
+<div id="fig-glove-factorization" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-glove-factorization-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/nlp/glove_factorization.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:70.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-glove-factorization-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;20.3: GloVe factorizes the (Words × Contexts) co-occurrence matrix into a (Words × Features) word-embedding matrix and a (Features × Contexts) context-embedding matrix.
+</figcaption>
+</figure>
+</div>
+<p><span class="math display">\[\boxed{J = \sum_{i,j=1}^{V} f(X_{ij})\left(w_i^\top \tilde w_j + b_i + \tilde b_j - \log X_{ij}\right)^2}\]</span> <span class="math display">\[f(x) = \begin{cases} (x / x_{\max})^{\alpha} &amp; x &lt; x_{\max} \\ 1 &amp; \text{otherwise} \end{cases} \qquad (x_{\max}=100,\ \alpha = 3/4)\]</span></p>
+<ul>
+<li><strong>Weighting <span class="math inline">\(f(X_{ij})\)</span></strong>: extremely rare co-occurrences are noisy, so <span class="math inline">\(f\)</span> scales them down for <span class="math inline">\(x &lt; x_{\max}\)</span>; extremely frequent pairs (e.g.&nbsp;“the”, “a”) are capped at weight <span class="math inline">\(1\)</span> rather than being allowed to dominate further.</li>
+<li><strong>The <span class="math inline">\(\log X_{ij}\)</span> term</strong> serves two purposes: (1) raw co-occurrence counts span orders of magnitude (Zipf’s law), and the log compresses this range so rare and frequent pairs can be fit in the same embedding space; (2) it is the <strong>ratios</strong> of co-occurrence probabilities — not the raw probabilities — that carry semantic information (e.g., the relationship between “king” and “queen” is captured by how their co-occurrence with “man” vs.&nbsp;“woman” <em>ratios</em> compare). Taking logs turns these ratios into additive differences, which is exactly the structure dot-product embeddings can represent — giving rise to linear analogies like “king” − “man” + “woman” ≈ “queen”.</li>
+</ul>
+<p><strong>Interview Insight</strong>: Word2Vec (skip-gram with negative sampling) and GloVe look algorithmically different — one is a neural predictive model, the other an explicit matrix factorization — but Levy &amp; Goldberg (2014) showed skip-gram with negative sampling implicitly factorizes a <strong>shifted PMI (pointwise mutual information) matrix</strong>. Both methods are, at their core, low-rank factorizations of a word co-occurrence statistic.</p>
+<hr>
+</section>
+</section>
+<section id="properties-and-uses-of-word-embeddings" class="level2" data-number="20.3">
+<h2 data-number="20.3" class="anchored" data-anchor-id="properties-and-uses-of-word-embeddings"><span class="header-section-number">20.3</span> Properties and Uses of Word Embeddings</h2>
+<section id="semantic-similarity-and-analogy-reasoning" class="level3" data-number="20.3.1">
+<h3 data-number="20.3.1" class="anchored" data-anchor-id="semantic-similarity-and-analogy-reasoning"><span class="header-section-number">20.3.1</span> Semantic Similarity and Analogy Reasoning</h3>
+<p>In a well-trained embedding space, words with similar meanings map to nearby points — clusters visible via dimensionality-reduction techniques like <strong>t-SNE</strong>. Beyond proximity, embeddings support <strong>analogy reasoning</strong>: given a similarity metric (cosine similarity or Euclidean distance), the vector closest to <span class="math display">\[e_{\text{king}} - e_{\text{man}} + e_{\text{woman}}\]</span> is typically <span class="math inline">\(e_{\text{queen}}\)</span>. Such relationships correspond to (approximate) parallelograms in the embedding space — a direct consequence of the additive, ratio-based structure discussed above.</p>
+</section>
+<section id="bias-and-debiasing" class="level3" data-number="20.3.2">
+<h3 data-number="20.3.2" class="anchored" data-anchor-id="bias-and-debiasing"><span class="header-section-number">20.3.2</span> Bias and Debiasing</h3>
+<p>Word embeddings inherit the biases present in their training corpus. A canonical example is gender bias: the embedding space exhibits analogies like [Father : Doctor] :: [Mother : Nurse]. To mitigate this:</p>
+<ol type="1">
+<li><strong>Identify the bias direction</strong> — e.g., average the difference vectors (man − woman), (boy − girl), etc., to obtain a “gender direction” <span class="math inline">\(g\)</span>.</li>
+<li><strong>Neutralize</strong>: for words that <em>should</em> be gender-neutral (e.g., “doctor”, “nurse”), project out the component along <span class="math inline">\(g\)</span>, placing them on the hyperplane orthogonal to <span class="math inline">\(g\)</span>.</li>
+<li><strong>Equalize</strong>: for word pairs that <em>should</em> differ only by gender (e.g., “father”/“mother”), move them to be equidistant from that hyperplane — by projecting their midpoint onto it and reflecting each word symmetrically around it.</li>
+</ol>
+</section>
+<section id="bag-of-words-classifier" class="level3" data-number="20.3.3">
+<h3 data-number="20.3.3" class="anchored" data-anchor-id="bag-of-words-classifier"><span class="header-section-number">20.3.3</span> Bag-of-Words Classifier</h3>
+<p>A simple but often-effective baseline for tasks like sentiment classification: sum (or average) the word embeddings of a sentence into a single vector, and train a logistic-regression or softmax head on top — the <strong>bag-of-words classifier</strong>. It discards word order entirely. To model order and context, these embeddings instead become the <em>input</em> to sequence models — RNNs, LSTMs, GRUs, and Transformers — covered in the next chapter.</p>
+<hr>
+</section>
+</section>
+<section id="interview-questions" class="level2" data-number="20.4">
+<h2 data-number="20.4" class="anchored" data-anchor-id="interview-questions"><span class="header-section-number">20.4</span> Interview Questions</h2>
+<p><strong>Q: Why does BM25 generally outperform raw TF-IDF for lexical search?</strong></p>
+<p>TF-IDF weights grow linearly with term frequency, so a document that repeats a query term many times (even artificially) scores proportionally higher. BM25 applies a saturating transform <span class="math inline">\(\frac{f_{t,d}(k+1)}{f_{t,d}+k(\cdots)}\)</span> so additional occurrences contribute diminishing returns, and normalizes by document length relative to the corpus average, so long documents don’t win purely by being long. This makes BM25 more robust and is why it remains the standard sparse-retrieval baseline, often combined with dense embeddings in hybrid search.</p>
+<hr>
+<p><strong>Q: Why can’t Word2Vec train with a plain softmax over the vocabulary, and what are the two standard fixes?</strong></p>
+<p>The softmax denominator <span class="math inline">\(\sum_{w \in V}\exp(u_w^\top v)\)</span> requires a full pass over the vocabulary (<span class="math inline">\(O(|V|)\)</span>, e.g.&nbsp;~100K) at every training step — for both the forward pass and the gradient update of every output vector. <strong>Hierarchical softmax</strong> restructures the output layer as a binary tree, reducing this to <span class="math inline">\(O(\log_2 |V|)\)</span> binary decisions. <strong>Negative sampling</strong> instead reframes training as binary classification: distinguish the true (target, context) pair from <span class="math inline">\(K\)</span> randomly sampled negative pairs, updating only <span class="math inline">\(O(K)\)</span> output vectors per step.</p>
+<hr>
+<p><strong>Q: CBOW vs.&nbsp;Skip-gram — what’s the practical trade-off?</strong></p>
+<p>CBOW averages all context word embeddings into a single vector to predict the center word — faster to train (one prediction per window) and tends to work well for frequent words, since averaging smooths out noise. Skip-gram predicts each context word individually from the center word — more training examples per window (one per context position), which gives rare words more gradient signal, generally improving embeddings for infrequent vocabulary at the cost of more compute.</p>
+<hr>
+<p><strong>Q: How are Word2Vec and GloVe related, despite looking like different algorithms?</strong></p>
+<p>GloVe is explicitly a (weighted, biased) low-rank factorization of the log co-occurrence matrix. Word2Vec’s skip-gram with negative sampling appears to be a neural predictive model, but Levy &amp; Goldberg (2014) showed it implicitly factorizes a shifted pointwise mutual information (PMI) matrix. Both methods ultimately produce embeddings whose dot products approximate a (shifted, transformed) co-occurrence statistic — the difference is mainly in optimization (online SGD over local windows vs.&nbsp;direct factorization of global counts).</p>
+<hr>
+<p><strong>Q: Why do word embeddings support linear analogy arithmetic (e.g., king − man + woman ≈ queen)?</strong></p>
+<p>Both GloVe’s objective and the PMI matrix that Word2Vec implicitly factorizes are built on <strong>log</strong> co-occurrence statistics. The semantic relationship between two words is carried by the <em>ratio</em> of their co-occurrence probabilities with other “probe” words — and taking logs converts ratios into differences. Embedding dot products (and the resulting vector geometry) therefore encode these log-ratio differences additively, which is precisely the structure that makes vector offsets between analogous pairs (e.g., king−man and queen−woman) align.</p>
+<hr>
+<p><strong>Q: How would you debias a gender-stereotyped analogy like [father : doctor] :: [mother : nurse] in an embedding space?</strong></p>
+<p>First estimate a “gender direction” <span class="math inline">\(g\)</span> by averaging difference vectors of known gendered pairs (man−woman, he−she, boy−girl, …). Then, for words that should be gender-neutral (doctor, nurse, engineer), <strong>neutralize</strong> by projecting out their component along <span class="math inline">\(g\)</span> — placing them on the hyperplane orthogonal to <span class="math inline">\(g\)</span>. For words that legitimately encode gender (father/mother, actor/actress), <strong>equalize</strong> by repositioning the pair symmetrically around that hyperplane, so they differ <em>only</em> along <span class="math inline">\(g\)</span> and are equidistant from all neutral words.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const callouts = document.querySelectorAll('.callout-tip');
+    callouts.forEach(function(callout) {
+      callout.style.borderLeftColor = '#2196f3'; //#616161; //'#4caf50';
+      callout.style.color = 'ffffff'; // Dark purple-gray text
+    });
+  });
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../chapters/nlp/_intro_nlp.html" class="pagination-link" aria-label="Natural Language Processing">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Natural Language Processing</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../chapters/nlp/18-sequence-models.html" class="pagination-link" aria-label="Sequence Models">
+        <span class="nav-page-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Sequence Models</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="../../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

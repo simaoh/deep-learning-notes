@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>21&nbsp; Sequence Models – deep_learning_notes</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../chapters/nlp/19-large-language-models.html" rel="next">
+<link href="../../chapters/nlp/17-text-representation.html" rel="prev">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-fd0503e23dce65854c81c5baaade3bdf.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../custom.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/nlp/18-sequence-models.html"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Sequence Models</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../">deep_learning_notes</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_intro_foundations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Foundations</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/01-neural-networks-and-optimization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Neural Networks and Optimization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/02-generalization-and-learning-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Generalization and Learning Theory</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro_computer_vision.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Computer Vision</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Visual Understanding</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/03-cnns.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Convolutional Neural Networks</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/04-object-detection-and-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Detection and Segmentation</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/05-vision-transformers.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Vision Transformers</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-foundation-models-for-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Foundation Models for Segmentation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Self-Supervised Learning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Generative Modeling</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Models</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/07-vaes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/08-gans.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/09-diffusion-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_conclusion-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Conclusion</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/_intro_video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Video</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/10-video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Video Fundamentals: Motion and Spatiotemporal Architectures</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/11-video-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Video Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/12-video-temporal-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Video Temporal Segmentation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/13-video-understanding-benchmarks.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Video Understanding Benchmarks</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/14-video-generation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Video Generation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/_intro_3d.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">3D Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/11-3d-data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">3D Data Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">3D Reconstruction</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/12-3d-reconstruction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">3D Reconstruction</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/13-gaussian-splatting.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">3D Gaussian Splatting</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Human Pose Estimation</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/human_pose_estimation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Human Pose Estimation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/_intro_nlp.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Natural Language Processing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/17-text-representation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Text Representation &amp; Word Embeddings</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/18-sequence-models.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Sequence Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/19-large-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Large Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/20-text-embeddings-evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Text Embedding Models &amp; Evaluation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/_intro_vision_language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Vision-Language</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/16-vision-language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Vision-Language Multimodal Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/_intro_time_series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Time Series</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/14-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">Time Series Fundamentals</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/15-deep-learning-for-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Deep Learning for Time Series</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/_intro_audio.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Audio</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/21-speech-representation-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Speech Representation Learning and Foundation Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/22-automatic-speech-recognition.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Automatic Speech Recognition</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/23-speaker-diarization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Speaker Diarization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/24-neural-audio-codecs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Neural Audio Codecs</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/25-speech-synthesis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">31</span>&nbsp; <span class="chapter-title">Speech Synthesis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/26-speech-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">32</span>&nbsp; <span class="chapter-title">Speech and Audio Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/27-audio-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">33</span>&nbsp; <span class="chapter-title">Audio Understanding Beyond Words</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#recurrent-neural-networks" id="toc-recurrent-neural-networks" class="nav-link active" data-scroll-target="#recurrent-neural-networks"><span class="header-section-number">21.1</span> Recurrent Neural Networks</a>
+  <ul class="collapse">
+  <li><a href="#vanilla-rnn" id="toc-vanilla-rnn" class="nav-link" data-scroll-target="#vanilla-rnn"><span class="header-section-number">21.1.1</span> Vanilla RNN</a></li>
+  <li><a href="#training-backpropagation-through-time" id="toc-training-backpropagation-through-time" class="nav-link" data-scroll-target="#training-backpropagation-through-time"><span class="header-section-number">21.1.2</span> Training: Backpropagation Through Time</a></li>
+  <li><a href="#gated-architectures" id="toc-gated-architectures" class="nav-link" data-scroll-target="#gated-architectures"><span class="header-section-number">21.1.3</span> Gated Architectures</a></li>
+  <li><a href="#inference" id="toc-inference" class="nav-link" data-scroll-target="#inference"><span class="header-section-number">21.1.4</span> Inference</a></li>
+  <li><a href="#architectural-improvements" id="toc-architectural-improvements" class="nav-link" data-scroll-target="#architectural-improvements"><span class="header-section-number">21.1.5</span> Architectural Improvements</a></li>
+  </ul></li>
+  <li><a href="#the-transformer" id="toc-the-transformer" class="nav-link" data-scroll-target="#the-transformer"><span class="header-section-number">21.2</span> The Transformer</a>
+  <ul class="collapse">
+  <li><a href="#sec-input-representation" id="toc-sec-input-representation" class="nav-link" data-scroll-target="#sec-input-representation"><span class="header-section-number">21.2.1</span> Input Representation</a></li>
+  <li><a href="#scaled-dot-product-attention" id="toc-scaled-dot-product-attention" class="nav-link" data-scroll-target="#scaled-dot-product-attention"><span class="header-section-number">21.2.2</span> Scaled Dot-Product Attention</a></li>
+  <li><a href="#multi-head-attention" id="toc-multi-head-attention" class="nav-link" data-scroll-target="#multi-head-attention"><span class="header-section-number">21.2.3</span> Multi-Head Attention</a></li>
+  <li><a href="#feed-forward-network-residuals-and-normalization" id="toc-feed-forward-network-residuals-and-normalization" class="nav-link" data-scroll-target="#feed-forward-network-residuals-and-normalization"><span class="header-section-number">21.2.4</span> Feed-Forward Network, Residuals, and Normalization</a></li>
+  <li><a href="#encoder-decoder-architecture-and-masking" id="toc-encoder-decoder-architecture-and-masking" class="nav-link" data-scroll-target="#encoder-decoder-architecture-and-masking"><span class="header-section-number">21.2.5</span> Encoder-Decoder Architecture and Masking</a></li>
+  <li><a href="#language-modeling-objective" id="toc-language-modeling-objective" class="nav-link" data-scroll-target="#language-modeling-objective"><span class="header-section-number">21.2.6</span> Language Modeling Objective</a></li>
+  </ul></li>
+  <li><a href="#interview-questions" id="toc-interview-questions" class="nav-link" data-scroll-target="#interview-questions"><span class="header-section-number">21.3</span> Interview Questions</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Sequence Models</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>Word embeddings (<a href="17-text-representation.html#fig-word2vec" class="quarto-xref">Figure&nbsp;<span>20.1</span></a>) give us a fixed vector per token, but most NLP tasks operate over <em>sequences</em> of tokens — sentences, documents, dialogues — of variable length, where order and long-range dependencies matter. This chapter covers the two dominant families of architectures for modeling sequences: <strong>Recurrent Neural Networks (RNNs)</strong>, which process tokens one at a time while maintaining a hidden state, and the <strong>Transformer</strong>, which processes the entire sequence in parallel via self-attention and underlies virtually all modern large language models.</p>
+<hr>
+<section id="recurrent-neural-networks" class="level2" data-number="21.1">
+<h2 data-number="21.1" class="anchored" data-anchor-id="recurrent-neural-networks"><span class="header-section-number">21.1</span> Recurrent Neural Networks</h2>
+<p>An RNN maps an input sequence <span class="math inline">\(x = (x^{&lt;1&gt;}, x^{&lt;2&gt;}, \dots, x^{&lt;T_x&gt;})\)</span> to an output sequence <span class="math inline">\(y = (y^{&lt;1&gt;}, y^{&lt;2&gt;}, \dots, y^{&lt;T_y&gt;})\)</span> of (possibly different) length, by applying the <em>same</em> parametrized transformation recurrently at every time step. This recurrence lets RNNs handle inputs and outputs of arbitrary length with a fixed number of parameters.</p>
+<div id="fig-rnn-tasks" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-rnn-tasks-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/nlp/sequence_task_types.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:95.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-rnn-tasks-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;21.1: Sequence task types: (1) one-to-one — vanilla feedforward classification with no recurrence; (2) one-to-many — e.g., image captioning (one input, a sequence of output words); (3) many-to-one — e.g., sentiment classification (a sequence of words, one output label); (4) many-to-many (unequal lengths) — e.g., machine translation (read the full input sequence, then generate the output sequence); (5) many-to-many (synced) — e.g., per-frame video classification.
+</figcaption>
+</figure>
+</div>
+<section id="vanilla-rnn" class="level3" data-number="21.1.1">
+<h3 data-number="21.1.1" class="anchored" data-anchor-id="vanilla-rnn"><span class="header-section-number">21.1.1</span> Vanilla RNN</h3>
+<p>The hidden state <span class="math inline">\(h^{&lt;t&gt;}\)</span> is computed from the previous hidden state <span class="math inline">\(h^{&lt;t-1&gt;}\)</span> and the current input <span class="math inline">\(x^{&lt;t&gt;}\)</span> via a single dense layer with a <span class="math inline">\(\tanh\)</span> nonlinearity, and the <strong>same weight matrices are reused at every time step</strong>:</p>
+<p><span class="math display">\[h^{&lt;t&gt;} = \tanh\left(W_{hh}\, h^{&lt;t-1&gt;} + W_{xh}\, x^{&lt;t&gt;} + b_h\right)\]</span></p>
+<p>An output can be read off at any (or every) time step via a separate output projection, e.g.&nbsp;<span class="math inline">\(\hat y^{&lt;t&gt;} = \text{softmax}(W_{hy}\, h^{&lt;t&gt;} + b_y)\)</span>.</p>
+<div id="fig-rnn-cell" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-rnn-cell-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/nlp/rnn_cell.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:30.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-rnn-cell-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;21.2: The vanilla RNN cell: the hidden state <span class="math inline">\(h_t\)</span> is the <span class="math inline">\(\tanh\)</span> of an affine combination of the input <span class="math inline">\(x_t\)</span> and the previous hidden state (fed back through the recurrent loop).
+</figcaption>
+</figure>
+</div>
+</section>
+<section id="training-backpropagation-through-time" class="level3" data-number="21.1.2">
+<h3 data-number="21.1.2" class="anchored" data-anchor-id="training-backpropagation-through-time"><span class="header-section-number">21.1.2</span> Training: Backpropagation Through Time</h3>
+<p><strong>Forward pass</strong>: the hidden state is propagated sequentially — <span class="math inline">\(h^{&lt;t&gt;}\)</span> depends on <span class="math inline">\(h^{&lt;t-1&gt;}\)</span>, which depends on <span class="math inline">\(h^{&lt;t-2&gt;}\)</span>, and so on, all the way back to <span class="math inline">\(h^{&lt;0&gt;}\)</span> (usually initialized to zero).</p>
+<p><strong>Backward pass</strong> (“<strong>backpropagation through time</strong>”, BPTT): gradients with respect to the loss at each output <span class="math inline">\(y^{&lt;t&gt;}\)</span> must be propagated back not only through the layer at time <span class="math inline">\(t\)</span>, but recursively through <em>every previous time step</em>, since <span class="math inline">\(W_{hh}\)</span> and <span class="math inline">\(W_{xh}\)</span> are shared across all <span class="math inline">\(t\)</span>. The gradient with respect to <span class="math inline">\(h^{&lt;1&gt;}\)</span> is a product of <span class="math inline">\(T\)</span> Jacobians of the recurrence — exactly the same structure as backpropagation through a feedforward network with <span class="math inline">\(T\)</span> layers, where <span class="math inline">\(T\)</span> is the sequence length.</p>
+<p><strong>Vanishing and exploding gradients</strong>: because the gradient is a product of <span class="math inline">\(T\)</span> Jacobians, it can shrink to zero or blow up exponentially in <span class="math inline">\(T\)</span> — the same pathology that affects very deep feedforward networks, but now <span class="math inline">\(T\)</span> can be hundreds or thousands of tokens.</p>
+<ul>
+<li><strong>Exploding gradients</strong>: addressed with <strong>gradient clipping</strong> (rescale the gradient if its norm exceeds a threshold) and <strong>truncated BPTT</strong> (only backpropagate through a fixed window of recent time steps).</li>
+<li><strong>Vanishing gradients</strong>: addressed with careful weight initialization (e.g., orthogonal / Kaiming) and, more effectively, <strong>gated architectures</strong> (GRU, LSTM) that provide an (approximately) additive, residual-like path for the cell state across time steps — analogous to skip connections in deep feedforward nets.</li>
+</ul>
+</section>
+<section id="gated-architectures" class="level3" data-number="21.1.3">
+<h3 data-number="21.1.3" class="anchored" data-anchor-id="gated-architectures"><span class="header-section-number">21.1.3</span> Gated Architectures</h3>
+<section id="gru-gated-recurrent-unit" class="level4" data-number="21.1.3.1">
+<h4 data-number="21.1.3.1" class="anchored" data-anchor-id="gru-gated-recurrent-unit"><span class="header-section-number">21.1.3.1</span> GRU (Gated Recurrent Unit)</h4>
+<p>The GRU introduces two gates — a <strong>reset gate</strong> <span class="math inline">\(\Gamma_r\)</span> and an <strong>update gate</strong> <span class="math inline">\(\Gamma_u\)</span> — that control how much of the previous state is retained versus overwritten by a new candidate value:</p>
+<p><span class="math display">\[\Gamma_r = \sigma\left(W_r [c^{&lt;t-1&gt;}, x^{&lt;t&gt;}] + b_r\right)\]</span> <span class="math display">\[\Gamma_u = \sigma\left(W_u [c^{&lt;t-1&gt;}, x^{&lt;t&gt;}] + b_u\right)\]</span> <span class="math display">\[\tilde c^{&lt;t&gt;} = \tanh\left(W_c [\Gamma_r \odot c^{&lt;t-1&gt;},\ x^{&lt;t&gt;}] + b_c\right)\]</span> <span class="math display">\[\boxed{c^{&lt;t&gt;} = \Gamma_u \odot c^{&lt;t-1&gt;} + (1 - \Gamma_u) \odot \tilde c^{&lt;t&gt;}}\]</span></p>
+<p>where <span class="math inline">\([\cdot,\cdot]\)</span> denotes concatenation and <span class="math inline">\(\odot\)</span> elementwise multiplication. The reset gate controls how much of the past state feeds into the new candidate <span class="math inline">\(\tilde c^{&lt;t&gt;}\)</span>; the update gate then interpolates between the old state and the candidate. When <span class="math inline">\(\Gamma_u \approx 1\)</span>, <span class="math inline">\(c^{&lt;t&gt;} \approx c^{&lt;t-1&gt;}\)</span> — gradients flow through this path almost unimpeded, mitigating vanishing gradients.</p>
+<div id="fig-gru" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-gru-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/nlp/gru_cell.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:40.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-gru-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;21.3: The GRU cell: the reset gate <span class="math inline">\(\Gamma_r\)</span> gates how much of <span class="math inline">\(c^{t-1}\)</span> contributes to the candidate <span class="math inline">\(\tilde c_t\)</span>; the update gate <span class="math inline">\(\Gamma_u\)</span> then interpolates between <span class="math inline">\(c^{t-1}\)</span> and <span class="math inline">\(\tilde c_t\)</span> to produce <span class="math inline">\(c^t\)</span>.
+</figcaption>
+</figure>
+</div>
+</section>
+<section id="lstm-long-short-term-memory" class="level4" data-number="21.1.3.2">
+<h4 data-number="21.1.3.2" class="anchored" data-anchor-id="lstm-long-short-term-memory"><span class="header-section-number">21.1.3.2</span> LSTM (Long Short-Term Memory)</h4>
+<p>The LSTM separates the <strong>cell state</strong> <span class="math inline">\(c^{&lt;t&gt;}\)</span> (long-term memory) from the <strong>hidden state</strong> <span class="math inline">\(h^{&lt;t&gt;}\)</span> (output), and uses three gates — <strong>forget</strong> <span class="math inline">\(\Gamma_f\)</span>, <strong>update/input</strong> <span class="math inline">\(\Gamma_u\)</span>, and <strong>output</strong> <span class="math inline">\(\Gamma_o\)</span>:</p>
+<p><span class="math display">\[\Gamma_f = \sigma\left(W_f[h^{&lt;t-1&gt;}, x^{&lt;t&gt;}] + b_f\right), \quad \Gamma_u = \sigma\left(W_u[h^{&lt;t-1&gt;}, x^{&lt;t&gt;}] + b_u\right), \quad \Gamma_o = \sigma\left(W_o[h^{&lt;t-1&gt;}, x^{&lt;t&gt;}] + b_o\right)\]</span> <span class="math display">\[\tilde c^{&lt;t&gt;} = \tanh\left(W_c[h^{&lt;t-1&gt;}, x^{&lt;t&gt;}] + b_c\right)\]</span> <span class="math display">\[\boxed{c^{&lt;t&gt;} = \Gamma_f \odot c^{&lt;t-1&gt;} + \Gamma_u \odot \tilde c^{&lt;t&gt;}, \qquad h^{&lt;t&gt;} = \Gamma_o \odot \tanh(c^{&lt;t&gt;})}\]</span></p>
+<p>The forget gate decides what to discard from <span class="math inline">\(c^{&lt;t-1&gt;}\)</span>, the update gate decides how much of the new candidate <span class="math inline">\(\tilde c^{&lt;t&gt;}\)</span> to write in, and the output gate decides how much of the (squashed) cell state to expose as the hidden state. Like the GRU’s update gate, <span class="math inline">\(\Gamma_f \approx 1\)</span> creates a near-identity path for <span class="math inline">\(c^{&lt;t&gt;}\)</span> across time steps.</p>
+<div id="fig-lstm" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-lstm-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/nlp/lstm_cell.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:55.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-lstm-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;21.4: The LSTM cell: the forget gate scales the incoming cell state <span class="math inline">\(c^{t-1}\)</span>; the input gate scales a new candidate value, which is added to give <span class="math inline">\(c^t\)</span>; the output gate scales <span class="math inline">\(\tanh(c^t)\)</span> to produce the hidden state <span class="math inline">\(h^t\)</span>.
+</figcaption>
+</figure>
+</div>
+<p><strong>Interview Insight</strong>: GRU vs.&nbsp;LSTM is mostly an engineering trade-off, not a capability gap — GRU has fewer parameters (2 gates vs.&nbsp;3, and a single state vector vs.&nbsp;separate cell/hidden states), making it faster to train and often preferred for smaller datasets, while LSTM’s extra gate gives it slightly more expressive control over what to remember. In practice, both are largely superseded by Transformers for sequence modeling at scale, but they remain relevant for streaming/low-latency settings where strict <span class="math inline">\(O(1)\)</span>-per-token recurrence (vs.&nbsp;<span class="math inline">\(O(T)\)</span> attention) is valuable.</p>
+</section>
+</section>
+<section id="inference" class="level3" data-number="21.1.4">
+<h3 data-number="21.1.4" class="anchored" data-anchor-id="inference"><span class="header-section-number">21.1.4</span> Inference</h3>
+<p><strong>Language modeling</strong>: at each step, sample (or take the argmax of) the output distribution <span class="math inline">\(\hat y^{&lt;t&gt;}\)</span> to obtain a token; feed that token, together with the hidden state <span class="math inline">\(h^{&lt;t&gt;}\)</span>, as input to produce <span class="math inline">\(\hat y^{&lt;t+1&gt;}\)</span>. Repeat until a maximum length is reached or an end-of-sequence token is produced.</p>
+<p><strong>Beam search</strong>: greedily sampling the highest-probability token at each step (<strong>greedy decoding</strong>, equivalent to beam width <span class="math inline">\(b=1\)</span>) does not guarantee the highest-probability <em>sequence</em>, since an early suboptimal choice can preclude a globally better continuation. Beam search keeps the top-<span class="math inline">\(b\)</span> partial sequences (by probability) at each step, expands each by one token, and again keeps only the top-<span class="math inline">\(b\)</span> — a middle ground between greedy decoding (<span class="math inline">\(b=1\)</span>) and exhaustive search, faster than full BFS/DFS but not guaranteed optimal.</p>
+<p>Because sequence probability <span class="math inline">\(P(y\mid x) = \prod_{t=1}^{T_y} P(y^{&lt;t&gt;}\mid x, y^{&lt;1:t-1&gt;})\)</span> is a product of many terms <span class="math inline">\(&lt;1\)</span>, it underflows numerically and is also biased toward shorter sequences. Beam search therefore maximizes the <strong>length-normalized log-probability</strong>:</p>
+<p><span class="math display">\[\boxed{\text{score}(y) = \frac{1}{T_y^{\alpha}} \sum_{t=1}^{T_y} \log P\!\left(y^{&lt;t&gt;} \mid x, y^{&lt;1:t-1&gt;}\right)}\]</span></p>
+<p>where <span class="math inline">\(\alpha \in [0,1]\)</span> controls the strength of the length penalty: <span class="math inline">\(\alpha=0\)</span> recovers raw (unnormalized) log-probability (favoring short sequences), <span class="math inline">\(\alpha=1\)</span> is the sequence-average log-probability, and intermediate values (commonly <span class="math inline">\(\alpha \approx 0.7\)</span>) interpolate between the two.</p>
+<p><strong>Error analysis</strong>: given a generated sequence <span class="math inline">\(\hat y\)</span> and a reference <span class="math inline">\(\tilde y\)</span>, compare <span class="math inline">\(P(\hat y \mid x)\)</span> and <span class="math inline">\(P(\tilde y \mid x)\)</span> under the trained model:</p>
+<ul>
+<li>If <span class="math inline">\(P(\hat y \mid x) &gt; P(\tilde y \mid x)\)</span>: the model assigns higher probability to its own (worse) output than to the reference — the <strong>model itself</strong> needs more training.</li>
+<li>If <span class="math inline">\(P(\hat y \mid x) \le P(\tilde y \mid x)\)</span>: the model already prefers the reference, but <strong>beam search failed to find it</strong> — increase the beam width.</li>
+</ul>
+</section>
+<section id="architectural-improvements" class="level3" data-number="21.1.5">
+<h3 data-number="21.1.5" class="anchored" data-anchor-id="architectural-improvements"><span class="header-section-number">21.1.5</span> Architectural Improvements</h3>
+<p><strong>Deep RNNs</strong>: stack multiple recurrent layers (RNN, GRU, or LSTM cells) on top of each other — the hidden-state sequence output by layer <span class="math inline">\(\ell\)</span> becomes the input sequence to layer <span class="math inline">\(\ell+1\)</span> — often followed by one or more feedforward layers on top of the final hidden states.</p>
+<p><strong>Bidirectional RNNs</strong>: a single forward pass only allows <span class="math inline">\(h^{&lt;t&gt;}\)</span> to depend on <span class="math inline">\(x^{&lt;1:t&gt;}\)</span> — but for tasks like NER or translation, the representation at position <span class="math inline">\(t\)</span> should also depend on <em>future</em> tokens <span class="math inline">\(x^{&lt;t+1:T_x&gt;}\)</span>. A bidirectional RNN runs two independent recurrences — one left-to-right over <span class="math inline">\((x^{&lt;1&gt;}, \dots, x^{&lt;T_x&gt;})\)</span> and one right-to-left over <span class="math inline">\((x^{&lt;T_x&gt;}, \dots, x^{&lt;1&gt;})\)</span> — and combines (e.g., concatenates) the two hidden states at each position.</p>
+<p><strong>Attention-based Seq2Seq</strong>: many-to-many tasks of unequal input/output length (e.g., machine translation) are naturally modeled with an <strong>encoder-decoder architecture</strong>: an encoder RNN reads the entire input sequence into a sequence of hidden states <span class="math inline">\(h^{&lt;1&gt;}, \dots, h^{&lt;T_x&gt;}\)</span>, and a decoder RNN generates the output sequence <span class="math inline">\(\hat y^{&lt;1&gt;}, \dots, \hat y^{&lt;T_y&gt;}\)</span> token by token.</p>
+<div id="fig-seq2seq" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-seq2seq-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/nlp/seq2seq_encoder_decoder.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:85.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-seq2seq-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;21.5: Encoder-decoder (seq2seq) architecture: the encoder (green) reads the input sequence into hidden states <span class="math inline">\(a^{&lt;t&gt;}\)</span>; the decoder (purple) then generates the output sequence autoregressively, each step’s prediction feeding back as the next step’s input.
+</figcaption>
+</figure>
+</div>
+<p>A decoder that only sees a single fixed-size summary vector (e.g., the encoder’s final hidden state) struggles with long inputs — this is the <strong>information bottleneck</strong> of vanilla seq2seq. The <strong>attention mechanism</strong> resolves this by letting the decoder, at each step <span class="math inline">\(t\)</span>, attend over <em>all</em> encoder hidden states and form a <strong>context vector</strong> as a weighted sum:</p>
+<p><span class="math display">\[\boxed{\text{context}^{&lt;t&gt;} = \sum_{t'=1}^{T_x} \alpha^{&lt;t,t'&gt;}\, h^{&lt;t'&gt;}}\]</span></p>
+<p>where the attention weights <span class="math inline">\(\alpha^{&lt;t,t'&gt;}\)</span> are the softmax (over <span class="math inline">\(t'\)</span>) of the outputs of a small feedforward network applied to <span class="math inline">\([s^{&lt;t-1&gt;}, h^{&lt;t'&gt;}]\)</span> — i.e., how relevant encoder position <span class="math inline">\(t'\)</span> is to the decoder’s current state <span class="math inline">\(s^{&lt;t-1&gt;}\)</span>. The decoder then uses <span class="math inline">\([\,s^{&lt;t-1&gt;}, \text{context}^{&lt;t&gt;}\,]\)</span> to produce <span class="math inline">\(s^{&lt;t&gt;}\)</span> and <span class="math inline">\(\hat y^{&lt;t&gt;}\)</span>.</p>
+<div id="fig-attention-rnn" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-attention-rnn-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/nlp/attention_mechanism.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:85.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-attention-rnn-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;21.6: Attention mechanism: the decoder LSTM at each step receives a context vector formed as the softmax-weighted sum of all (bidirectional) encoder hidden states <span class="math inline">\(h(t')\)</span>, with weights <span class="math inline">\(\alpha(t')\)</span> learned as a function of the decoder’s previous state and each encoder state.
+</figcaption>
+</figure>
+</div>
+<p><strong>Interview Insight</strong>: This additive attention mechanism (Bahdanau et al., 2015) is the direct conceptual ancestor of the Transformer’s self-attention. The key generalization the Transformer makes is to (1) replace the small feedforward “alignment” network with a simple dot product (scaled for numerical stability), and (2) apply this attention <em>everywhere</em> — including between positions of the <em>same</em> sequence (self-attention) — rather than only from decoder to encoder, removing the need for recurrence entirely.</p>
+<hr>
+</section>
+</section>
+<section id="the-transformer" class="level2" data-number="21.2">
+<h2 data-number="21.2" class="anchored" data-anchor-id="the-transformer"><span class="header-section-number">21.2</span> The Transformer</h2>
+<p>RNNs process tokens sequentially: <span class="math inline">\(h^{&lt;t&gt;}\)</span> cannot be computed until <span class="math inline">\(h^{&lt;t-1&gt;}\)</span> is available. This is fundamentally unparallelizable across the sequence dimension, and gradients/information must pass through <span class="math inline">\(O(T)\)</span> sequential steps to connect distant tokens. The <strong>Transformer</strong> (Vaswani et al., 2017) replaces recurrence entirely with <strong>self-attention</strong>, giving:</p>
+<ul>
+<li><strong>Parallel processing</strong>: all positions are processed simultaneously, fully utilizing modern accelerators.</li>
+<li><strong>Constant path length</strong>: any two positions can directly attend to each other in a single layer — <span class="math inline">\(O(1)\)</span> rather than <span class="math inline">\(O(T)\)</span> steps for information to flow.</li>
+<li><strong>Scalability</strong>: these properties have made the Transformer the substrate for scaling to billions of parameters and tokens (Part: Large Language Models).</li>
+</ul>
+<section id="sec-input-representation" class="level3" data-number="21.2.1">
+<h3 data-number="21.2.1" class="anchored" data-anchor-id="sec-input-representation"><span class="header-section-number">21.2.1</span> Input Representation</h3>
+<p><strong>Token + positional embeddings</strong>: tokens are mapped to dense vectors via a learned embedding matrix. Since self-attention itself is <em>permutation-invariant</em> (it has no notion of order), a <strong>positional encoding</strong> vector is added to each token embedding to inject position information:</p>
+<p><span class="math display">\[PE_{(pos,\, 2i)} = \sin\!\left(\frac{pos}{10000^{2i/d_{\text{model}}}}\right), \qquad PE_{(pos,\, 2i+1)} = \cos\!\left(\frac{pos}{10000^{2i/d_{\text{model}}}}\right)\]</span></p>
+<p>for position <span class="math inline">\(pos\)</span> and embedding dimension index <span class="math inline">\(i \in [0, d_{\text{model}}/2)\)</span>. This sinusoidal scheme (as used in the original Transformer) can also be replaced with a <strong>learned</strong> positional embedding table. Modern decoder-only LLMs typically replace absolute positional embeddings with <strong>relative</strong> schemes such as RoPE (Rotary Position Embeddings) — covered in the LLMs chapter.</p>
+<p><strong>Padding mask</strong>: sequences in a batch are padded to a common length; a padding mask ensures attention scores for <code>&lt;PAD&gt;</code> positions are set to <span class="math inline">\(-\infty\)</span> before the softmax, so they receive zero attention weight.</p>
+</section>
+<section id="scaled-dot-product-attention" class="level3" data-number="21.2.2">
+<h3 data-number="21.2.2" class="anchored" data-anchor-id="scaled-dot-product-attention"><span class="header-section-number">21.2.2</span> Scaled Dot-Product Attention</h3>
+<p>Given an input sequence represented as a matrix of row vectors <span class="math inline">\(X \in \mathbb{R}^{n \times d_{\text{model}}}\)</span> (and a second sequence <span class="math inline">\(Y\)</span>, possibly equal to <span class="math inline">\(X\)</span>), and learnable projection matrices <span class="math inline">\(W^Q, W^K \in \mathbb{R}^{d_{\text{model}} \times d_k}\)</span> and <span class="math inline">\(W^V \in \mathbb{R}^{d_{\text{model}} \times d_v}\)</span>, define <strong>queries</strong>, <strong>keys</strong>, and <strong>values</strong>:</p>
+<p><span class="math display">\[Q = X W^Q, \qquad K = Y W^K, \qquad V = Y W^V\]</span></p>
+<p>The attention of <span class="math inline">\(X\)</span> with respect to <span class="math inline">\(Y\)</span> is then:</p>
+<p><span class="math display">\[\boxed{\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{Q K^\top}{\sqrt{d_k}}\right) V}\]</span></p>
+<p>Each row of <span class="math inline">\(QK^\top \in \mathbb{R}^{n \times n}\)</span> contains the dot-product similarity between one query and every key — the softmax turns these into a probability distribution over positions, and the output for each query position is the corresponding weighted sum of value vectors.</p>
+<p><strong>Why <span class="math inline">\(\sqrt{d_k}\)</span>?</strong> The dot product of two random <span class="math inline">\(d_k\)</span>-dimensional vectors has variance proportional to <span class="math inline">\(d_k\)</span>. Without rescaling, logits would grow large for high <span class="math inline">\(d_k\)</span>, pushing the softmax into a near-one-hot regime with vanishingly small gradients. Dividing by <span class="math inline">\(\sqrt{d_k}\)</span> keeps the pre-softmax variance <span class="math inline">\(\approx 1\)</span> regardless of dimensionality.</p>
+<p><strong>Self-attention vs.&nbsp;cross-attention</strong>: when <span class="math inline">\(Y = X\)</span> (queries, keys, and values all derived from the same sequence), this is <strong>self-attention</strong> — each position attends to (and aggregates information from) every other position in the same sequence. When <span class="math inline">\(Y \ne X\)</span> (e.g., <span class="math inline">\(Q\)</span> from the decoder, <span class="math inline">\(K,V\)</span> from the encoder), this is <strong>cross-attention</strong>.</p>
+</section>
+<section id="multi-head-attention" class="level3" data-number="21.2.3">
+<h3 data-number="21.2.3" class="anchored" data-anchor-id="multi-head-attention"><span class="header-section-number">21.2.3</span> Multi-Head Attention</h3>
+<p>A single attention operation computes one weighted average per position — but different positions may need to attend to each other for <em>different reasons</em> (e.g., syntactic vs.&nbsp;coreference relationships). <strong>Multi-head attention</strong> runs <span class="math inline">\(h\)</span> independent attention operations (“heads”) in parallel, each with its own (smaller) projections <span class="math inline">\(W_i^Q, W_i^K, W_i^V \in \mathbb{R}^{d_{\text{model}} \times d_{\text{model}}/h}\)</span>, concatenates their outputs, and projects back to <span class="math inline">\(d_{\text{model}}\)</span> with a learned output matrix <span class="math inline">\(W^O\)</span>:</p>
+<p><span class="math display">\[\text{head}_i = \text{Attention}(Q W_i^Q, K W_i^K, V W_i^V)\]</span> <span class="math display">\[\text{MultiHead}(Q,K,V) = \text{Concat}(\text{head}_1, \dots, \text{head}_h)\, W^O\]</span></p>
+<div id="fig-multihead" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-multihead-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/nlp/multi_head_attention.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:45.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-multihead-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;21.7: Multi-head attention: <span class="math inline">\(Q\)</span>, <span class="math inline">\(K\)</span>, <span class="math inline">\(V\)</span> are each linearly projected <span class="math inline">\(h\)</span> times into lower-dimensional subspaces, scaled dot-product attention is applied in parallel within each head, and the <span class="math inline">\(h\)</span> outputs are concatenated and linearly projected back to <span class="math inline">\(d_{\text{model}}\)</span>.
+</figcaption>
+</figure>
+</div>
+<p>Because each head operates on a <span class="math inline">\(d_{\text{model}}/h\)</span>-dimensional subspace, the total compute of multi-head attention is comparable to a single full-dimensional attention operation — the benefit is purely representational: each head can specialize in different types of relationships.</p>
+</section>
+<section id="feed-forward-network-residuals-and-normalization" class="level3" data-number="21.2.4">
+<h3 data-number="21.2.4" class="anchored" data-anchor-id="feed-forward-network-residuals-and-normalization"><span class="header-section-number">21.2.4</span> Feed-Forward Network, Residuals, and Normalization</h3>
+<p>Each Transformer block additionally contains:</p>
+<ul>
+<li><strong>Position-wise Feed-Forward Network (FFN)</strong>: a two-layer MLP with a wider hidden dimension (typically <span class="math inline">\(4\times d_{\text{model}}\)</span>) and a nonlinearity (ReLU in the original paper; GELU/SwiGLU in modern LLMs), applied identically and independently to each position. While attention mixes information <em>across</em> positions, the FFN processes each position’s representation <em>independently</em>, adding per-token capacity.</li>
+<li><strong>Residual connections</strong>: the input to each sub-layer (attention or FFN) is added to its output, <span class="math inline">\(x + \text{Sublayer}(x)\)</span> — providing a direct gradient path through the network, exactly analogous to ResNets, and essential for training deep stacks of layers.</li>
+<li><strong>Layer normalization</strong>: normalizes activations across the feature dimension for each token independently. Combined with residuals as <span class="math inline">\(x + \text{Sublayer}(\text{LN}(x))\)</span> (“pre-norm”) or <span class="math inline">\(\text{LN}(x + \text{Sublayer}(x))\)</span> (“post-norm”) — pre-norm is more stable for deep networks and is standard in modern LLMs.</li>
+</ul>
+</section>
+<section id="encoder-decoder-architecture-and-masking" class="level3" data-number="21.2.5">
+<h3 data-number="21.2.5" class="anchored" data-anchor-id="encoder-decoder-architecture-and-masking"><span class="header-section-number">21.2.5</span> Encoder-Decoder Architecture and Masking</h3>
+<div id="fig-transformer" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-transformer-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/nlp/transformer_architecture.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:45.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-transformer-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;21.8: The Transformer architecture: an encoder stack (left) of <span class="math inline">\(N\)</span> blocks, each with self-attention and a feed-forward network; a decoder stack (right) of <span class="math inline">\(N\)</span> blocks, each with masked self-attention, cross-attention over the encoder output, and a feed-forward network. Both stacks add positional encodings to their input embeddings.
+</figcaption>
+</figure>
+</div>
+<p><strong>Encoder block</strong>: self-attention (every position attends to every other position in the input) <span class="math inline">\(\to\)</span> FFN, each wrapped with residual + layer norm.</p>
+<p><strong>Decoder block</strong>: at training time, the target sequence is fed to the decoder shifted right by one position and prepended with a <code>&lt;SOS&gt;</code> token (<strong>teacher forcing</strong>). Because the decoder must not “see the future” when predicting position <span class="math inline">\(t\)</span>, self-attention in the decoder uses a <strong>causal (look-ahead) mask</strong> — setting all attention scores to <span class="math inline">\(-\infty\)</span> for key positions <span class="math inline">\(&gt; t\)</span>, so the softmax assigns them zero weight. A decoder block is therefore: <strong>masked self-attention</strong> <span class="math inline">\(\to\)</span> <strong>cross-attention</strong> (queries from the decoder, keys/values from the encoder output) <span class="math inline">\(\to\)</span> <strong>FFN</strong>.</p>
+<p>At inference time, there is no ground-truth target to feed in — the decoder operates <strong>autoregressively</strong>: each generated token is appended to the decoder’s input sequence and used to predict the next token, exactly as in RNN-based language modeling, but recomputing (or, with KV-caching, incrementally updating) self-attention over the growing sequence at each step.</p>
+<p><strong>Interview Insight</strong>: A purely <strong>encoder-only</strong> stack (e.g., BERT) produces contextualized representations of an input sequence, suited to classification/tagging tasks. A purely <strong>decoder-only</strong> stack (e.g., GPT) uses causal self-attention throughout and is trained as a language model — this is the architecture behind essentially all modern LLMs (Part: Large Language Models). The full <strong>encoder-decoder</strong> architecture (e.g., T5, the original Transformer) remains common for sequence-to-sequence tasks like translation and summarization where the input and output are distinct sequences.</p>
+</section>
+<section id="language-modeling-objective" class="level3" data-number="21.2.6">
+<h3 data-number="21.2.6" class="anchored" data-anchor-id="language-modeling-objective"><span class="header-section-number">21.2.6</span> Language Modeling Objective</h3>
+<p>A final linear layer projects the last decoder block’s output (dimension <span class="math inline">\(d_{\text{model}}\)</span>) to the vocabulary size <span class="math inline">\(|V|\)</span>, followed by a softmax to produce a probability distribution over the next token:</p>
+<p><span class="math display">\[P(\text{token} \mid \cdot) = \text{softmax}\left(\text{Linear}(h^{(L)})\right) \in \mathbb{R}^{|V|}\]</span></p>
+<div id="fig-lm-head" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-lm-head-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../images/nlp/lm_head.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:55.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-lm-head-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;21.9: The language modeling head: the final decoder hidden state is linearly projected to vocabulary-sized logits, then passed through a softmax to obtain a probability distribution over the next token.
+</figcaption>
+</figure>
+</div>
+<p>The model is trained to maximize the log-probability of the true next token at every position (cross-entropy loss), in parallel across all positions of the sequence — this is what enables Transformers to be trained far more efficiently than RNNs despite eventually being used autoregressively.</p>
+<p><strong>Temperature</strong>: at inference, the softmax can be sharpened or flattened with a temperature <span class="math inline">\(\tau\)</span>: <span class="math inline">\(\text{softmax}(z/\tau)\)</span>. Low <span class="math inline">\(\tau\)</span> (<span class="math inline">\(\to 0\)</span>) approaches greedy/argmax decoding (deterministic, less diverse); high <span class="math inline">\(\tau\)</span> flattens the distribution (more diverse, more likely to produce incoherent text).</p>
+<hr>
+</section>
+</section>
+<section id="interview-questions" class="level2" data-number="21.3">
+<h2 data-number="21.3" class="anchored" data-anchor-id="interview-questions"><span class="header-section-number">21.3</span> Interview Questions</h2>
+<p><strong>Q: Why do RNNs suffer from vanishing/exploding gradients, and how do LSTMs/GRUs address this?</strong></p>
+<p>BPTT computes the gradient with respect to early hidden states as a product of <span class="math inline">\(T\)</span> Jacobians (one per time step), since the same weights are reused at every step. If the dominant eigenvalue of these Jacobians is consistently <span class="math inline">\(&lt;1\)</span>, the product shrinks exponentially in <span class="math inline">\(T\)</span> (vanishing); if <span class="math inline">\(&gt;1\)</span>, it grows exponentially (exploding). LSTMs and GRUs introduce a gated, (near-)additive update to the cell state — <span class="math inline">\(c^{&lt;t&gt;} = \Gamma_f \odot c^{&lt;t-1&gt;} + \Gamma_u \odot \tilde c^{&lt;t&gt;}\)</span> — so that when the forget/update gates are saturated near 1, the cell state has an (approximately) identity path across time steps, similar to a residual connection, allowing gradients to flow over long horizons.</p>
+<hr>
+<p><strong>Q: What is the “information bottleneck” in vanilla seq2seq models, and how does attention solve it?</strong></p>
+<p>In a basic encoder-decoder RNN, the entire input sequence must be compressed into a single fixed-size vector (the encoder’s final hidden state), which the decoder then relies on for the whole output sequence — long inputs lose information. Attention instead lets the decoder, at each output step, compute a context vector as a weighted sum over <em>all</em> encoder hidden states, with weights determined by relevance to the decoder’s current state. This removes the fixed-size bottleneck and gives the decoder direct, position-specific access to the entire input.</p>
+<hr>
+<p><strong>Q: Derive why scaled dot-product attention divides by <span class="math inline">\(\sqrt{d_k}\)</span>.</strong></p>
+<p>For query and key vectors with i.i.d. components of mean 0 and variance 1, the dot product <span class="math inline">\(q \cdot k = \sum_{i=1}^{d_k} q_i k_i\)</span> has mean 0 and variance <span class="math inline">\(d_k\)</span> (sum of <span class="math inline">\(d_k\)</span> independent terms each with variance 1). As <span class="math inline">\(d_k\)</span> grows, the pre-softmax logits’ magnitude grows like <span class="math inline">\(\sqrt{d_k}\)</span>, pushing the softmax toward a near-one-hot distribution where gradients with respect to the logits vanish almost everywhere. Dividing by <span class="math inline">\(\sqrt{d_k}\)</span> normalizes the variance back to <span class="math inline">\(O(1)\)</span>, keeping the softmax in a well-conditioned regime regardless of head dimension.</p>
+<hr>
+<p><strong>Q: Why is the decoder’s self-attention “masked” but its cross-attention is not?</strong></p>
+<p>The decoder is trained with teacher forcing on the full target sequence at once for efficiency, but at inference it must generate autoregressively — so during training, self-attention over the (visible) target sequence must not let position <span class="math inline">\(t\)</span> attend to positions <span class="math inline">\(&gt; t\)</span>, or the model would learn to “cheat” by looking at the answer. This is enforced via a causal mask. Cross-attention, in contrast, attends over the <em>encoder’s</em> output — the full input sequence is always available (there’s no “future” to leak), so no masking is needed there (aside from padding masks).</p>
+<hr>
+<p><strong>Q: What is the practical difference between an encoder-only, decoder-only, and encoder-decoder Transformer?</strong></p>
+<p>Encoder-only (BERT-style) uses bidirectional self-attention — every token sees the full input — and is suited to producing contextual representations for classification/tagging, but cannot generate text autoregressively without modification. Decoder-only (GPT-style) uses causal self-attention throughout, is trained as a language model on next-token prediction, and naturally supports autoregressive generation — this is the dominant architecture for modern LLMs. Encoder-decoder (T5-style) combines a bidirectional encoder over the input with a causal decoder that cross-attends to the encoder output, well-suited to sequence transduction tasks (translation, summarization) where input and output are distinct sequences of possibly different lengths.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const callouts = document.querySelectorAll('.callout-tip');
+    callouts.forEach(function(callout) {
+      callout.style.borderLeftColor = '#2196f3'; //#616161; //'#4caf50';
+      callout.style.color = 'ffffff'; // Dark purple-gray text
+    });
+  });
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../chapters/nlp/17-text-representation.html" class="pagination-link" aria-label="Text Representation &amp; Word Embeddings">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Text Representation &amp; Word Embeddings</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../chapters/nlp/19-large-language-models.html" class="pagination-link" aria-label="Large Language Models">
+        <span class="nav-page-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Large Language Models</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="../../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

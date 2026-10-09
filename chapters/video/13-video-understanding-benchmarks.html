@@ -1,0 +1,1995 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>14&nbsp; Video Understanding Benchmarks – deep_learning_notes</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../chapters/video/14-video-generation.html" rel="next">
+<link href="../../chapters/video/12-video-temporal-segmentation.html" rel="prev">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-fd0503e23dce65854c81c5baaade3bdf.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../custom.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/video/13-video-understanding-benchmarks.html"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Video Understanding Benchmarks</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../">deep_learning_notes</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_intro_foundations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Foundations</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/01-neural-networks-and-optimization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Neural Networks and Optimization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/02-generalization-and-learning-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Generalization and Learning Theory</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro_computer_vision.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Computer Vision</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Visual Understanding</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/03-cnns.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Convolutional Neural Networks</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/04-object-detection-and-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Detection and Segmentation</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/05-vision-transformers.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Vision Transformers</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-foundation-models-for-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Foundation Models for Segmentation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Self-Supervised Learning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/06-self-supervised-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Self-Supervised Learning</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Generative Modeling</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/_intro-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Models</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/07-vaes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Variational Autoencoders (VAEs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/08-gans.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Generative Adversarial Networks (GANs)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision/09-diffusion-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Diffusion Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/_conclusion-generative-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Conclusion</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/_intro_video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Video</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/10-video.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Video Fundamentals: Motion and Spatiotemporal Architectures</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/11-video-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Video Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/12-video-temporal-segmentation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Video Temporal Segmentation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/13-video-understanding-benchmarks.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Video Understanding Benchmarks</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/video/14-video-generation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Video Generation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/_intro_3d.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">3D Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/11-3d-data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">3D Data Understanding</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">3D Reconstruction</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/12-3d-reconstruction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">3D Reconstruction</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/13-gaussian-splatting.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">3D Gaussian Splatting</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Human Pose Estimation</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/3d/human_pose_estimation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Human Pose Estimation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/_intro_nlp.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Natural Language Processing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/17-text-representation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Text Representation &amp; Word Embeddings</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/18-sequence-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Sequence Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/19-large-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Large Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/nlp/20-text-embeddings-evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Text Embedding Models &amp; Evaluation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/_intro_vision_language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Vision-Language</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/vision_language/16-vision-language.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Vision-Language Multimodal Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/_intro_time_series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Time Series</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/14-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">Time Series Fundamentals</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/time_series/15-deep-learning-for-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Deep Learning for Time Series</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/_intro_audio.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Audio</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/21-speech-representation-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Speech Representation Learning and Foundation Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/22-automatic-speech-recognition.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Automatic Speech Recognition</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/23-speaker-diarization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Speaker Diarization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/24-neural-audio-codecs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Neural Audio Codecs</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/25-speech-synthesis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">31</span>&nbsp; <span class="chapter-title">Speech Synthesis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/26-speech-language-models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">32</span>&nbsp; <span class="chapter-title">Speech and Audio Language Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/audio/27-audio-understanding.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">33</span>&nbsp; <span class="chapter-title">Audio Understanding Beyond Words</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#sec-bench-action" id="toc-sec-bench-action" class="nav-link active" data-scroll-target="#sec-bench-action"><span class="header-section-number">14.1</span> Action Recognition Benchmarks</a></li>
+  <li><a href="#sec-bench-long" id="toc-sec-bench-long" class="nav-link" data-scroll-target="#sec-bench-long"><span class="header-section-number">14.2</span> Long-Video Understanding Benchmarks</a></li>
+  <li><a href="#sec-bench-vqa" id="toc-sec-bench-vqa" class="nav-link" data-scroll-target="#sec-bench-vqa"><span class="header-section-number">14.3</span> General Video VQA and Reasoning Benchmarks</a></li>
+  <li><a href="#sec-bench-moment" id="toc-sec-bench-moment" class="nav-link" data-scroll-target="#sec-bench-moment"><span class="header-section-number">14.4</span> Temporal Grounding and Moment Retrieval Benchmarks</a></li>
+  <li><a href="#sec-bench-vcmr" id="toc-sec-bench-vcmr" class="nav-link" data-scroll-target="#sec-bench-vcmr"><span class="header-section-number">14.5</span> Video Corpus Moment Retrieval (VCMR)</a></li>
+  <li><a href="#sec-bench-cap" id="toc-sec-bench-cap" class="nav-link" data-scroll-target="#sec-bench-cap"><span class="header-section-number">14.6</span> Captioning and Retrieval Benchmarks</a></li>
+  <li><a href="#sec-bench-tracking" id="toc-sec-bench-tracking" class="nav-link" data-scroll-target="#sec-bench-tracking"><span class="header-section-number">14.7</span> Tracking, Detection and Segmentation Benchmarks</a></li>
+  <li><a href="#sec-bench-ego" id="toc-sec-bench-ego" class="nav-link" data-scroll-target="#sec-bench-ego"><span class="header-section-number">14.8</span> Egocentric Benchmarks</a></li>
+  <li><a href="#sec-bench-pretrain" id="toc-sec-bench-pretrain" class="nav-link" data-scroll-target="#sec-bench-pretrain"><span class="header-section-number">14.9</span> Pretraining Corpora</a></li>
+  <li><a href="#sec-bench-headline" id="toc-sec-bench-headline" class="nav-link" data-scroll-target="#sec-bench-headline"><span class="header-section-number">14.10</span> Headline Summary Table</a></li>
+  <li><a href="#sec-choosing-benchmark" id="toc-sec-choosing-benchmark" class="nav-link" data-scroll-target="#sec-choosing-benchmark"><span class="header-section-number">14.11</span> Choosing a Benchmark: Practical Recommendations</a>
+  <ul class="collapse">
+  <li><a href="#stage-1-autoregressive-image-lm-extended-to-video" id="toc-stage-1-autoregressive-image-lm-extended-to-video" class="nav-link" data-scroll-target="#stage-1-autoregressive-image-lm-extended-to-video">Stage 1 — autoregressive image-LM extended to video</a></li>
+  <li><a href="#stage-2-representation-model-token-average-contrastive-head" id="toc-stage-2-representation-model-token-average-contrastive-head" class="nav-link" data-scroll-target="#stage-2-representation-model-token-average-contrastive-head">Stage 2 — representation model (token-average + contrastive head)</a></li>
+  </ul></li>
+  <li><a href="#sec-bench-trends" id="toc-sec-bench-trends" class="nav-link" data-scroll-target="#sec-bench-trends"><span class="header-section-number">14.12</span> 2026 Trends in Video Benchmarks</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span id="sec-video-benchmarks" class="quarto-section-identifier"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Video Understanding Benchmarks</span></span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>This is a companion chapter to <a href="11-video-understanding.html" class="quarto-xref"><span>Chapter 12</span></a>. The benchmark survey lives here so that the main chapter can move quickly through architectures while still pointing to a definitive index of every evaluation set worth knowing about. The structure mirrors the task taxonomy of <a href="11-video-understanding.html#sec-video-tasks" class="quarto-xref"><span>Section 12.2</span></a>: one subsection per family of tasks, each with a few headline benchmarks expanded into fact blocks and the rest listed compactly.</p>
+<p>Every benchmark below is written as a compact fact block with the same six fields so the section can be scanned at speed:</p>
+<ul>
+<li><strong>Domain</strong> — what the videos are <em>of</em> (third-person YouTube, egocentric cooking, movies, surveillance, …).</li>
+<li><strong>Size &amp; length</strong> — number of videos, total hours, typical per-clip duration.</li>
+<li><strong>Task</strong> — which downstream task from <a href="11-video-understanding.html#sec-video-tasks" class="quarto-xref"><span>Section 12.2</span></a> it scores.</li>
+<li><strong>Modalities</strong> — video only / video + subtitles / video + audio / video + audio + dense annotations.</li>
+<li><strong>Probes</strong> — what aspect of video understanding it uniquely tests; the reason this benchmark exists alongside its neighbours.</li>
+<li><strong>Importance</strong> — <em>critical</em> (every paper reports), <em>standard</em> (most papers in this sub-area report), <em>niche</em> (specialised but useful), <em>saturated</em> (SOTA too close to the ceiling to differentiate models), <em>deprecated</em> (still cited but superseded). Plus a note on the metric the field reports.</li>
+</ul>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Numbers in this section are taken from the original benchmark papers and verified against the leaderboards as of mid-2026 where possible. When a count or duration is given as approximate (∼) it is the figure reported by the paper rather than a recount.</p>
+</div>
+</div>
+<section id="sec-bench-action" class="level2" data-number="14.1">
+<h2 data-number="14.1" class="anchored" data-anchor-id="sec-bench-action"><span class="header-section-number">14.1</span> Action Recognition Benchmarks</h2>
+<p>The oldest video task and still the default reported number for every <em>encoder</em> paper. The action-recognition benchmarks split into three flavours: large-scale clip classification (Kinetics family), motion- and interaction-heavy classification (SSv2, Diving48), and multi-label / spatio-temporal (Charades, AVA).</p>
+<ul>
+<li><strong>Kinetics-400 / -600 / -700</strong> <span class="citation" data-cites="kay2017kinetics carreira2018k600 carreira2019k700">(<a href="../../references.html#ref-kay2017kinetics" role="doc-biblioref">Kay et al. 2017</a>; <a href="../../references.html#ref-carreira2018k600" role="doc-biblioref">Carreira et al. 2018</a>, <a href="../../references.html#ref-carreira2019k700" role="doc-biblioref">2019</a>)</span> (2017–2019)
+<ul>
+<li><strong>Domain:</strong> YouTube clips, third-person, single dominant human action.</li>
+<li><strong>Size &amp; length:</strong> K400 ≈ 306K clips × 10 s ≈ 850 h, 400 classes; K600 ≈ 480K × 10 s, 600 classes; K700 ≈ 650K × 10 s, 700 classes.</li>
+<li><strong>Task:</strong> action recognition (clip classification).</li>
+<li><strong>Modalities:</strong> video (audio usually stripped).</li>
+<li><strong>Probes:</strong> generic action recognition at scale; the de facto pretraining benchmark for video encoders.</li>
+<li><strong>Importance:</strong> <em>saturated</em> on K400 (best encoders &gt; 90 % top-1; VideoMAEv2 <span class="citation" data-cites="wang2023videomaev2">(<a href="../../references.html#ref-wang2023videomaev2" role="doc-biblioref">L. Wang et al. 2023</a>)</span>, InternVideo2 <span class="citation" data-cites="wang2024internvideo2">(<a href="../../references.html#ref-wang2024internvideo2" role="doc-biblioref"><span class="nocase">Y. Wang et al.</span> 2024</a>)</span>) but <strong>still the default reported number</strong> in every encoder paper. K700 is the harder, less-saturated current target. Metric: top-1 / top-5 accuracy.</li>
+</ul></li>
+<li><strong>Something-Something v2 (SSv2)</strong> <span class="citation" data-cites="goyal2017ssv2">(<a href="../../references.html#ref-goyal2017ssv2" role="doc-biblioref"><span class="nocase">Goyal et al.</span> 2017</a>)</span> (2017)
+<ul>
+<li><strong>Domain:</strong> crowdsourced clips of someone manipulating an object on a tabletop, filmed against a plain background.</li>
+<li><strong>Size &amp; length:</strong> ∼220K clips × 4 s, 174 fine-grained action classes (e.g.&nbsp;<em>“pushing X from right to left”</em>, <em>“pretending to put X on Y”</em>).</li>
+<li><strong>Task:</strong> action recognition, <strong>motion-heavy</strong>.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> <em>temporal</em> understanding — the same scene can yield different labels depending solely on the direction of motion, so a model that looks at one frame cannot win.</li>
+<li><strong>Importance:</strong> <em>critical</em> for any paper that wants to argue its model has temporal understanding (separates frame-bag classifiers from real video models). Metric: top-1 accuracy.</li>
+</ul></li>
+<li><strong>UCF-101</strong> <span class="citation" data-cites="soomro2012ucf101">(<a href="../../references.html#ref-soomro2012ucf101" role="doc-biblioref">Soomro et al. 2012</a>)</span> (2012)
+<ul>
+<li><strong>Domain:</strong> sports + everyday action clips from YouTube.</li>
+<li><strong>Size &amp; length:</strong> 13K clips × 7 s, 101 action classes.</li>
+<li><strong>Task:</strong> action recognition.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> historic ImageNet-of-video; 3-split protocol still used for tiny-data ablations and zero-shot transfer.</li>
+<li><strong>Importance:</strong> <em>saturated</em> (top-1 &gt; 98 %); also widely used as an <strong>FVD</strong> reference for video generation. Metric: top-1 accuracy.</li>
+</ul></li>
+<li><strong>HMDB-51</strong> <span class="citation" data-cites="kuehne2011hmdb">(<a href="../../references.html#ref-kuehne2011hmdb" role="doc-biblioref">Kuehne et al. 2011</a>)</span> (2011)
+<ul>
+<li><strong>Domain:</strong> movie clips + YouTube; 51 action classes.</li>
+<li><strong>Size &amp; length:</strong> 7K clips × ∼4 s; 3 official train/test splits.</li>
+<li><strong>Task:</strong> action recognition.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> small-scale transfer; harder than UCF-101 due to cluttered scenes and inter-class similarity.</li>
+<li><strong>Importance:</strong> <em>saturated</em>; legacy benchmark; usually quoted as a triplet with UCF-101 and K400. Metric: top-1 accuracy across the three splits.</li>
+</ul></li>
+<li><strong>Moments in Time (MiT)</strong> <span class="citation" data-cites="monfort2019mit">(<a href="../../references.html#ref-monfort2019mit" role="doc-biblioref">Monfort et al. 2019</a>)</span> (2019)
+<ul>
+<li><strong>Domain:</strong> very short web clips spanning humans, animals, objects, weather, abstractions.</li>
+<li><strong>Size &amp; length:</strong> ∼1M clips × <strong>3 s</strong>, 339 classes; a <em>multi-label</em> extension (Multi-Moments) has ∼1M clips with 313 classes.</li>
+<li><strong>Task:</strong> action recognition (extremely short clips).</li>
+<li><strong>Modalities:</strong> video + audio.</li>
+<li><strong>Probes:</strong> generalisation across <em>agents</em> (not just humans) and very short events; large training scale.</li>
+<li><strong>Importance:</strong> <em>standard</em> as an auxiliary pretraining corpus, less common as a final eval. Metric: top-1 / top-5 accuracy.</li>
+</ul></li>
+<li><strong>Charades</strong> <span class="citation" data-cites="sigurdsson2016charades">(<a href="../../references.html#ref-sigurdsson2016charades" role="doc-biblioref">Sigurdsson et al. 2016</a>)</span> (2016)
+<ul>
+<li><strong>Domain:</strong> crowdsourced <em>Hollywood-in-Homes</em> — people perform scripted indoor activities.</li>
+<li><strong>Size &amp; length:</strong> ∼10K untrimmed videos × ∼30 s, 157 daily-activity classes.</li>
+<li><strong>Task:</strong> <strong>multi-label</strong> action classification and temporal localization (multiple actions can overlap).</li>
+<li><strong>Modalities:</strong> video + audio.</li>
+<li><strong>Probes:</strong> dense multi-label classification under heavy overlap; activity <em>recognition</em> in unscripted-looking settings.</li>
+<li><strong>Importance:</strong> <em>standard</em> for multi-label classification and as the source of the Charades-STA grounding split. Metric: mAP (multi-label), mAP@IoU (localization).</li>
+</ul></li>
+<li><strong>AVA</strong> <span class="citation" data-cites="gu2018ava">(<a href="../../references.html#ref-gu2018ava" role="doc-biblioref">Gu et al. 2018</a>)</span> (2018)
+<ul>
+<li><strong>Domain:</strong> 15-min movie segments densely annotated.</li>
+<li><strong>Size &amp; length:</strong> ∼430 movies, ∼1.6M actor-action labels at 1 Hz, 80 atomic action classes (e.g.&nbsp;<em>stand</em>, <em>sit</em>, <em>hand-wave</em>).</li>
+<li><strong>Task:</strong> <strong>spatio-temporal</strong> action detection — per-actor bounding box + action labels.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> combines detection (where) with action recognition (what) on long-form video.</li>
+<li><strong>Importance:</strong> <em>critical</em> and <strong>non-saturated</strong> for any model that claims spatial-temporal localisation; SlowFast <span class="citation" data-cites="feichtenhofer2019slowfast">(<a href="../../references.html#ref-feichtenhofer2019slowfast" role="doc-biblioref">Feichtenhofer et al. 2019</a>)</span> and MViTv2 <span class="citation" data-cites="li2022mvitv2">(<a href="../../references.html#ref-li2022mvitv2" role="doc-biblioref">Li et al. 2022</a>)</span> benchmark here. Metric: frame-level mAP @ spatial IoU 0.5.</li>
+</ul></li>
+<li><strong>Diving48</strong> <span class="citation" data-cites="li2018diving48">(<a href="../../references.html#ref-li2018diving48" role="doc-biblioref">Li et al. 2018</a>)</span> (2018)
+<ul>
+<li><strong>Domain:</strong> competitive diving videos.</li>
+<li><strong>Size &amp; length:</strong> ∼18K clips × ∼5 s, 48 fine-grained dive classes.</li>
+<li><strong>Task:</strong> action recognition, <strong>motion-only</strong> (background and equipment are uninformative).</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> isolation of motion cues from scene/object bias — designed as a counter-example to Kinetics-style “context cheating”.</li>
+<li><strong>Importance:</strong> <em>niche</em> but the cleanest test that a model uses motion; pairs well with SSv2. Metric: top-1 accuracy.</li>
+</ul></li>
+</ul>
+</section>
+<section id="sec-bench-long" class="level2" data-number="14.2">
+<h2 data-number="14.2" class="anchored" data-anchor-id="sec-bench-long"><span class="header-section-number">14.2</span> Long-Video Understanding Benchmarks</h2>
+<p>The 2023–2026 wave of benchmarks built specifically for video VLMs with <em>minute- to hour-long</em> inputs. All are MCQ-style by construction (so they can be auto-scored at the LLM-judge-free level of reliability) and all emphasise <em>aggregation</em> and <em>narrative reasoning</em> over per-frame perception.</p>
+<ul>
+<li><strong>LongVideoBench (LVB)</strong> <span class="citation" data-cites="wu2024longvideobench">(<a href="../../references.html#ref-wu2024longvideobench" role="doc-biblioref">Wu et al. 2024</a>)</span> (2024)
+<ul>
+<li><strong>Domain:</strong> 3 763 web videos across multiple genres, paired with their original subtitles.</li>
+<li><strong>Size &amp; length:</strong> 8 s – 1 h per video; 6 678 human-written MCQ questions over 17 fine-grained categories.</li>
+<li><strong>Task:</strong> long-video MCQ VQA with <strong>referring-query</strong> structure — every question explicitly cites a sub-window the answer is grounded in.</li>
+<li><strong>Modalities:</strong> video + subtitles.</li>
+<li><strong>Probes:</strong> memory and <em>segment retrieval</em> under interleaved video+text input; the referring clause forces the model to pick from many candidate windows.</li>
+<li><strong>Importance:</strong> <em>critical</em> — together with Video-MME the de facto pair every long-video VLM reports (Qwen2.5-VL, InternVL3, LLaVA-Video). Metric: MCQ accuracy, with separate splits by duration (8–15 s / 15–60 s / 3–10 min / 15–60 min).</li>
+</ul></li>
+<li><strong>Video-MME</strong> <span class="citation" data-cites="fu2024videomme">(<a href="../../references.html#ref-fu2024videomme" role="doc-biblioref"><span class="nocase">Fu et al.</span> 2024</a>)</span> (2024)
+<ul>
+<li><strong>Domain:</strong> 900 hand-picked YouTube videos spanning 6 high-level genres (knowledge, film/TV, sports, life, multilingual, artistic).</li>
+<li><strong>Size &amp; length:</strong> ∼254 h total, durations from 11 s to ∼1 h split into <em>short / medium / long</em> sub-splits; 2 700 expert-written MCQs (3 per video × 4-way).</li>
+<li><strong>Task:</strong> general video MCQ VQA — the eval is also commonly reported in <em>with-subtitles</em> mode.</li>
+<li><strong>Modalities:</strong> video + subtitles + audio (some questions are answerable only from subtitles).</li>
+<li><strong>Probes:</strong> general video understanding across the full duration spectrum in one suite; the long sub-split (30 min – 1 h) is the de facto long-video number.</li>
+<li><strong>Importance:</strong> <strong>the most-reported video VLM benchmark of 2024–2026.</strong> Gemini 1.5 / 2.x, GPT-4o, Qwen2.5/3-VL, InternVL2.5/3, LLaVA-OneVision, Apollo, LongVU all report on it. Metric: MCQ accuracy, separately <em>no-subs</em> and <em>w/ subs</em>.</li>
+</ul></li>
+<li><strong>MLVU (Multi-task Long Video Understanding)</strong> <span class="citation" data-cites="zhou2024mlvu">(<a href="../../references.html#ref-zhou2024mlvu" role="doc-biblioref">Zhou et al. 2024</a>)</span> (2024)
+<ul>
+<li><strong>Domain:</strong> very diverse — movies, surveillance, cartoons, games, egocentric, life vlogs, etc.</li>
+<li><strong>Size &amp; length:</strong> ∼1 700 videos, 3 min – 2 h long; ∼3K questions across <strong>9 sub-tasks</strong> (plot QA, action order, needle-in-haystack, sub-scene captioning, summarisation, …).</li>
+<li><strong>Task:</strong> MCQ VQA + open-ended captioning/summarisation — the only major long-video benchmark with non-MCQ sub-tasks.</li>
+<li><strong>Modalities:</strong> video only (no subtitles).</li>
+<li><strong>Probes:</strong> <em>multi-task</em> long-video understanding — exposes models that are tuned only for MCQ.</li>
+<li><strong>Importance:</strong> <em>standard</em> in 2025–2026 long-video papers; complementary to Video-MME because it has open-ended generation sub-tasks. Metric: MCQ acc for MCQ tasks; generation metrics (CIDEr / LLM-judge) for the open ones.</li>
+</ul></li>
+<li><strong>LVBench</strong> <span class="citation" data-cites="wang2024lvbench">(<a href="../../references.html#ref-wang2024lvbench" role="doc-biblioref">W. Wang et al. 2024</a>)</span> (2024) — <em>distinct from LongVideoBench above</em>
+<ul>
+<li><strong>Domain:</strong> publicly sourced long videos (TV episodes, sports, surveillance, …).</li>
+<li><strong>Size &amp; length:</strong> ∼500 videos, mean ∼68 min, max several hours; ∼1.5K MCQs.</li>
+<li><strong>Task:</strong> long-video MCQ VQA, with a focus on <strong>hour-scale reasoning</strong>.</li>
+<li><strong>Modalities:</strong> video + subtitles.</li>
+<li><strong>Probes:</strong> the very long tail (&gt; 30 min) where Video-MME has only ∼100 videos.</li>
+<li><strong>Importance:</strong> <em>important</em> for hour-scale specialists (LongVU, Video-XL-2, LongVA, LongVILA all report). Metric: MCQ accuracy.</li>
+</ul></li>
+<li><strong>EgoSchema</strong> <span class="citation" data-cites="mangalam2023egoschema">(<a href="../../references.html#ref-mangalam2023egoschema" role="doc-biblioref">Mangalam et al. 2023</a>)</span> (2023)
+<ul>
+<li><strong>Domain:</strong> egocentric (head-mounted camera) clips drawn from Ego4D.</li>
+<li><strong>Size &amp; length:</strong> ∼5K MCQs over <strong>3-minute</strong> clips, ∼250 h total.</li>
+<li><strong>Task:</strong> long-form egocentric MCQ VQA, 5-way.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> <em>intrinsic temporal certificate</em> — by design every question requires reasoning over the full 3 min (the certificate length is ∼10× prior egocentric benchmarks).</li>
+<li><strong>Importance:</strong> <em>critical</em> for any long-video or egocentric model (Gemini, Qwen2.5-VL, Apollo all report). Metric: 5-way MCQ accuracy; the <em>subset</em> split has 500 fully validated questions, the <em>fullset</em> has all 5K.</li>
+</ul></li>
+<li><strong>HourVideo</strong> <span class="citation" data-cites="chandrasegaran2024hourvideo">(<a href="../../references.html#ref-chandrasegaran2024hourvideo" role="doc-biblioref">Chandrasegaran et al. 2024</a>)</span> (2024)
+<ul>
+<li><strong>Domain:</strong> 1-hour egocentric videos from Ego4D.</li>
+<li><strong>Size &amp; length:</strong> 500 videos, mean ∼45 min, range 20–120 min; ∼13K MCQs.</li>
+<li><strong>Task:</strong> very-long-form MCQ VQA with task categories <em>summarisation / perception / visual reasoning / navigation</em>.</li>
+<li><strong>Modalities:</strong> video only (audio available).</li>
+<li><strong>Probes:</strong> <em>hour-scale</em> reasoning specifically, with a curated task taxonomy.</li>
+<li><strong>Importance:</strong> <em>emerging</em> — released late 2024, gaining traction in 2025–2026 long-video work. Metric: MCQ accuracy.</li>
+</ul></li>
+<li><strong>MomentSeeker</strong> <span class="citation" data-cites="hu2025momentseeker">(<a href="../../references.html#ref-hu2025momentseeker" role="doc-biblioref">Hu et al. 2025</a>)</span> (2025)
+<ul>
+<li><strong>Domain:</strong> long videos (mean 20 min) for <strong>video corpus moment retrieval</strong> (VCMR).</li>
+<li><strong>Size &amp; length:</strong> 268 long videos, 1 800 multi-modal queries.</li>
+<li><strong>Task:</strong> locate a relevant temporal segment within a corpus of long videos (not a single video).</li>
+<li><strong>Modalities:</strong> video + audio + subtitles; multi-modal queries.</li>
+<li><strong>Probes:</strong> the <em>corpus</em> version of moment retrieval at long-video scale; needs efficient retrieval <em>and</em> fine grounding.</li>
+<li><strong>Importance:</strong> <em>emerging</em> — the de facto VCMR-at-scale benchmark for 2025–2026 retrieval research. Metric: R@1/R@5 at IoU.</li>
+</ul></li>
+</ul>
+</section>
+<section id="sec-bench-vqa" class="level2" data-number="14.3">
+<h2 data-number="14.3" class="anchored" data-anchor-id="sec-bench-vqa"><span class="header-section-number">14.3</span> General Video VQA and Reasoning Benchmarks</h2>
+<p>The workhorses for short / medium-clip evaluation. MVBench and the Video-MME <em>short</em> split are now the must-haves; the older ActivityNet-QA / MSRVTT-QA / MSVD-QA generation benchmarks are still reported but generally regarded as saturated and replaced by MCQ ones above.</p>
+<ul>
+<li><strong>MVBench</strong> <span class="citation" data-cites="li2024mvbench">(<a href="../../references.html#ref-li2024mvbench" role="doc-biblioref">Li et al. 2024</a>)</span> (2024, introduced with VideoChat2)
+<ul>
+<li><strong>Domain:</strong> clips reused from Charades, EPIC-Kitchens, SSv2, NTU RGB+D, Perception Test, FunQA, etc.</li>
+<li><strong>Size &amp; length:</strong> ∼4K MCQ examples spanning <strong>20 temporal-reasoning task types</strong> (action order, object existence, action prediction, scene transition, counterfactual, …); short clips (mostly &lt; 30 s).</li>
+<li><strong>Task:</strong> MCQ VQA, <strong>temporal-reasoning-specific</strong>.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> designed so the answer cannot be inferred from a single frame nor from world knowledge alone — the 20 task categories are constructed to force inter-frame reasoning.</li>
+<li><strong>Importance:</strong> <strong>the canonical short-clip video VLM benchmark of 2024–2026.</strong> Every video VLM paper reports it. Metric: 4-way MCQ accuracy, with optional per-task breakdown.</li>
+</ul></li>
+<li><strong>TVBench</strong> <span class="citation" data-cites="cores2024tvbench">(<a href="../../references.html#ref-cores2024tvbench" role="doc-biblioref">Cores et al. 2024</a>)</span> (2024)
+<ul>
+<li><strong>Domain:</strong> filtered subset of MVBench’s source clips with newly written questions.</li>
+<li><strong>Size &amp; length:</strong> ∼2.5K MCQs over 10 temporal-skill categories.</li>
+<li><strong>Task:</strong> MCQ VQA, <strong>temporal-only</strong>.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> addresses a known weakness of MVBench — its questions are partly <em>solvable from a single frame</em> or from text alone. TVBench filters those out: most published 2024 video LMs score <em>near chance</em> at release.</li>
+<li><strong>Importance:</strong> <em>standard</em>, used alongside MVBench as a “true temporal” sanity check. Metric: MCQ accuracy.</li>
+</ul></li>
+<li><strong>TempCompass</strong> <span class="citation" data-cites="liu2024tempcompass">(<a href="../../references.html#ref-liu2024tempcompass" role="doc-biblioref">Liu et al. 2024</a>)</span> (2024)
+<ul>
+<li><strong>Domain:</strong> ∼500 carefully edited videos (paired clips that differ only in their <em>temporal</em> dimension — direction, speed, order).</li>
+<li><strong>Size &amp; length:</strong> ∼7K MCQs spanning <em>action</em>, <em>direction</em>, <em>speed</em>, <em>event order</em>, <em>attribute change</em>.</li>
+<li><strong>Task:</strong> MCQ VQA, <strong>temporal-only</strong>.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> controlled-pair tests for temporal sensitivity, with paired-video accuracy as an <em>additional</em> metric (model must answer both clips in a contrastive pair correctly to score 1).</li>
+<li><strong>Importance:</strong> <em>standard</em> for any paper making a temporal-reasoning claim (Qwen2.5-VL, Apollo, VideoLLaMA3 report). Metric: MCQ accuracy + paired accuracy.</li>
+</ul></li>
+<li><strong>Vinoground</strong> <span class="citation" data-cites="zhang2024vinoground">(<a href="../../references.html#ref-zhang2024vinoground" role="doc-biblioref">J. Zhang et al. 2024</a>)</span> (2024)
+<ul>
+<li><strong>Domain:</strong> 1 000 short-clip pairs that differ only in their temporal counterfactual content (e.g.&nbsp;<em>cause vs effect</em>).</li>
+<li><strong>Size &amp; length:</strong> ∼1K pairs × ∼5 s each.</li>
+<li><strong>Task:</strong> binary MCQ + dense temporal-counterfactual judgement.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> the temporal analogue of the <em>Winoground</em> image benchmark — counterfactual reasoning that requires distinguishing two near-identical clips.</li>
+<li><strong>Importance:</strong> <em>emerging</em>; the strongest published 2024 video LMs score below random on the paired metric. Metric: pair accuracy + group accuracy.</li>
+</ul></li>
+<li><strong>Perception Test</strong> <span class="citation" data-cites="patraucean2023perceptiontest">(<a href="../../references.html#ref-patraucean2023perceptiontest" role="doc-biblioref"><span class="nocase">Patraucean et al.</span> 2023</a>)</span> (2023)
+<ul>
+<li><strong>Domain:</strong> scripted real-world “perception probes” filmed in lab settings — people manipulating objects, performing physical demos, illusions.</li>
+<li><strong>Size &amp; length:</strong> 11 600 videos, ∼23 s each; densely annotated with 190K object tracks, 73.5K action segments, 137K sound segments, 38K MCQ-VQA + 6K grounded VQA.</li>
+<li><strong>Task:</strong> <em>combined</em> — VQA + temporal action localisation + object tracking + sound localisation + grounded VQA.</li>
+<li><strong>Modalities:</strong> video + audio + dense annotations.</li>
+<li><strong>Probes:</strong> a <em>capability matrix</em> — 4 reasoning skills (memory, abstraction, physics, semantics) × 4 reasoning types (descriptive, explanatory, predictive, counterfactual). Designed as a diagnostic, not a single number.</li>
+<li><strong>Importance:</strong> <em>important</em> multi-task diagnostic; widely reported in 2024–2026 video VLM papers (Qwen2.5-VL, Apollo, VideoLLaMA3). Metric: top-1 MCQ accuracy by default; per-skill breakdown.</li>
+</ul></li>
+<li><strong>MMBench-Video</strong> <span class="citation" data-cites="fang2024mmbenchvideo">(<a href="../../references.html#ref-fang2024mmbenchvideo" role="doc-biblioref">Fang et al. 2024</a>)</span> (2024)
+<ul>
+<li><strong>Domain:</strong> ∼600 YouTube videos × 10 s – 6 min.</li>
+<li><strong>Size &amp; length:</strong> ∼2K open-ended QAs across 26 fine-grained capability dimensions (counting, reasoning, OCR, captioning, …).</li>
+<li><strong>Task:</strong> open-ended VQA scored by <strong>LLM-as-judge</strong> (GPT-4 by default).</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> capability-axis breakdown for VLMs, generation-style (vs MCQ).</li>
+<li><strong>Importance:</strong> <em>standard</em> for VLM papers that want a generation-style number alongside MCQ. Metric: LLM-judge score (0–3) averaged per dimension.</li>
+</ul></li>
+<li><strong>NeXT-QA</strong> <span class="citation" data-cites="xiao2021nextqa">(<a href="../../references.html#ref-xiao2021nextqa" role="doc-biblioref">Xiao et al. 2021</a>)</span> (2021) and <strong>NeXT-GQA</strong> <span class="citation" data-cites="xiao2024nextgqa">(<a href="../../references.html#ref-xiao2024nextgqa" role="doc-biblioref">Xiao et al. 2024</a>)</span> (2024)
+<ul>
+<li><strong>Domain:</strong> ∼5.4K trimmed YouTube clips of daily-life activity.</li>
+<li><strong>Size &amp; length:</strong> ∼44s avg; ∼52K MCQs in NeXT-QA covering <em>causal</em>, <em>temporal</em>, <em>descriptive</em>; NeXT-GQA adds <strong>temporal grounding</strong> annotations for 5.6K causal/temporal QAs.</li>
+<li><strong>Task:</strong> MCQ VQA (NeXT-QA) and <strong>grounded</strong> MCQ VQA (NeXT-GQA).</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> causal and temporal reasoning specifically (NeXT-QA); whether MCQ accuracy is <em>grounded</em> in the actual evidence window (NeXT-GQA).</li>
+<li><strong>Importance:</strong> NeXT-QA <em>standard</em>; NeXT-GQA <em>important</em> and unique — it measures the <em>grounding gap</em>, the fraction of correct MCQs that are also temporally well-grounded. Metric: MCQ accuracy + IoU@0.5 grounding accuracy for NeXT-GQA.</li>
+</ul></li>
+<li><strong>STAR</strong> <span class="citation" data-cites="wu2024star">(<a href="../../references.html#ref-wu2024star" role="doc-biblioref">Wu et al. 2021</a>)</span> (2021)
+<ul>
+<li><strong>Domain:</strong> filtered Charades clips.</li>
+<li><strong>Size &amp; length:</strong> ∼22K MCQs across <em>interaction / sequence / prediction / feasibility</em> situations.</li>
+<li><strong>Task:</strong> <strong>situated reasoning</strong> MCQ VQA, with object-relation graphs in the supervision.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> compositional and counterfactual reasoning, especially the <em>feasibility</em> and <em>prediction</em> questions which require physical-world common sense.</li>
+<li><strong>Importance:</strong> <em>standard</em> — frequently reported by VLM papers as an OOD reasoning test. Metric: MCQ accuracy per situation type.</li>
+</ul></li>
+<li><strong>AGQA / AGQA-Decomp</strong> <span class="citation" data-cites="grunde2021agqa">(<a href="../../references.html#ref-grunde2021agqa" role="doc-biblioref">Grunde-McLaughlin et al. 2021</a>)</span> (2021)
+<ul>
+<li><strong>Domain:</strong> Charades clips with auto-generated compositional questions.</li>
+<li><strong>Size &amp; length:</strong> ∼9.6M compositional MCQs (filtered subsets of 192K and 3M widely used).</li>
+<li><strong>Task:</strong> compositional, multi-step VQA.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> compositional reasoning chains over object relations.</li>
+<li><strong>Importance:</strong> <em>niche</em> — auto-generated questions are sometimes noisy; cited mainly for compositional ablations. Metric: MCQ accuracy.</li>
+</ul></li>
+<li><strong>TVQA / TVQA+</strong> <span class="citation" data-cites="lei2018tvqa lei2020tvqaplus">(<a href="../../references.html#ref-lei2018tvqa" role="doc-biblioref">Lei et al. 2018</a>, <a href="../../references.html#ref-lei2020tvqaplus" role="doc-biblioref">2020a</a>)</span> (2018 / 2020)
+<ul>
+<li><strong>Domain:</strong> clips from 6 popular TV shows (sitcom + medical + crime drama).</li>
+<li><strong>Size &amp; length:</strong> ∼22K clips × 60–90 s; 152K MCQs; TVQA+ adds bounding boxes + frame indices for 29K of those.</li>
+<li><strong>Task:</strong> MCQ VQA (TVQA), grounded MCQ VQA (TVQA+).</li>
+<li><strong>Modalities:</strong> video + <strong>subtitles</strong> (subtitle text is often essential to answer).</li>
+<li><strong>Probes:</strong> dialogue-heavy reasoning where subtitles dominate.</li>
+<li><strong>Importance:</strong> <em>standard</em> for subtitle-aware VLMs; metric: MCQ accuracy.</li>
+</ul></li>
+<li><strong>ActivityNet-QA</strong> <span class="citation" data-cites="yu2019activitynetqa">(<a href="../../references.html#ref-yu2019activitynetqa" role="doc-biblioref">Yu et al. 2019</a>)</span> (2019)
+<ul>
+<li><strong>Domain:</strong> ActivityNet web videos.</li>
+<li><strong>Size &amp; length:</strong> 5.8K videos × ∼2 min, 58K open-ended QAs.</li>
+<li><strong>Task:</strong> <strong>open-ended</strong> VQA (short answers, often single words).</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> generic action-and-object questions over short web videos; the historical open-ended VQA baseline.</li>
+<li><strong>Importance:</strong> <em>standard but declining</em> — increasingly replaced by MCQ benchmarks. Metric: accuracy (exact match by GPT-judge), sometimes WUPS.</li>
+</ul></li>
+<li><strong>MSRVTT-QA / MSVD-QA</strong> <span class="citation" data-cites="xu2017videoqa">(<a href="../../references.html#ref-xu2017videoqa" role="doc-biblioref">Xu et al. 2017</a>)</span> (2017)
+<ul>
+<li><strong>Domain:</strong> MSR-VTT and MSVD web clips.</li>
+<li><strong>Size &amp; length:</strong> MSRVTT-QA — 10K clips, 244K QAs; MSVD-QA — 1 970 clips, 50K QAs.</li>
+<li><strong>Task:</strong> open-ended VQA, short clips.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> very short web-video VQA; historical baseline.</li>
+<li><strong>Importance:</strong> <em>deprecated for SOTA papers</em> (saturated, single-frame solvable for most questions) but still reported as a sanity number. Metric: accuracy (GPT-judge or exact match).</li>
+</ul></li>
+<li><strong>VideoChatGPT-bench (VCG-Bench)</strong> <span class="citation" data-cites="maaz2023videochatgpt">(<a href="../../references.html#ref-maaz2023videochatgpt" role="doc-biblioref">Maaz et al. 2024</a>)</span> (2023)
+<ul>
+<li><strong>Domain:</strong> subset of ActivityNet videos.</li>
+<li><strong>Size &amp; length:</strong> ∼3K open-ended QAs.</li>
+<li><strong>Task:</strong> generation-style VQA scored on <strong>5 axes</strong> — <em>correctness of information, detail orientation, contextual understanding, temporal understanding, consistency</em>.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> dialogue quality of an end-to-end video chatbot.</li>
+<li><strong>Importance:</strong> <em>standard</em> in video-chat papers (VideoChat2, Video-LLaVA, LLaVA-Video). Metric: GPT-judge 1–5 scores per axis.</li>
+</ul></li>
+</ul>
+</section>
+<section id="sec-bench-moment" class="level2" data-number="14.4">
+<h2 data-number="14.4" class="anchored" data-anchor-id="sec-bench-moment"><span class="header-section-number">14.4</span> Temporal Grounding and Moment Retrieval Benchmarks</h2>
+<p>Given a natural-language query, find when the described event occurs. The metric of choice is Recall@N at IoU <span class="math inline">\(\tau\)</span> (see <a href="11-video-understanding.html#eq-moment-r" class="quarto-xref">Equation&nbsp;<span>12.2</span></a>).</p>
+<ul>
+<li><strong>Charades-STA</strong> <span class="citation" data-cites="gao2017charadessta">(<a href="../../references.html#ref-gao2017charadessta" role="doc-biblioref">Gao et al. 2017</a>)</span> (2017)
+<ul>
+<li><strong>Domain:</strong> indoor daily-activity videos from Charades.</li>
+<li><strong>Size &amp; length:</strong> 9 848 videos × ∼30 s, ∼16K query–moment pairs.</li>
+<li><strong>Task:</strong> sentence-conditioned moment retrieval (Video Moment Retrieval / Temporal Moment Localization).</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> mid-length indoor moment retrieval; the canonical introductory grounding benchmark.</li>
+<li><strong>Importance:</strong> <em>standard</em> — every temporal grounding paper reports it, though now considered too short and too easy to differentiate modern systems. Metric: R@1 and R@5 at IoU ∈ {0.3, 0.5, 0.7}; mIoU.</li>
+</ul></li>
+<li><strong>ActivityNet Captions</strong> <span class="citation" data-cites="krishna2017densecaptioning">(<a href="../../references.html#ref-krishna2017densecaptioning" role="doc-biblioref">Krishna et al. 2017</a>)</span> (2017)
+<ul>
+<li><strong>Domain:</strong> ActivityNet web videos.</li>
+<li><strong>Size &amp; length:</strong> 20K videos × ∼2 min, ∼100K densely annotated event captions (∼3.6 captions per video).</li>
+<li><strong>Task:</strong> <strong>dense video captioning</strong> and (separately) sentence-conditioned <strong>moment retrieval</strong>.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> longer multi-event narratives; dense captioning evaluates <em>event detection</em> + captioning jointly.</li>
+<li><strong>Importance:</strong> <em>critical</em> for dense captioning, <em>standard</em> for grounding. Metric: dense — CIDEr / METEOR @ tIoU + SODA_c <span class="citation" data-cites="fujita2020soda">(<a href="../../references.html#ref-fujita2020soda" role="doc-biblioref">Fujita et al. 2020</a>)</span>; grounding — R@N IoU.</li>
+</ul></li>
+<li><strong>DiDeMo</strong> <span class="citation" data-cites="hendricks2017didemo">(<a href="../../references.html#ref-hendricks2017didemo" role="doc-biblioref">Hendricks et al. 2017</a>)</span> (2017)
+<ul>
+<li><strong>Domain:</strong> Flickr web clips, descriptive of everyday scenes.</li>
+<li><strong>Size &amp; length:</strong> ∼10K untrimmed videos × ∼30 s, ∼41K query–moment pairs; moments are <strong>quantised to 5-s bins</strong> (a defining feature).</li>
+<li><strong>Task:</strong> sentence-conditioned moment retrieval.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> short-clip retrieval with discretised time — simpler metric than continuous IoU.</li>
+<li><strong>Importance:</strong> <em>standard</em>; metric: Recall@N over bins, plus mIoU.</li>
+</ul></li>
+<li><strong>QVHighlights</strong> <span class="citation" data-cites="lei2021qvhighlights">(<a href="../../references.html#ref-lei2021qvhighlights" role="doc-biblioref">Lei et al. 2021</a>)</span> (2021)
+<ul>
+<li><strong>Domain:</strong> ∼10K YouTube vlogs (lifestyle, news, travel) × ∼150 s.</li>
+<li><strong>Size &amp; length:</strong> ∼10K queries with both <em>moment</em> annotations (1+ relevant segments per query) and <em>saliency scores</em> per 2-s clip.</li>
+<li><strong>Task:</strong> <strong>joint</strong> moment retrieval and highlight detection.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> the only widely used benchmark that scores moment retrieval <em>and</em> highlight ranking in the same dataset.</li>
+<li><strong>Importance:</strong> <em>critical</em> for temporal grounding papers since 2022 (Moment-DETR, QD-DETR, TimeChat). Metric: R@1 IoU={0.5, 0.7} + mAP for moments; mAP @ HIT@1 for highlights.</li>
+</ul></li>
+<li><strong>TACoS</strong> <span class="citation" data-cites="regneri2013tacos">(<a href="../../references.html#ref-regneri2013tacos" role="doc-biblioref">Regneri et al. 2013</a>)</span> (2013)
+<ul>
+<li><strong>Domain:</strong> cooking videos.</li>
+<li><strong>Size &amp; length:</strong> 127 videos × ∼5 min, ∼17K query–moment pairs.</li>
+<li><strong>Task:</strong> moment retrieval, <strong>long-clip cooking</strong> domain.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> dense fine-grained step-level grounding within long cooking videos.</li>
+<li><strong>Importance:</strong> <em>standard</em>; metric: R@N IoU.</li>
+</ul></li>
+<li><strong>HiREST</strong> <span class="citation" data-cites="zala2023hirest">(<a href="../../references.html#ref-zala2023hirest" role="doc-biblioref">Zala et al. 2023</a>)</span> (2023)
+<ul>
+<li><strong>Domain:</strong> instructional YouTube videos.</li>
+<li><strong>Size &amp; length:</strong> ∼3.4K videos × 0.5–8 min, multi-step retrieval annotations.</li>
+<li><strong>Task:</strong> <strong>hierarchical</strong> retrieval — moment retrieval <em>and</em> step segmentation <em>and</em> clip-level retrieval, evaluated jointly.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> hierarchical-task generalisation; multi-task evaluation.</li>
+<li><strong>Importance:</strong> <em>emerging</em> — used by long-video / instructional-video specialists. Metric: R@N for retrieval; step-level F1.</li>
+</ul></li>
+</ul>
+</section>
+<section id="sec-bench-vcmr" class="level2" data-number="14.5">
+<h2 data-number="14.5" class="anchored" data-anchor-id="sec-bench-vcmr"><span class="header-section-number">14.5</span> Video Corpus Moment Retrieval (VCMR)</h2>
+<p>Strictly a generalisation of moment retrieval: the query is matched against <em>all</em> moments in <em>all</em> videos in a corpus rather than against moments in a single given video. The metric is the same (R@N IoU) but the corpus size makes retrieval indexing essential.</p>
+<ul>
+<li><p><strong>TVR</strong> <span class="citation" data-cites="lei2020tvr">(<a href="../../references.html#ref-lei2020tvr" role="doc-biblioref">Lei et al. 2020b</a>)</span> (2020) — built from the TVQA TV-show corpus; ∼22K videos × 60–90 s, ∼109K query–moment annotations across visual + subtitle + audio modalities. <em>Modalities:</em> video + subtitles + audio. <em>Probes:</em> multi-modal moment retrieval; the standard VCMR benchmark since 2020.</p></li>
+<li><p><strong>MAD</strong> (Moment Anything Dataset) <span class="citation" data-cites="soldan2022mad">(<a href="../../references.html#ref-soldan2022mad" role="doc-biblioref">Soldan et al. 2022</a>)</span> (2022) — ∼650 long movies × ∼110 min from the LSMDC source, ∼384K natural-language queries from movie audio descriptions. <em>Probes:</em> moment retrieval over a corpus of <em>full-length movies</em>, where most clips are far from any given query. <em>Importance:</em> the canonical <em>long-video</em> VCMR benchmark.</p></li>
+<li><p><strong>TVR-Ranking</strong> <span class="citation" data-cites="lei2020tvr">(<a href="../../references.html#ref-lei2020tvr" role="doc-biblioref">Lei et al. 2020b</a>)</span> — a re-scored split of TVR that converts the original retrieval task into a <em>ranking</em> problem with relevance judgments, used for evaluating rerankers.</p></li>
+<li><p><strong>MomentSeeker</strong> <span class="citation" data-cites="hu2025momentseeker">(<a href="../../references.html#ref-hu2025momentseeker" role="doc-biblioref">Hu et al. 2025</a>)</span> (2025) — see <a href="#sec-bench-long" class="quarto-xref"><span>Section 14.2</span></a>; the modern VCMR-at-scale benchmark.</p></li>
+</ul>
+</section>
+<section id="sec-bench-cap" class="level2" data-number="14.6">
+<h2 data-number="14.6" class="anchored" data-anchor-id="sec-bench-cap"><span class="header-section-number">14.6</span> Captioning and Retrieval Benchmarks</h2>
+<p>The classical text↔︎video alignment benchmarks. Almost all of them sit between <em>training corpus</em> and <em>test set</em> — the same MSR-VTT collection appears as MSRVTT-QA above, as a retrieval test here, and as a generation test for video generators.</p>
+<ul>
+<li><strong>MSR-VTT</strong> <span class="citation" data-cites="xu2016msrvtt">(<a href="../../references.html#ref-xu2016msrvtt" role="doc-biblioref">Xu et al. 2016</a>)</span> (2016)
+<ul>
+<li><strong>Domain:</strong> YouTube clips from 20 categories (music, sports, news, …).</li>
+<li><strong>Size &amp; length:</strong> 10K clips × 10–30 s, 20 captions per clip (200K captions).</li>
+<li><strong>Task:</strong> clip captioning + text↔︎video retrieval (canonical 1K-A / 1K-B test splits).</li>
+<li><strong>Modalities:</strong> video + audio.</li>
+<li><strong>Probes:</strong> general short-clip caption / retrieval; long-running leaderboard.</li>
+<li><strong>Importance:</strong> <em>critical</em> historical benchmark, still reported by every contrastive paper (CLIP4Clip <span class="citation" data-cites="luo2022clip4clip">(<a href="../../references.html#ref-luo2022clip4clip" role="doc-biblioref">Luo et al. 2021</a>)</span>, ViCLIP <span class="citation" data-cites="wang2024internvid">(<a href="../../references.html#ref-wang2024internvid" role="doc-biblioref"><span class="nocase">Y. Wang et al.</span> 2023</a>)</span>, LanguageBind-Video <span class="citation" data-cites="zhu2024languagebind">(<a href="../../references.html#ref-zhu2024languagebind" role="doc-biblioref"><span class="nocase">Zhu et al.</span> 2023</a>)</span>). Metric: captioning — BLEU-4/METEOR/CIDEr; retrieval — R@1/5/10, median rank, mean rank.</li>
+</ul></li>
+<li><strong>VATEX</strong> <span class="citation" data-cites="wang2019vatex">(<a href="../../references.html#ref-wang2019vatex" role="doc-biblioref">Wang et al. 2019</a>)</span> (2019)
+<ul>
+<li><strong>Domain:</strong> Kinetics-600 clips re-captioned by humans.</li>
+<li><strong>Size &amp; length:</strong> ∼41K clips × 10 s, ∼826K captions (10 EN + 10 ZH each).</li>
+<li><strong>Task:</strong> clip captioning + retrieval; explicitly <strong>multilingual</strong>.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> parallel EN/ZH evaluation; the standard multilingual video benchmark.</li>
+<li><strong>Importance:</strong> <em>standard</em> for multilingual evaluation; metric: same as MSR-VTT.</li>
+</ul></li>
+<li><strong>YouCook2</strong> <span class="citation" data-cites="zhou2018youcook2">(<a href="../../references.html#ref-zhou2018youcook2" role="doc-biblioref">Zhou et al. 2018</a>)</span> (2018)
+<ul>
+<li><strong>Domain:</strong> instructional cooking videos from YouTube.</li>
+<li><strong>Size &amp; length:</strong> 2K videos × ∼5.3 min, ∼14K step segments with captions.</li>
+<li><strong>Task:</strong> dense video captioning + step localisation + retrieval.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> instructional procedural understanding; pre-training signal for cooking-oriented models.</li>
+<li><strong>Importance:</strong> <em>standard</em> for instructional-video work (TimeChat <span class="citation" data-cites="ren2024timechat">(<a href="../../references.html#ref-ren2024timechat" role="doc-biblioref">Ren et al. 2024</a>)</span>, HiREST <span class="citation" data-cites="zala2023hirest">(<a href="../../references.html#ref-zala2023hirest" role="doc-biblioref">Zala et al. 2023</a>)</span>). Metric: CIDEr / METEOR @ tIoU.</li>
+</ul></li>
+<li><strong>LSMDC</strong> <span class="citation" data-cites="rohrbach2017lsmdc">(<a href="../../references.html#ref-rohrbach2017lsmdc" role="doc-biblioref">Rohrbach et al. 2017</a>)</span> (2017)
+<ul>
+<li><strong>Domain:</strong> movie clips with audio-description tracks (subtitles for the blind).</li>
+<li><strong>Size &amp; length:</strong> ∼118K clips × ∼5 s from 200 movies, 1 caption each.</li>
+<li><strong>Task:</strong> clip captioning, retrieval, and fill-in-the-blank.</li>
+<li><strong>Modalities:</strong> video + audio.</li>
+<li><strong>Probes:</strong> narrative-style descriptions; movie-domain bias.</li>
+<li><strong>Importance:</strong> <em>standard</em> but declining; metric: same as MSR-VTT.</li>
+</ul></li>
+<li><strong>MSVD</strong> <span class="citation" data-cites="chen2011msvd">(<a href="../../references.html#ref-chen2011msvd" role="doc-biblioref">Chen and Dolan 2011</a>)</span> (2011)
+<ul>
+<li><strong>Domain:</strong> very short YouTube clips of single events.</li>
+<li><strong>Size &amp; length:</strong> 1 970 clips × ∼10 s, ∼80K captions.</li>
+<li><strong>Task:</strong> clip captioning + retrieval.</li>
+<li><strong>Modalities:</strong> video only.</li>
+<li><strong>Probes:</strong> simplest possible single-event captioning.</li>
+<li><strong>Importance:</strong> <em>deprecated</em> (saturated); metric: same as MSR-VTT.</li>
+</ul></li>
+<li><strong>DiDeMo</strong> (see <a href="#sec-bench-moment" class="quarto-xref"><span>Section 14.4</span></a>) — also a standard <em>retrieval</em> benchmark in addition to its grounding role; 10K videos, 41K text–video pairs.</li>
+</ul>
+</section>
+<section id="sec-bench-tracking" class="level2" data-number="14.7">
+<h2 data-number="14.7" class="anchored" data-anchor-id="sec-bench-tracking"><span class="header-section-number">14.7</span> Tracking, Detection and Segmentation Benchmarks</h2>
+<p>Closer to classic computer vision than to video VLMs, but worth listing because (i) representation models often pretrain on them and (ii) some VLM extensions (e.g.&nbsp;SAM-2, Mol-2Track) compete on them.</p>
+<ul>
+<li><strong>LaSOT</strong> <span class="citation" data-cites="fan2019lasot">(<a href="../../references.html#ref-fan2019lasot" role="doc-biblioref">Fan et al. 2019</a>)</span> (2019) — single-object tracking; 1.4K sequences, mean 84 s; metric: AUC of success plot.</li>
+<li><strong>GOT-10k</strong> <span class="citation" data-cites="huang2019got10k">(<a href="../../references.html#ref-huang2019got10k" role="doc-biblioref">Huang et al. 2019</a>)</span> (2019) — SOT with class-disjoint train/test (zero-shot tracking); 10K videos; metric: average overlap (AO).</li>
+<li><strong>TrackingNet</strong> <span class="citation" data-cites="muller2018trackingnet">(<a href="../../references.html#ref-muller2018trackingnet" role="doc-biblioref">Müller et al. 2018</a>)</span> (2018) — SOT in the wild; 30K training + 511 test sequences; metric: AUC + precision.</li>
+<li><strong>MOT17 / MOT20</strong> <span class="citation" data-cites="dendorfer2020mot20">(<a href="../../references.html#ref-dendorfer2020mot20" role="doc-biblioref">Dendorfer et al. 2020</a>)</span> (2017 / 2020) — multi-object tracking; pedestrians; metric: <strong>HOTA</strong> <span class="citation" data-cites="luiten2021hota">(<a href="../../references.html#ref-luiten2021hota" role="doc-biblioref">Luiten et al. 2021</a>)</span> + MOTA.</li>
+<li><strong>DanceTrack</strong> <span class="citation" data-cites="sun2022dancetrack">(<a href="../../references.html#ref-sun2022dancetrack" role="doc-biblioref">Sun et al. 2022</a>)</span> (2022) — MOT for dancers (uniform appearance, complex motion); metric: HOTA + AssA — a particularly hard <em>association</em> benchmark.</li>
+<li><strong>DAVIS-2017</strong> <span class="citation" data-cites="ponttuset2017davis">(<a href="../../references.html#ref-ponttuset2017davis" role="doc-biblioref">Pont-Tuset et al. 2017</a>)</span> (2017) — semi-supervised VOS, ∼150 sequences × 4 s; metric: <span class="math inline">\(\mathcal{J} \&amp; \mathcal{F}\)</span>.</li>
+<li><strong>YouTube-VOS</strong> <span class="citation" data-cites="xu2018ytbvos">(<a href="../../references.html#ref-xu2018ytbvos" role="doc-biblioref">Xu et al. 2018</a>)</span> (2018) — semi-supervised VOS at scale; 4K videos; metric: <span class="math inline">\(\mathcal{J} \&amp; \mathcal{F}\)</span> split into <em>seen</em> and <em>unseen</em> classes.</li>
+<li><strong>MeViS</strong> <span class="citation" data-cites="ding2023mevis">(<a href="../../references.html#ref-ding2023mevis" role="doc-biblioref">Ding et al. 2023</a>)</span> (2023) — <strong>motion-guided</strong> referring VOS; 2K videos, ∼28K motion-expression queries. <em>Probes</em> phrase-level grounding that requires temporal cues (e.g.&nbsp;<em>“the bird that flies up”</em>); a strong test for VLM-grounded segmenters. Metric: <span class="math inline">\(\mathcal{J} \&amp; \mathcal{F}\)</span>.</li>
+<li><strong>V-HICO</strong> <span class="citation" data-cites="chao2020vhico">(<a href="../../references.html#ref-chao2020vhico" role="doc-biblioref">Chao et al. 2020</a>)</span> (2020) — <em>human-object interaction</em> detection in video; 6K video segments, 244 verb categories. Probes spatio-temporal HOI specifically. Metric: mAP for interaction detection + temporal IoU.</li>
+<li><strong>DALY</strong> <span class="citation" data-cites="weinzaepfel2016daly">(<a href="../../references.html#ref-weinzaepfel2016daly" role="doc-biblioref">Weinzaepfel et al. 2016</a>)</span> (2016) — <strong>D</strong>aily <strong>A</strong>ction <strong>L</strong>ocalisation in <strong>Y</strong>outube; 510 untrimmed videos × ∼3 min, weakly supervised action localisation. Niche but instructive: weakly supervised setup mirrors what we have at web scale. Metric: video-mAP + frame-mAP.</li>
+</ul>
+</section>
+<section id="sec-bench-ego" class="level2" data-number="14.8">
+<h2 data-number="14.8" class="anchored" data-anchor-id="sec-bench-ego"><span class="header-section-number">14.8</span> Egocentric Benchmarks</h2>
+<p>Distinct enough from the third-person setting that it warrants its own section. The dominant data source is Ego4D, and most egocentric papers report on its native task suite <em>plus</em> EgoSchema for long-form reasoning (see <a href="#sec-bench-long" class="quarto-xref"><span>Section 14.2</span></a>).</p>
+<ul>
+<li><strong>Ego4D</strong> <span class="citation" data-cites="grauman2022ego4d">(<a href="../../references.html#ref-grauman2022ego4d" role="doc-biblioref">Grauman et al. 2022</a>)</span> (2022)
+<ul>
+<li><strong>Domain:</strong> egocentric video from 9 countries, daily activities (cooking, crafts, sport, driving, …).</li>
+<li><strong>Size &amp; length:</strong> <strong>∼3 670 h</strong> across 931 unique camera-wearers, clips up to 10 h.</li>
+<li><strong>Task:</strong> a <strong>5-benchmark suite</strong> — <em>Episodic Memory</em>, <em>Hands-and-Objects</em>, <em>Audio-Visual Diarisation</em>, <em>Social</em>, <em>Forecasting</em> (each with its own splits and metrics).</li>
+<li><strong>Modalities:</strong> video + audio + IMU + gaze + 3D scans (varies by clip).</li>
+<li><strong>Probes:</strong> generic egocentric understanding at unprecedented scale; the data source for most modern egocentric pretraining.</li>
+<li><strong>Importance:</strong> <em>critical</em>; metric: task-dependent (e.g.&nbsp;<em>Natural Language Queries</em> — R@1 IoU; <em>Object State Change Classification</em> — accuracy).</li>
+</ul></li>
+<li><strong>EPIC-Kitchens-100</strong> <span class="citation" data-cites="damen2020epickitchens100">(<a href="../../references.html#ref-damen2020epickitchens100" role="doc-biblioref">Damen et al. 2022</a>)</span> (2020)
+<ul>
+<li><strong>Domain:</strong> egocentric kitchen activity (cooking sessions, single-person).</li>
+<li><strong>Size &amp; length:</strong> 100 h, 90K narrated action segments, 97 verbs × 300 nouns.</li>
+<li><strong>Task:</strong> action recognition (verb / noun / verb+noun), action detection, action anticipation, retrieval.</li>
+<li><strong>Modalities:</strong> video + audio + narration.</li>
+<li><strong>Probes:</strong> fine-grained activity recognition in a constrained domain; strong <strong>hand-object interaction</strong> signal.</li>
+<li><strong>Importance:</strong> <em>critical</em> for any egocentric encoder (VideoMAE, V-JEPA2, InternVideo2 all report). Metric: top-1 / top-5 accuracy per axis.</li>
+</ul></li>
+<li><strong>Charades-Ego</strong> <span class="citation" data-cites="sigurdsson2018charadesego">(<a href="../../references.html#ref-sigurdsson2018charadesego" role="doc-biblioref">Sigurdsson et al. 2018</a>)</span> (2018)
+<ul>
+<li><strong>Domain:</strong> the same activities as Charades but filmed simultaneously from third-person and egocentric.</li>
+<li><strong>Size &amp; length:</strong> ∼8K paired video pairs × ∼30 s.</li>
+<li><strong>Task:</strong> action recognition; the canonical dataset for studying <strong>third-person ↔︎ first-person transfer</strong>.</li>
+<li><strong>Modalities:</strong> video + audio.</li>
+<li><strong>Probes:</strong> view-invariance of learned representations.</li>
+<li><strong>Importance:</strong> <em>niche but important</em>; metric: mAP (multi-label) and view-invariance gap.</li>
+</ul></li>
+</ul>
+</section>
+<section id="sec-bench-pretrain" class="level2" data-number="14.9">
+<h2 data-number="14.9" class="anchored" data-anchor-id="sec-bench-pretrain"><span class="header-section-number">14.9</span> Pretraining Corpora</h2>
+<p>Not test benchmarks — they have no canonical held-out split — but worth listing because almost every model in <a href="11-video-understanding.html#sec-video-vlms" class="quarto-xref"><span>Section 12.3</span></a> cites at least one of them as training data. Quality and scale here dominate downstream benchmark scores.</p>
+<ul>
+<li><strong>HowTo100M</strong> <span class="citation" data-cites="miech2019howto100m">(<a href="../../references.html#ref-miech2019howto100m" role="doc-biblioref">Miech et al. 2019</a>)</span> (2019) — 136M YouTube-clip / ASR-caption pairs from ∼1.2M instructional videos (∼23 years of video). Noisy by construction; the original “scale beats quality” pretraining corpus.</li>
+<li><strong>WebVid-10M</strong> <span class="citation" data-cites="bain2021frozen">(<a href="../../references.html#ref-bain2021frozen" role="doc-biblioref">Bain et al. 2021</a>)</span> (2021) — 10M video-caption pairs scraped from a stock-footage site. <strong>Taken down in late 2024 after a copyright dispute</strong>; pre-2024 papers that cite it are increasingly unreproducible. The standard mid-scale captioned-video corpus 2021–2024.</li>
+<li><strong>VideoCC3M / VideoCC</strong> <span class="citation" data-cites="nagrani2022videocc">(<a href="../../references.html#ref-nagrani2022videocc" role="doc-biblioref">Nagrani et al. 2022</a>)</span> (2022) — ∼10M auto-matched (CC3M-derived) caption / video clip pairs; cleaner alternative to HowTo100M.</li>
+<li><strong>InternVid / InternVid-10M-FLT</strong> <span class="citation" data-cites="wang2024internvid">(<a href="../../references.html#ref-wang2024internvid" role="doc-biblioref"><span class="nocase">Y. Wang et al.</span> 2023</a>)</span> (2024) — ∼7M videos × ∼234M re-captioned sentences (re-captioned with multimodal-LLM judges). The standard “modern” video-caption corpus, used by ViCLIP, InternVideo2, and many 2024–2026 VLMs.</li>
+<li><strong>Panda-70M</strong> <span class="citation" data-cites="chen2024panda70m">(<a href="../../references.html#ref-chen2024panda70m" role="doc-biblioref">T.-S. Chen et al. 2024</a>)</span> (2024) — 70M video clips × ∼ 1 caption each; auto-captioned by an ensemble of VLMs and filtered. The largest open captioned-video corpus as of 2026.</li>
+<li><strong>HD-VG-130M / HD-VILA-100M</strong> <span class="citation" data-cites="xue2022hdvila">(<a href="../../references.html#ref-xue2022hdvila" role="doc-biblioref">Xue et al. 2022</a>)</span> (2022) — 100M+ clips at HD resolution for video-language pretraining; useful for higher-resolution work.</li>
+<li><strong>VAST-27M</strong> <span class="citation" data-cites="chen2023vast">(<a href="../../references.html#ref-chen2023vast" role="doc-biblioref">Chen et al. 2023</a>)</span> (2023) — 27M video clips with <strong>omni-modality</strong> captions (separate captions describing video, audio, subtitles) — designed for video-audio-language pretraining.</li>
+<li><strong>LLaVA-Video-178K</strong> <span class="citation" data-cites="li2024llavavideo">(<a href="../../references.html#ref-li2024llavavideo" role="doc-biblioref">Y. Zhang et al. 2024</a>)</span> (2024) — 178K videos with synthetic dense captions + 1.3M QA pairs; the de facto SFT recipe for late-2024 / 2025 video VLMs (LLaVA-Video-7B, Apollo, VideoLLaMA3 all use it).</li>
+<li><strong>ShareGPT4Video</strong> <span class="citation" data-cites="chen2024sharegpt4video">(<a href="../../references.html#ref-chen2024sharegpt4video" role="doc-biblioref">L. Chen et al. 2024</a>)</span> (2024) — 40K human + 4.8M GPT-4V detailed video captions; used widely as a <em>quality</em> signal on top of larger noisy corpora.</li>
+</ul>
+</section>
+<section id="sec-bench-headline" class="level2" data-number="14.10">
+<h2 data-number="14.10" class="anchored" data-anchor-id="sec-bench-headline"><span class="header-section-number">14.10</span> Headline Summary Table</h2>
+<p>The 20-or-so most-used benchmarks across all categories, kept terse so the table fits on a screen. The <em>Use</em> column says which model family typically reports on it.</p>
+<div id="tbl-video-bench-headline" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-video-bench-headline-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;14.1: Headline benchmark summary across all video understanding tasks.
+</figcaption>
+<div aria-describedby="tbl-video-bench-headline-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 18%">
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 13%">
+<col style="width: 17%">
+<col style="width: 20%">
+<col style="width: 8%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Benchmark</th>
+<th style="text-align: center;">Year</th>
+<th style="text-align: left;">Task</th>
+<th style="text-align: left;">Domain</th>
+<th style="text-align: right;"># Videos</th>
+<th style="text-align: center;">Avg length</th>
+<th style="text-align: left;">Use</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Kinetics-400</td>
+<td style="text-align: center;">2017</td>
+<td style="text-align: left;">Action recognition</td>
+<td style="text-align: left;">YouTube actions</td>
+<td style="text-align: right;">306 K</td>
+<td style="text-align: center;">10 s</td>
+<td style="text-align: left;">Encoder (saturated)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Kinetics-700</td>
+<td style="text-align: center;">2019</td>
+<td style="text-align: left;">Action recognition</td>
+<td style="text-align: left;">YouTube actions</td>
+<td style="text-align: right;">650 K</td>
+<td style="text-align: center;">10 s</td>
+<td style="text-align: left;">Encoder</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">SSv2</td>
+<td style="text-align: center;">2017</td>
+<td style="text-align: left;">Action recognition (motion)</td>
+<td style="text-align: left;">Tabletop, crowdsourced</td>
+<td style="text-align: right;">220 K</td>
+<td style="text-align: center;">4 s</td>
+<td style="text-align: left;">Encoder</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">AVA</td>
+<td style="text-align: center;">2018</td>
+<td style="text-align: left;">Spatio-temporal action det.</td>
+<td style="text-align: left;">Movies</td>
+<td style="text-align: right;">430 mv.</td>
+<td style="text-align: center;">15 min</td>
+<td style="text-align: left;">Encoder, detection</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Charades</td>
+<td style="text-align: center;">2016</td>
+<td style="text-align: left;">Multi-label action</td>
+<td style="text-align: left;">Indoor home</td>
+<td style="text-align: right;">10 K</td>
+<td style="text-align: center;">30 s</td>
+<td style="text-align: left;">Encoder</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Charades-STA</td>
+<td style="text-align: center;">2017</td>
+<td style="text-align: left;">Moment retrieval</td>
+<td style="text-align: left;">Indoor home</td>
+<td style="text-align: right;">10 K</td>
+<td style="text-align: center;">30 s</td>
+<td style="text-align: left;">Grounding</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">QVHighlights</td>
+<td style="text-align: center;">2021</td>
+<td style="text-align: left;">Moment retrieval + highlight</td>
+<td style="text-align: left;">YouTube vlogs</td>
+<td style="text-align: right;">10 K</td>
+<td style="text-align: center;">2.5 min</td>
+<td style="text-align: left;">Grounding</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">TVR</td>
+<td style="text-align: center;">2020</td>
+<td style="text-align: left;">VCMR (multi-modal)</td>
+<td style="text-align: left;">TV shows</td>
+<td style="text-align: right;">22 K</td>
+<td style="text-align: center;">60–90 s</td>
+<td style="text-align: left;">VCMR</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">MAD</td>
+<td style="text-align: center;">2022</td>
+<td style="text-align: left;">VCMR (long-movie)</td>
+<td style="text-align: left;">Movies</td>
+<td style="text-align: right;">650</td>
+<td style="text-align: center;">110 min</td>
+<td style="text-align: left;">Long-video VCMR</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">ActivityNet Captions</td>
+<td style="text-align: center;">2017</td>
+<td style="text-align: left;">Dense captioning + grounding</td>
+<td style="text-align: left;">Web</td>
+<td style="text-align: right;">20 K</td>
+<td style="text-align: center;">2 min</td>
+<td style="text-align: left;">Captioning, grounding</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">MSR-VTT</td>
+<td style="text-align: center;">2016</td>
+<td style="text-align: left;">Captioning + retrieval</td>
+<td style="text-align: left;">YouTube</td>
+<td style="text-align: right;">10 K</td>
+<td style="text-align: center;">15 s</td>
+<td style="text-align: left;">Contrastive, retrieval</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">MVBench</td>
+<td style="text-align: center;">2024</td>
+<td style="text-align: left;">MCQ VQA (temporal)</td>
+<td style="text-align: left;">Multi-source short clips</td>
+<td style="text-align: right;">∼4 K</td>
+<td style="text-align: center;">&lt; 30 s</td>
+<td style="text-align: left;"><strong>Decoder VLM (critical)</strong></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">TVBench</td>
+<td style="text-align: center;">2024</td>
+<td style="text-align: left;">MCQ VQA (true temporal)</td>
+<td style="text-align: left;">MVBench-filtered</td>
+<td style="text-align: right;">∼2.5 K</td>
+<td style="text-align: center;">&lt; 30 s</td>
+<td style="text-align: left;">Decoder VLM</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">TempCompass</td>
+<td style="text-align: center;">2024</td>
+<td style="text-align: left;">MCQ VQA (temporal pairs)</td>
+<td style="text-align: left;">Hand-edited</td>
+<td style="text-align: right;">∼500</td>
+<td style="text-align: center;">&lt; 30 s</td>
+<td style="text-align: left;">Decoder VLM</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Perception Test</td>
+<td style="text-align: center;">2023</td>
+<td style="text-align: left;">Multi-task diagnostic</td>
+<td style="text-align: left;">Scripted lab</td>
+<td style="text-align: right;">11.6 K</td>
+<td style="text-align: center;">23 s</td>
+<td style="text-align: left;">Decoder VLM</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">NeXT-QA</td>
+<td style="text-align: center;">2021</td>
+<td style="text-align: left;">MCQ VQA (causal/temporal)</td>
+<td style="text-align: left;">Daily-life</td>
+<td style="text-align: right;">5.4 K</td>
+<td style="text-align: center;">44 s</td>
+<td style="text-align: left;">Decoder VLM</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">NeXT-GQA</td>
+<td style="text-align: center;">2024</td>
+<td style="text-align: left;">Grounded MCQ VQA</td>
+<td style="text-align: left;">Daily-life</td>
+<td style="text-align: right;">∼1 K</td>
+<td style="text-align: center;">44 s</td>
+<td style="text-align: left;">Decoder VLM, grounding</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Video-MME</td>
+<td style="text-align: center;">2024</td>
+<td style="text-align: left;">MCQ VQA (short→long)</td>
+<td style="text-align: left;">6-genre YouTube</td>
+<td style="text-align: right;">900</td>
+<td style="text-align: center;">11 s – 1 h</td>
+<td style="text-align: left;"><strong>Decoder VLM (critical)</strong></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">MMBench-Video</td>
+<td style="text-align: center;">2024</td>
+<td style="text-align: left;">Open-ended VQA (LLM-judge)</td>
+<td style="text-align: left;">YouTube</td>
+<td style="text-align: right;">∼600</td>
+<td style="text-align: center;">10 s – 6 min</td>
+<td style="text-align: left;">Decoder VLM</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">LongVideoBench</td>
+<td style="text-align: center;">2024</td>
+<td style="text-align: left;">Long MCQ VQA + subs</td>
+<td style="text-align: left;">Web</td>
+<td style="text-align: right;">3.8 K</td>
+<td style="text-align: center;">8 s – 1 h</td>
+<td style="text-align: left;"><strong>Long-video VLM (critical)</strong></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">MLVU</td>
+<td style="text-align: center;">2024</td>
+<td style="text-align: left;">Multi-task long VQA</td>
+<td style="text-align: left;">Multi-genre</td>
+<td style="text-align: right;">1.7 K</td>
+<td style="text-align: center;">3 min – 2 h</td>
+<td style="text-align: left;">Long-video VLM</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">EgoSchema</td>
+<td style="text-align: center;">2023</td>
+<td style="text-align: left;">Long MCQ VQA (egocentric)</td>
+<td style="text-align: left;">Egocentric (Ego4D)</td>
+<td style="text-align: right;">5 K Q</td>
+<td style="text-align: center;">3 min</td>
+<td style="text-align: left;">Long-video + ego VLM</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Ego4D suite</td>
+<td style="text-align: center;">2022</td>
+<td style="text-align: left;">5-task egocentric suite</td>
+<td style="text-align: left;">Egocentric</td>
+<td style="text-align: right;">∼3.7 K h</td>
+<td style="text-align: center;">30 s – 10 h</td>
+<td style="text-align: left;">Egocentric encoder</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">EPIC-Kitchens-100</td>
+<td style="text-align: center;">2020</td>
+<td style="text-align: left;">Action / detection / anticip.</td>
+<td style="text-align: left;">Egocentric (kitchen)</td>
+<td style="text-align: right;">100 h</td>
+<td style="text-align: center;">hours</td>
+<td style="text-align: left;">Egocentric encoder</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">MeViS</td>
+<td style="text-align: center;">2023</td>
+<td style="text-align: left;">Referring VOS (motion)</td>
+<td style="text-align: left;">Web</td>
+<td style="text-align: right;">2 K</td>
+<td style="text-align: center;">∼12 s</td>
+<td style="text-align: left;">VOS-VLM</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</section>
+<section id="sec-choosing-benchmark" class="level2" data-number="14.11">
+<h2 data-number="14.11" class="anchored" data-anchor-id="sec-choosing-benchmark"><span class="header-section-number">14.11</span> Choosing a Benchmark: Practical Recommendations</h2>
+<p>The benchmark choice is forced by <em>two</em> things — what task we want to prove and what budget we have. The recommendations below reflect a specific model trajectory: an autoregressive image-LM in the Molmo / Qwen2.5-VL line, first extended to video frames, later turned into a contrastive representation model via token-average + contrastive head.</p>
+<section id="stage-1-autoregressive-image-lm-extended-to-video" class="level3 unnumbered">
+<h3 class="unnumbered anchored" data-anchor-id="stage-1-autoregressive-image-lm-extended-to-video">Stage 1 — autoregressive image-LM extended to video</h3>
+<p>Five-benchmark suite, ordered by <em>priority</em>:</p>
+<ol type="1">
+<li><strong>MVBench <span class="citation" data-cites="li2024mvbench">(<a href="../../references.html#ref-li2024mvbench" role="doc-biblioref">Li et al. 2024</a>)</span>.</strong> Short-clip MCQ over 20 temporal-reasoning task types. The fastest, cheapest test that proves the model has <em>any</em> temporal understanding above a frame-bag baseline. Run this first.</li>
+<li><strong>Video-MME <span class="citation" data-cites="fu2024videomme">(<a href="../../references.html#ref-fu2024videomme" role="doc-biblioref"><span class="nocase">Fu et al.</span> 2024</a>)</span></strong> (full + short split). The de facto industry-standard video VLM benchmark; lets us position against Qwen2.5-VL / InternVL3 / LLaVA-OneVision on a single axis. Report both with-subtitles and no-subtitles.</li>
+<li><strong>TempCompass <span class="citation" data-cites="liu2024tempcompass">(<a href="../../references.html#ref-liu2024tempcompass" role="doc-biblioref">Liu et al. 2024</a>)</span></strong> (or TVBench <span class="citation" data-cites="cores2024tvbench">(<a href="../../references.html#ref-cores2024tvbench" role="doc-biblioref">Cores et al. 2024</a>)</span>). A <em>paired-clip</em> test that catches the “looks at one frame and guesses” failure mode. Pick TempCompass for clarity, TVBench if we want to share an axis with VideoChat2 and Qwen2.5-VL.</li>
+<li><strong>Perception Test <span class="citation" data-cites="patraucean2023perceptiontest">(<a href="../../references.html#ref-patraucean2023perceptiontest" role="doc-biblioref"><span class="nocase">Patraucean et al.</span> 2023</a>)</span></strong> (validation split, MCQ only). Diagnostic-style breakdown into Memory / Abstraction / Physics / Semantics × Descriptive / Explanatory / Predictive / Counterfactual; tells us <em>where</em> the model is weak.</li>
+<li><strong>LongVideoBench <span class="citation" data-cites="wu2024longvideobench">(<a href="../../references.html#ref-wu2024longvideobench" role="doc-biblioref">Wu et al. 2024</a>)</span></strong> (validation, MCQ only). Only if we have decided to invest in long-context training; otherwise expect near-chance on the &gt; 15 min split. Defers to Video-MME-long if budget is tight.</li>
+</ol>
+<p>What we are explicitly <strong>not</strong> running first:</p>
+<ul>
+<li>No K400 / SSv2 — these are encoder benchmarks. We will get a number from K400 zero-shot if we ever turn the model into a representation model in Stage 2; otherwise it tells us very little about the autoregressive head.</li>
+<li>No MSRVTT-QA / MSVD-QA — generation-style, saturated, and replaced by MCQ benchmarks above.</li>
+<li>No ActivityNet-QA — same, with one exception: cite it once for continuity with the older video-chat lineage.</li>
+</ul>
+</section>
+<section id="stage-2-representation-model-token-average-contrastive-head" class="level3 unnumbered">
+<h3 class="unnumbered anchored" data-anchor-id="stage-2-representation-model-token-average-contrastive-head">Stage 2 — representation model (token-average + contrastive head)</h3>
+<p>Five-benchmark suite for the contrastive variant:</p>
+<ol type="1">
+<li><strong>Kinetics-400 zero-shot <span class="citation" data-cites="kay2017kinetics">(<a href="../../references.html#ref-kay2017kinetics" role="doc-biblioref">Kay et al. 2017</a>)</span>.</strong> The canonical zero-shot action-classification number. Compare to ViCLIP and InternVideo2.</li>
+<li><strong>MSR-VTT 1K-A retrieval <span class="citation" data-cites="xu2016msrvtt">(<a href="../../references.html#ref-xu2016msrvtt" role="doc-biblioref">Xu et al. 2016</a>)</span>.</strong> Both directions (text → video and video → text), R@1/5/10. The default retrieval leaderboard.</li>
+<li><strong>DiDeMo retrieval <span class="citation" data-cites="hendricks2017didemo">(<a href="../../references.html#ref-hendricks2017didemo" role="doc-biblioref">Hendricks et al. 2017</a>)</span>.</strong> Shorter clips, simpler IoU bins; pair with MSR-VTT.</li>
+<li><strong>Charades-STA moment retrieval <span class="citation" data-cites="gao2017charadessta">(<a href="../../references.html#ref-gao2017charadessta" role="doc-biblioref">Gao et al. 2017</a>)</span></strong> (if the representation supports temporal grounding via similarity-over-time). R@1 IoU={0.5, 0.7}.</li>
+<li><strong>SSv2 zero-shot or linear-probe <span class="citation" data-cites="goyal2017ssv2">(<a href="../../references.html#ref-goyal2017ssv2" role="doc-biblioref"><span class="nocase">Goyal et al.</span> 2017</a>)</span>.</strong> The motion-heavy counterpoint to K400 — if a representation has <em>not</em> learned motion, this is where it shows. Skip if the model is purely frame-pooled (it will score at chance by design).</li>
+</ol>
+<p>If we add a long-video retrieval/grounding axis later, the canonical pair is <strong>EgoSchema</strong> (long-form egocentric MCQ) and <strong>ActivityNet-Captions retrieval</strong> (medium-length narrated web). For <em>corpus-scale</em> moment retrieval, the canonical pair is <strong>TVR</strong> (short-form, multi-modal) and <strong>MAD</strong> (long-form movie).</p>
+</section>
+</section>
+<section id="sec-bench-trends" class="level2" data-number="14.12">
+<h2 data-number="14.12" class="anchored" data-anchor-id="sec-bench-trends"><span class="header-section-number">14.12</span> 2026 Trends in Video Benchmarks</h2>
+<p>A compressed read of the field as the chapter is being written:</p>
+<ul>
+<li><strong>Saturated, still reported anyway:</strong> K400 (encoders &gt; 90 % top-1), UCF-101, HMDB-51, MSVD-QA. These remain on every results table for continuity, but moving the needle on them no longer signifies a real capability gain.</li>
+<li><strong>The 2024–2026 short-clip de facto trio:</strong> <strong>MVBench + Video-MME + Perception Test.</strong> Almost every video VLM paper from 2025 onwards reports all three; if a benchmark is missing from a paper it is usually because the authors didn’t like the result.</li>
+<li><strong>Long-video has consolidated:</strong> <strong>LongVideoBench + Video-MME-long + MLVU</strong> form the de facto long-video trio. LVBench and HourVideo are the dataset-papers’ newer hour-scale tests, used mainly by long-video specialists.</li>
+<li><strong>The “true temporal” wave:</strong> TVBench, TempCompass, and Vinoground exist specifically because most 2023–2024 video VLMs can answer MVBench-style questions from a single frame or from world knowledge. Expect any 2026 paper that claims temporal understanding to report at least one of these.</li>
+<li><strong>Egocentric has its own axis:</strong> EgoSchema (long-form) + EPIC-Kitchens-100 (fine-grained) + Ego4D NLQ are the canonical trio; if a paper claims egocentric understanding it has to hit all three.</li>
+<li><strong>The grounded-MCQ frontier:</strong> NeXT-GQA’s <em>grounding gap</em> — the fraction of correct MCQs that are also temporally well-grounded — is the most informative single number for “does the model actually know <em>when</em> the answer is?”. The field is collectively bad at this and that is where the next gains will come from.</li>
+<li><strong>VCMR at scale:</strong> TVR remains the standard, but MAD and MomentSeeker have moved the frontier to long-form / multi-modal queries. Combined with the rise of LLM-based rerankers (UniME-V2 <span class="citation" data-cites="gu2025unimev2">(<a href="../../references.html#ref-gu2025unimev2" role="doc-biblioref">Gu et al. 2025</a>)</span>), 2025–2026 sees retrieval pipelines become two-stage (coarse first-stage embedding retrieval → LLM cross-encoder reranker) rather than single-stage.</li>
+<li><strong>Pretraining-corpus shake-up:</strong> the take-down of WebVid-10M in 2024 forced a switch to InternVid / Panda-70M / LLaVA-Video-178K. Quality + re-captioning has displaced raw scale as the dominant axis; expect 2026 papers to spend pages on data composition rather than architecture.</li>
+<li><strong>What is <em>not</em> reported and probably should be:</strong> open-ended captioning under SODA_c (only ActivityNet-Captions and YouCook2 do this routinely); spatio-temporal grounding for VLMs (no good benchmark in 2026); fairness/cultural-coverage of egocentric data outside North America and Europe (Ego-Exo4D partially addresses this, an emerging story).</li>
+</ul>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-bain2021frozen" class="csl-entry" role="listitem">
+Bain, Max, Arsha Nagrani, Gül Varol, and Andrew Zisserman. 2021. <em>Frozen in Time: A Joint Video and Image Encoder for End-to-End Retrieval</em>. <a href="https://arxiv.org/abs/2104.00650">https://arxiv.org/abs/2104.00650</a>.
+</div>
+<div id="ref-carreira2018k600" class="csl-entry" role="listitem">
+Carreira, Joao, Eric Noland, Andras Banki-Horvath, Chloe Hillier, and Andrew Zisserman. 2018. <span>“A Short Note about <span>Kinetics-600</span>.”</span> <em>arXiv Preprint arXiv:1808.01340</em>.
+</div>
+<div id="ref-carreira2019k700" class="csl-entry" role="listitem">
+Carreira, Joao, Eric Noland, Chloe Hillier, and Andrew Zisserman. 2019. <span>“A Short Note on the <span>Kinetics-700</span> Human Action Dataset.”</span> <em>arXiv Preprint arXiv:1907.06987</em>.
+</div>
+<div id="ref-chandrasegaran2024hourvideo" class="csl-entry" role="listitem">
+Chandrasegaran, Keshigeyan, Agrim Gupta, Lea M. Hadzic, et al. 2024. <span>“<span>HourVideo</span>: 1-Hour Video-Language Understanding.”</span> <em>arXiv Preprint arXiv:2411.04998</em>.
+</div>
+<div id="ref-chao2020vhico" class="csl-entry" role="listitem">
+Chao, Yu-Wei, Yunfan Liu, Xieyang Liu, Huayi Zeng, and Jia Deng. 2020. <span>“<span>V-HICO</span>: Learning to Detect Human-Object Interactions from Videos.”</span> <em>Proceedings of the European Conference on Computer Vision (ECCV) Workshops</em>.
+</div>
+<div id="ref-chen2011msvd" class="csl-entry" role="listitem">
+Chen, David L., and William B. Dolan. 2011. <span>“Collecting Highly Parallel Data for Paraphrase Evaluation.”</span> <em>Proceedings of the 49th Annual Meeting of the Association for Computational Linguistics (ACL)</em>.
+</div>
+<div id="ref-chen2024sharegpt4video" class="csl-entry" role="listitem">
+Chen, Lin, Xilin Wei, Jinsong Li, et al. 2024. <span>“<span>ShareGPT4Video</span>: Improving Video Understanding and Generation with Better Captions.”</span> <em>arXiv Preprint arXiv:2406.04325</em>.
+</div>
+<div id="ref-chen2023vast" class="csl-entry" role="listitem">
+Chen, Sihan, Handong Li, Qunbo Wang, et al. 2023. <span>“<span>VAST</span>: A Vision-Audio-Subtitle-Text Omni-Modality Foundation Model and Dataset.”</span> <em>Advances in Neural Information Processing Systems (NeurIPS)</em>.
+</div>
+<div id="ref-chen2024panda70m" class="csl-entry" role="listitem">
+Chen, Tsai-Shien, Aliaksandr Siarohin, Willi Menapace, et al. 2024. <em>Panda-70M: Captioning 70M Videos for Video Generation</em>. <a href="https://arxiv.org/abs/2402.19479">https://arxiv.org/abs/2402.19479</a>.
+</div>
+<div id="ref-cores2024tvbench" class="csl-entry" role="listitem">
+Cores, Daniel, Pedro Muñoz, Andres Vallés, Roberto Carballal, and Víctor M. Brea. 2024. <em>TVBench: Redesigning Video-Language Evaluation</em>. <a href="https://arxiv.org/abs/2410.07752">https://arxiv.org/abs/2410.07752</a>.
+</div>
+<div id="ref-damen2020epickitchens100" class="csl-entry" role="listitem">
+Damen, Dima, Hazel Doughty, Giovanni Maria Farinella, et al. 2022. <span>“Rescaling Egocentric Vision: Collection, Pipeline and Challenges for <span>EPIC-KITCHENS-100</span>.”</span> <em>International Journal of Computer Vision (IJCV)</em> 130: 33–55.
+</div>
+<div id="ref-dendorfer2020mot20" class="csl-entry" role="listitem">
+Dendorfer, Patrick, Hamid Rezatofighi, Anton Milan, et al. 2020. <span>“<span>MOT20</span>: A Benchmark for Multi-Object Tracking in Crowded Scenes.”</span> <em>arXiv Preprint arXiv:2003.09003</em>.
+</div>
+<div id="ref-ding2023mevis" class="csl-entry" role="listitem">
+Ding, Henghui, Chang Liu, Shuting He, Xudong Jiang, and Chen Change Loy. 2023. <span>“<span>MeViS</span>: A Large-Scale Benchmark for Video Segmentation with Motion Expressions.”</span> <em>Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)</em>.
+</div>
+<div id="ref-fan2019lasot" class="csl-entry" role="listitem">
+Fan, Heng, Liting Lin, Fan Yang, et al. 2019. <span>“<span>LaSOT</span>: A High-Quality Benchmark for Large-Scale Single Object Tracking.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>.
+</div>
+<div id="ref-fang2024mmbenchvideo" class="csl-entry" role="listitem">
+Fang, Xinyu, Kangrui Mao, Haodong Duan, et al. 2024. <span>“<span>MMBench-Video</span>: A Long-Form Multi-Shot Benchmark for Holistic Video Understanding.”</span> <em>Advances in Neural Information Processing Systems (NeurIPS), Datasets and Benchmarks Track</em>.
+</div>
+<div id="ref-feichtenhofer2019slowfast" class="csl-entry" role="listitem">
+Feichtenhofer, Christoph, Haoqi Fan, Jitendra Malik, and Kaiming He. 2019. <span>“SlowFast Networks for Video Recognition.”</span> <em>Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)</em>.
+</div>
+<div id="ref-fu2024videomme" class="csl-entry" role="listitem">
+<span class="nocase">Fu, Chaoyou, Yuhan Dai, Yondong Luo, et al.</span> 2024. <em>Video-MME: The First-Ever Comprehensive Evaluation Benchmark of Multi-Modal LLMs in Video Analysis</em>. <a href="https://arxiv.org/abs/2405.21075">https://arxiv.org/abs/2405.21075</a>.
+</div>
+<div id="ref-fujita2020soda" class="csl-entry" role="listitem">
+Fujita, Soichiro, Tsutomu Hirao, Hidetaka Kamigaito, Manabu Okumura, and Masaaki Nagata. 2020. <span>“SODA: Story Oriented Dense Video Captioning Evaluation Framework.”</span> <em>Proceedings of the European Conference on Computer Vision (ECCV)</em>.
+</div>
+<div id="ref-gao2017charadessta" class="csl-entry" role="listitem">
+Gao, Jiyang, Chen Sun, Zhenheng Yang, and Ram Nevatia. 2017. <span>“<span>TALL</span>: Temporal Activity Localization via Language Query.”</span> <em>Proceedings of the IEEE International Conference on Computer Vision (ICCV)</em>.
+</div>
+<div id="ref-goyal2017ssv2" class="csl-entry" role="listitem">
+<span class="nocase">Goyal, Raghav, Samira Ebrahimi Kahou, Vincent Michalski, et al.</span> 2017. <em>The "Something Something" Video Database for Learning and Evaluating Visual Common Sense</em>. <a href="https://arxiv.org/abs/1706.04261">https://arxiv.org/abs/1706.04261</a>.
+</div>
+<div id="ref-grauman2022ego4d" class="csl-entry" role="listitem">
+Grauman, Kristen, Andrew Westbury, Eugene Byrne, et al. 2022. <span>“<span>Ego4D</span>: Around the World in 3,000 Hours of Egocentric Video.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>.
+</div>
+<div id="ref-grunde2021agqa" class="csl-entry" role="listitem">
+Grunde-McLaughlin, Madeleine, Ranjay Krishna, and Maneesh Agrawala. 2021. <span>“<span>AGQA</span>: A Benchmark for Compositional Spatio-Temporal Reasoning.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>.
+</div>
+<div id="ref-gu2018ava" class="csl-entry" role="listitem">
+Gu, Chunhui, Chen Sun, David A. Ross, et al. 2018. <em>AVA: A Video Dataset of Spatio-Temporally Localized Atomic Visual Actions</em>. <a href="https://arxiv.org/abs/1705.08421">https://arxiv.org/abs/1705.08421</a>.
+</div>
+<div id="ref-gu2025unimev2" class="csl-entry" role="listitem">
+Gu, Tiancheng, Kaicheng Yang, Xiang Zhang, Ziyong An, Bo Wang, and Weidong Deng. 2025. <em>UniME-V2: LLM-as-Reranker for Universal Multimodal Embedding</em>. LLM-as-reranker for universal multimodal embedding.
+</div>
+<div id="ref-hendricks2017didemo" class="csl-entry" role="listitem">
+Hendricks, Lisa Anne, Oliver Wang, Eli Shechtman, Josef Sivic, Trevor Darrell, and Bryan Russell. 2017. <span>“Localizing Moments in Video with Natural Language.”</span> <em>Proceedings of the IEEE International Conference on Computer Vision (ICCV)</em>.
+</div>
+<div id="ref-hu2025momentseeker" class="csl-entry" role="listitem">
+Hu, Huaying, Chengyu Zhang, Zheng Liu, Yujia Shao, and Caiming Xiong. 2025. <em>MomentSeeker: A Comprehensive Benchmark and a Strong Baseline for Moment Retrieval Within Long Videos</em>. Long-video moment retrieval benchmark.
+</div>
+<div id="ref-huang2019got10k" class="csl-entry" role="listitem">
+Huang, Lianghua, Xin Zhao, and Kaiqi Huang. 2019. <span>“<span>GOT-10k</span>: A Large High-Diversity Benchmark for Generic Object Tracking in the Wild.”</span> <em>IEEE Transactions on Pattern Analysis and Machine Intelligence (TPAMI)</em>.
+</div>
+<div id="ref-kay2017kinetics" class="csl-entry" role="listitem">
+Kay, Will, Joao Carreira, Karen Simonyan, et al. 2017. <em>The Kinetics Human Action Video Dataset</em>. <a href="https://arxiv.org/abs/1705.06950">https://arxiv.org/abs/1705.06950</a>.
+</div>
+<div id="ref-krishna2017densecaptioning" class="csl-entry" role="listitem">
+Krishna, Ranjay, Kenji Hata, Frederic Ren, Li Fei-Fei, and Juan Carlos Niebles. 2017. <span>“Dense-Captioning Events in Videos.”</span> <em>Proceedings of the IEEE International Conference on Computer Vision (ICCV)</em>.
+</div>
+<div id="ref-kuehne2011hmdb" class="csl-entry" role="listitem">
+Kuehne, Hilde, Hueihan Jhuang, Estı́baliz Garrote, Tomaso Poggio, and Thomas Serre. 2011. <span>“<span>HMDB</span>: A Large Video Database for Human Motion Recognition.”</span> <em>Proceedings of the IEEE International Conference on Computer Vision (ICCV)</em>.
+</div>
+<div id="ref-lei2021qvhighlights" class="csl-entry" role="listitem">
+Lei, Jie, Tamara L. Berg, and Mohit Bansal. 2021. <span>“QVHighlights: Detecting Moments and Highlights in Videos via Natural Language Queries.”</span> <em>Advances in Neural Information Processing Systems (NeurIPS)</em>.
+</div>
+<div id="ref-lei2018tvqa" class="csl-entry" role="listitem">
+Lei, Jie, Licheng Yu, Mohit Bansal, and Tamara L. Berg. 2018. <span>“<span>TVQA</span>: Localized, Compositional Video Question Answering.”</span> <em>Proceedings of the Conference on Empirical Methods in Natural Language Processing (EMNLP)</em>.
+</div>
+<div id="ref-lei2020tvqaplus" class="csl-entry" role="listitem">
+Lei, Jie, Licheng Yu, Tamara L. Berg, and Mohit Bansal. 2020a. <span>“<span>TVQA+</span>: Spatio-Temporal Grounding for Video Question Answering.”</span> <em>Proceedings of the Annual Meeting of the Association for Computational Linguistics (ACL)</em>.
+</div>
+<div id="ref-lei2020tvr" class="csl-entry" role="listitem">
+Lei, Jie, Licheng Yu, Tamara L. Berg, and Mohit Bansal. 2020b. <span>“TVR: A Large-Scale Dataset for Video-Subtitle Moment Retrieval.”</span> <em>Proceedings of the European Conference on Computer Vision (ECCV)</em>.
+</div>
+<div id="ref-li2024mvbench" class="csl-entry" role="listitem">
+Li, Kunchang, Yali Wang, Yinan He, et al. 2024. <em>MVBench: A Comprehensive Multi-Modal Video Understanding Benchmark</em>. <a href="https://arxiv.org/abs/2311.17005">https://arxiv.org/abs/2311.17005</a>.
+</div>
+<div id="ref-li2022mvitv2" class="csl-entry" role="listitem">
+Li, Yanghao, Chao-Yuan Wu, Haoqi Fan, et al. 2022. <span>“<span>MViTv2</span>: Improved Multiscale Vision Transformers for Classification and Detection.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>.
+</div>
+<div id="ref-li2018diving48" class="csl-entry" role="listitem">
+Li, Yingwei, Yi Li, and Nuno Vasconcelos. 2018. <span>“<span>RESOUND</span>: Towards Action Recognition Without Representation Bias.”</span> <em>Proceedings of the European Conference on Computer Vision (ECCV)</em>.
+</div>
+<div id="ref-liu2024tempcompass" class="csl-entry" role="listitem">
+Liu, Yuanxin, Shicheng Li, Yi Liu, et al. 2024. <em>TempCompass: Do Video LLMs Really Understand Videos?</em> <a href="https://arxiv.org/abs/2403.00476">https://arxiv.org/abs/2403.00476</a>.
+</div>
+<div id="ref-luiten2021hota" class="csl-entry" role="listitem">
+Luiten, Jonathon, Aljosa Osep, Patrick Dendorfer, et al. 2021. <span>“HOTA: A Higher Order Metric for Evaluating Multi-Object Tracking.”</span> <em>International Journal of Computer Vision</em> 129: 548–78.
+</div>
+<div id="ref-luo2022clip4clip" class="csl-entry" role="listitem">
+Luo, Huaishao, Lei Ji, Ming Zhong, et al. 2021. <em>CLIP4Clip: An Empirical Study of CLIP for End to End Video Clip Retrieval</em>. <a href="https://arxiv.org/abs/2104.08860">https://arxiv.org/abs/2104.08860</a>.
+</div>
+<div id="ref-maaz2023videochatgpt" class="csl-entry" role="listitem">
+Maaz, Muhammad, Hanoona Rasheed, Salman Khan, and Fahad Shahbaz Khan. 2024. <span>“<span>Video-ChatGPT</span>: Towards Detailed Video Understanding via Large Vision and Language Models.”</span> <em>Proceedings of the Annual Meeting of the Association for Computational Linguistics (ACL)</em>.
+</div>
+<div id="ref-mangalam2023egoschema" class="csl-entry" role="listitem">
+Mangalam, Karttikeya, Raiymbek Akshulakov, and Jitendra Malik. 2023. <span>“EgoSchema: A Diagnostic Benchmark for Very Long-Form Video Language Understanding.”</span> <em>Advances in Neural Information Processing Systems (NeurIPS)</em>.
+</div>
+<div id="ref-miech2019howto100m" class="csl-entry" role="listitem">
+Miech, Antoine, Dimitri Zhukov, Jean-Baptiste Alayrac, Makarand Tapaswi, Ivan Laptev, and Josef Sivic. 2019. <em>HowTo100M: Learning a Text-Video Embedding by Watching Hundred Million Narrated Video Clips</em>. <a href="https://arxiv.org/abs/1906.03327">https://arxiv.org/abs/1906.03327</a>.
+</div>
+<div id="ref-monfort2019mit" class="csl-entry" role="listitem">
+Monfort, Mathew, Alex Andonian, Bolei Zhou, et al. 2019. <span>“Moments in Time Dataset: One Million Videos for Event Understanding.”</span> <em>IEEE Transactions on Pattern Analysis and Machine Intelligence (TPAMI)</em>.
+</div>
+<div id="ref-muller2018trackingnet" class="csl-entry" role="listitem">
+Müller, Matthias, Adel Bibi, Silvio Giancola, Salman Al-Subaihi, and Bernard Ghanem. 2018. <span>“<span>TrackingNet</span>: A Large-Scale Dataset and Benchmark for Object Tracking in the Wild.”</span> <em>Proceedings of the European Conference on Computer Vision (ECCV)</em>.
+</div>
+<div id="ref-nagrani2022videocc" class="csl-entry" role="listitem">
+Nagrani, Arsha, Paul Hongsuck Seo, Bryan Seybold, et al. 2022. <span>“Learning Audio-Video Modalities from Image Captions.”</span> <em>Proceedings of the European Conference on Computer Vision (ECCV)</em>.
+</div>
+<div id="ref-patraucean2023perceptiontest" class="csl-entry" role="listitem">
+<span class="nocase">Patraucean, Viorica, Lucas Smaira, Ankush Gupta, et al.</span> 2023. <span>“Perception Test: A Diagnostic Benchmark for Multimodal Video Models.”</span> <em>Advances in Neural Information Processing Systems (NeurIPS)</em>.
+</div>
+<div id="ref-ponttuset2017davis" class="csl-entry" role="listitem">
+Pont-Tuset, Jordi, Federico Perazzi, Sergi Caelles, Pablo Arbeláez, Alex Sorkine-Hornung, and Luc Van Gool. 2017. <span>“The 2017 <span>DAVIS</span> Challenge on Video Object Segmentation.”</span> <em>arXiv Preprint arXiv:1704.00675</em>.
+</div>
+<div id="ref-regneri2013tacos" class="csl-entry" role="listitem">
+Regneri, Michaela, Marcus Rohrbach, Dominikus Wetzel, Stefan Thater, Bernt Schiele, and Manfred Pinkal. 2013. <span>“Grounding Action Descriptions in Videos.”</span> <em>Transactions of the Association for Computational Linguistics (TACL)</em> 1: 25–36.
+</div>
+<div id="ref-ren2024timechat" class="csl-entry" role="listitem">
+Ren, Shuhuai, Linli Yao, Shicheng Li, Xu Sun, and Lu Hou. 2024. <span>“<span>TimeChat</span>: A Time-Sensitive Multimodal Large Language Model for Long Video Understanding.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>.
+</div>
+<div id="ref-rohrbach2017lsmdc" class="csl-entry" role="listitem">
+Rohrbach, Anna, Atousa Torabi, Marcus Rohrbach, et al. 2017. <span>“Movie Description.”</span> <em>International Journal of Computer Vision (IJCV)</em> 123: 94–120.
+</div>
+<div id="ref-sigurdsson2018charadesego" class="csl-entry" role="listitem">
+Sigurdsson, Gunnar A., Abhinav Gupta, Cordelia Schmid, Ali Farhadi, and Karteek Alahari. 2018. <span>“Actor and Observer: Joint Modeling of First and Third-Person Videos.”</span> <em>Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)</em>.
+</div>
+<div id="ref-sigurdsson2016charades" class="csl-entry" role="listitem">
+Sigurdsson, Gunnar A., Gül Varol, Xiaolong Wang, Ali Farhadi, Ivan Laptev, and Abhinav Gupta. 2016. <span>“<span class="nocase">Hollywood in Homes</span>: Crowdsourcing Data Collection for Activity Understanding.”</span> <em>Proceedings of the European Conference on Computer Vision (ECCV)</em>.
+</div>
+<div id="ref-soldan2022mad" class="csl-entry" role="listitem">
+Soldan, Mattia, Alejandro Pardo, Juan León Alcázar, et al. 2022. <span>“MAD: A Scalable Dataset for Language Grounding in Videos from Movie Audio Descriptions.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>.
+</div>
+<div id="ref-soomro2012ucf101" class="csl-entry" role="listitem">
+Soomro, Khurram, Amir Roshan Zamir, and Mubarak Shah. 2012. <span>“<span>UCF101</span>: A Dataset of 101 Human Actions Classes from Videos in the Wild.”</span> <em>arXiv Preprint arXiv:1212.0402</em>.
+</div>
+<div id="ref-sun2022dancetrack" class="csl-entry" role="listitem">
+Sun, Peize, Jinkun Cao, Yi Jiang, et al. 2022. <span>“<span>DanceTrack</span>: Multi-Object Tracking in Uniform Appearance and Diverse Motion.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>.
+</div>
+<div id="ref-wang2023videomaev2" class="csl-entry" role="listitem">
+Wang, Limin, Bingkun Huang, Zhiyu Zhao, et al. 2023. <span>“VideoMAE V2: Scaling Video Masked Autoencoders with Dual Masking.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>.
+</div>
+<div id="ref-wang2024lvbench" class="csl-entry" role="listitem">
+Wang, Weihan, Zehai He, Wenyi Hong, et al. 2024. <span>“<span>LVBench</span>: An Extreme Long Video Understanding Benchmark.”</span> <em>arXiv Preprint arXiv:2406.08035</em>.
+</div>
+<div id="ref-wang2019vatex" class="csl-entry" role="listitem">
+Wang, Xin, Jiawei Wu, Junkun Chen, Lei Li, Yuan-Fang Wang, and William Yang Wang. 2019. <span>“<span>VATEX</span>: A Large-Scale, High-Quality Multilingual Dataset for Video-and-Language Research.”</span> <em>Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)</em>.
+</div>
+<div id="ref-wang2024internvid" class="csl-entry" role="listitem">
+<span class="nocase">Wang, Yi, Yinan He, Yizhuo Li, et al.</span> 2023. <em>InternVid: A Large-Scale Video-Text Dataset for Multimodal Understanding and Generation</em>. <a href="https://arxiv.org/abs/2307.06942">https://arxiv.org/abs/2307.06942</a>.
+</div>
+<div id="ref-wang2024internvideo2" class="csl-entry" role="listitem">
+<span class="nocase">Wang, Yi, Kunchang Li, Xinhao Li, et al.</span> 2024. <em>InternVideo2: Scaling Foundation Models for Multimodal Video Understanding</em>. <a href="https://arxiv.org/abs/2403.15377">https://arxiv.org/abs/2403.15377</a>.
+</div>
+<div id="ref-weinzaepfel2016daly" class="csl-entry" role="listitem">
+Weinzaepfel, Philippe, Xavier Martin, and Cordelia Schmid. 2016. <span>“Towards Weakly-Supervised Action Localization.”</span> <em>arXiv Preprint arXiv:1605.05197</em>.
+</div>
+<div id="ref-wu2024star" class="csl-entry" role="listitem">
+Wu, Bo, Shoubin Yu, Zhenfang Chen, Joshua B. Tenenbaum, and Chuang Gan. 2021. <span>“<span>STAR</span>: A Benchmark for Situated Reasoning in Real-World Videos.”</span> <em>Advances in Neural Information Processing Systems (NeurIPS), Datasets and Benchmarks Track</em>.
+</div>
+<div id="ref-wu2024longvideobench" class="csl-entry" role="listitem">
+Wu, Haoning, Dongxu Li, Bei Chen, and Junnan Li. 2024. <em>LongVideoBench: A Benchmark for Long-Context Interleaved Video-Language Understanding</em>. <a href="https://arxiv.org/abs/2407.15754">https://arxiv.org/abs/2407.15754</a>.
+</div>
+<div id="ref-xiao2021nextqa" class="csl-entry" role="listitem">
+Xiao, Junbin, Xindi Shang, Angela Yao, and Tat-Seng Chua. 2021. <span>“NExT-QA: Next Phase of Question-Answering to Explaining Temporal Actions.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>.
+</div>
+<div id="ref-xiao2024nextgqa" class="csl-entry" role="listitem">
+Xiao, Junbin, Angela Yao, Yicong Li, and Tat-Seng Chua. 2024. <span>“Can i Trust Your Answer? Visually Grounded Video Question Answering.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>.
+</div>
+<div id="ref-xu2017videoqa" class="csl-entry" role="listitem">
+Xu, Dejing, Zhou Zhao, Jun Xiao, et al. 2017. <span>“Video Question Answering via Gradually Refined Attention over Appearance and Motion.”</span> <em>Proceedings of the ACM International Conference on Multimedia (MM)</em>.
+</div>
+<div id="ref-xu2016msrvtt" class="csl-entry" role="listitem">
+Xu, Jun, Tao Mei, Ting Yao, and Yong Rui. 2016. <span>“<span>MSR-VTT</span>: A Large Video Description Dataset for Bridging Video and Language.”</span> <em>Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)</em>.
+</div>
+<div id="ref-xu2018ytbvos" class="csl-entry" role="listitem">
+Xu, Ning, Linjie Yang, Yuchen Fan, et al. 2018. <span>“<span>YouTube-VOS</span>: A Large-Scale Video Object Segmentation Benchmark.”</span> <em>Proceedings of the European Conference on Computer Vision (ECCV)</em>.
+</div>
+<div id="ref-xue2022hdvila" class="csl-entry" role="listitem">
+Xue, Hongwei, Tiankai Hang, Yanhong Zeng, et al. 2022. <span>“Advancing High-Resolution Video-Language Representation with Large-Scale Video Transcriptions.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>.
+</div>
+<div id="ref-yu2019activitynetqa" class="csl-entry" role="listitem">
+Yu, Zhou, Dejing Xu, Jun Yu, et al. 2019. <span>“<span>ActivityNet-QA</span>: A Dataset for Understanding Complex Web Videos via Question Answering.”</span> <em>Proceedings of the AAAI Conference on Artificial Intelligence</em>.
+</div>
+<div id="ref-zala2023hirest" class="csl-entry" role="listitem">
+Zala, Abhay, Jaemin Cho, Satwik Kottur, et al. 2023. <span>“Hierarchical Video-Moment Retrieval and Step-Captioning.”</span> <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>.
+</div>
+<div id="ref-zhang2024vinoground" class="csl-entry" role="listitem">
+Zhang, Jianrui, Mu Cai, and Yong Jae Lee. 2024. <span>“<span>Vinoground</span>: Scrutinizing <span>LMM</span>s over Dense Temporal Reasoning with Short Videos.”</span> <em>arXiv Preprint arXiv:2410.02763</em>.
+</div>
+<div id="ref-li2024llavavideo" class="csl-entry" role="listitem">
+Zhang, Yuanhan, Jinming Wu, Wei Li, et al. 2024. <span>“Video Instruction Tuning with Synthetic Data.”</span> <em>arXiv Preprint arXiv:2410.02713</em>.
+</div>
+<div id="ref-zhou2024mlvu" class="csl-entry" role="listitem">
+Zhou, Junjie, Yan Shu, Bo Zhao, et al. 2024. <em>MLVU: A Comprehensive Benchmark for Multi-Task Long Video Understanding</em>. <a href="https://arxiv.org/abs/2406.04264">https://arxiv.org/abs/2406.04264</a>.
+</div>
+<div id="ref-zhou2018youcook2" class="csl-entry" role="listitem">
+Zhou, Luowei, Chenliang Xu, and Jason J. Corso. 2018. <span>“Towards Automatic Learning of Procedures from Web Instructional Videos.”</span> <em>Proceedings of the AAAI Conference on Artificial Intelligence</em>.
+</div>
+<div id="ref-zhu2024languagebind" class="csl-entry" role="listitem">
+<span class="nocase">Zhu, Bin, Bin Lin, Munan Ning, et al.</span> 2023. <em>LanguageBind: Extending Video-Language Pretraining to n-Modality by Language-Based Semantic Alignment</em>. <a href="https://arxiv.org/abs/2310.01852">https://arxiv.org/abs/2310.01852</a>.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const callouts = document.querySelectorAll('.callout-tip');
+    callouts.forEach(function(callout) {
+      callout.style.borderLeftColor = '#2196f3'; //#616161; //'#4caf50';
+      callout.style.color = 'ffffff'; // Dark purple-gray text
+    });
+  });
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../chapters/video/12-video-temporal-segmentation.html" class="pagination-link" aria-label="Video Temporal Segmentation">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Video Temporal Segmentation</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../chapters/video/14-video-generation.html" class="pagination-link" aria-label="Video Generation">
+        <span class="nav-page-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Video Generation</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="../../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>
