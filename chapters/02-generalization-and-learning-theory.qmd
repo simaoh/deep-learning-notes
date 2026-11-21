@@ -177,7 +177,7 @@ $$\hat{y}_{\text{ensemble}} = \frac{1}{M} \sum_{i=1}^M \hat{y}^{(i)}$$
 - Linear classifier in $\mathbb{R}^d$: $\text{VC} = d + 1$
 - Two-layer ReLU network: $\text{VC} = O(W^2)$ where $W$ is total parameters
 
-**Empirical Finding** (Zhang et al., 2017): Neural networks can perfectly fit random labels—demonstrating they have *capacity* to memorize. Yet on real data, they *prefer* to learn patterns first.
+**Empirical Finding** (Zhang et al., 2017; see @sec-modern-puzzles): Neural networks can perfectly fit random labels—demonstrating they have *capacity* to memorize. Yet on real data, they *prefer* to learn patterns first.
 
 **Rademacher Complexity**: A data-dependent capacity measure that predicts generalization better than parameter count alone. For dataset $\mathcal{S}$:
 
@@ -205,6 +205,12 @@ The noise in mini-batch SGD acts as implicit regularization, preventing converge
 
 **Practical Implication**: Batch size affects generalization not just through gradient estimation, but through the geometry of the solutions found.
 
+**Edge of Stability** (Cohen et al., 2021) [@cohen2021eos]: Flat vs. sharp describes *where* training ends; the Edge of Stability explains *why the step size limits how sharp it can get*. Define **sharpness** as the largest Hessian eigenvalue $\lambda_{\max}$. Gradient descent with step size $\eta$ is unstable on a quadratic once $\lambda_{\max} > 2/\eta$. Empirically, full-batch GD first sharpens steadily ("progressive sharpening") until $\lambda_{\max} \approx 2/\eta$, then **hovers right at that threshold** while the loss keeps falling non-monotonically.
+
+![Edge of Stability: for every step size $\eta$ (colors), sharpness (bottom) rises until it reaches $2/\eta$ (dashed line) and then stays there, while the training loss (top) decreases with spikes. *Source: Cohen et al., "Gradient Descent on Neural Networks Typically Occurs at the Edge of Stability" (2021), Figure 1.*](/images/generalization/edge_of_stability.png){#fig-eos width=95%}
+
+So $\eta$ caps the sharpness of the solution: **larger step sizes end in flatter minima**, a deterministic counterpart to the small-batch noise argument above. The two are related but not the same: flat minima are a property of the *solution*, Edge of Stability a property of the *trajectory* (shown for full-batch GD, without SGD noise).
+
 ---
 
 ### Implicit Regularization from Optimization
@@ -222,9 +228,13 @@ The noise in mini-batch SGD acts as implicit regularization, preventing converge
 
 ---
 
-## Modern Generalization Puzzles
+## Modern Generalization Puzzles {#sec-modern-puzzles}
 
-Classical theory predicts that over-parameterized models should catastrophically overfit. Reality contradicts this. Understanding these paradoxes is essential for modern deep learning research.
+Classical theory predicts that over-parameterized models should catastrophically overfit. The puzzle was made concrete by Zhang et al. (2017) [@zhang2017rethinking]: standard networks reach **zero training error even when the labels are replaced by random ones**—so they have the capacity to memorize anything—yet on real labels the same networks generalize well. Capacity-based bounds (VC dimension, parameter counts) cannot tell these two cases apart, so something else must explain generalization.
+
+![Fitting random labels on CIFAR-10. (a) Training loss still reaches zero with random labels or pixels, only more slowly; (c) test error grows toward chance (0.9) as label corruption increases. *Source: Zhang et al., "Understanding Deep Learning Requires Rethinking Generalization" (2017), Figure 1.*](/images/generalization/random_labels.png){#fig-random-labels width=95%}
+
+The phenomena below are different answers to that question: double descent (capacity is not the right axis), lottery tickets (which subnetwork is trained), and grokking (when generalization emerges). The mechanisms that select *which* zero-loss solution is found—flat minima and the Edge of Stability—are in the previous section.
 
 ### Double Descent Phenomenon
 
@@ -383,7 +393,7 @@ Understanding these mechanisms is essential for designing scalable deep learning
 
 ### Further Reading
 
-- **Generalization**: [Understanding Deep Learning Requires Rethinking Generalization](https://arxiv.org/abs/1611.03530)
+- **Generalization**: [Understanding Deep Learning Requires Rethinking Generalization](https://arxiv.org/abs/1611.03530), [Edge of Stability](https://arxiv.org/abs/2103.00065)
 - **Modern Generalization**: [Deep Double Descent](https://arxiv.org/abs/1912.02292), [Lottery Ticket Hypothesis](https://arxiv.org/abs/1803.03635)
 - **Grokking**: [Power et al., 2022 (original paper)](https://arxiv.org/abs/2201.02177), [Nanda et al., 2023 (mechanistic account)](https://arxiv.org/abs/2301.05217), [Thilak et al., 2022 (Slingshot Effect)](https://arxiv.org/abs/2206.04817) — for the most in-depth, up-to-date treatment, see the survey [Bertolotti & Cazzola, "A Survey on Grokking," ACM Computing Surveys (2026)](https://doi.org/10.1145/3814603)
 
