@@ -7,13 +7,12 @@ Computer vision enables machines to extract meaning from visual data—a capabil
 **Chapter Scope**:
 
 - **Convolutional Neural Networks** (§2.1): Core building blocks and design principles
-- **Object Detection** (§2.2): Localizing and classifying objects in images
-- **Semantic Segmentation** (§2.3): Pixel-level understanding
-- **Vision Transformers** (§2.4): Attention-based architectures for vision
-- **Foundation Models** (§2.5): Large-scale pre-trained systems (SAM)
-- **Self-Supervised Learning** (§2.6): Learning visual representations without labels
-- **Generative Models** (§2.7): Modeling visual data distributions
-- **Video Understanding** (§2.8): Temporal modeling and generation
+- **Vision Transformers** (§2.2): Attention-based backbones for vision (ViT, DeiT, CvT, Swin)
+- **Detection and Segmentation** (§2.3): Localizing and labeling objects and pixels—two-stage and single-stage detectors, feature pyramids, semantic/instance/panoptic segmentation, and transformer detectors (DETR)
+- **Foundation Segmentation Models** (§2.4): Promptable segmentation at scale (SAM, SAM 2, SAM 3)
+- **Self-Supervised Learning** (§2.5): Learning visual representations without labels
+- **Generative Models** (§2.6): Modeling visual data distributions
+- **Video Understanding** (§2.7): Temporal modeling and generation
 
 **Interview Relevance**: Companies like Meta (detection/segmentation), Tesla (autonomous vision), Waymo (3D perception), and Google (foundational models) rely on these techniques. Expect questions on architectural trade-offs, when to use CNNs vs. Transformers, optimization challenges at scale, and recent advances (DINO, SAM, Stable Diffusion).
 

@@ -19,9 +19,9 @@ book:
     - part: "Part II: Visual Understanding"
       chapters:
         - chapters/vision/03-cnns.qmd
-        - chapters/vision/04-object-detection-and-segmentation.qmd
-        - chapters/vision/05-vision-transformers.qmd
-        - chapters/vision/06-foundation-models-for-segmentation.qmd
+        - chapters/vision/04-vision-transformers.qmd
+        - chapters/vision/05-detection-and-segmentation.qmd
+        - chapters/vision/06-foundation-segmentation-models.qmd
 
     - part: "Part III: Self-Supervised Learning"
       chapters:

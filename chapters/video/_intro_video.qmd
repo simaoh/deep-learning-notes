@@ -14,6 +14,6 @@ Video extends images with a temporal dimension, turning visual understanding int
 
 **Interview Relevance**: Video understanding and generation are central to roles at Meta (Reels ranking, Movie Gen), Google DeepMind (Gemini, Veo, Genie), OpenAI (Sora), Tesla and Waymo (temporal scene understanding), and TikTok/YouTube (recommendation, search, and moderation at scale). Expect questions on extending image architectures to video efficiently, token-budget trade-offs for long-context video LLMs, how modern video generators (Sora, CogVideoX) differ architecturally from image diffusion models, how a video is split into shots/scenes for retrieval, and how to evaluate video understanding or generation quality.
 
-**Prerequisites**: Part II (CNNs, Vision Transformers), Part III (Self-Supervised Learning), Part IV (Diffusion Models), and the Foundation Models for Segmentation chapter (§sec-segmentation). Familiarity with 2D convolution, multi-head self-attention, rotary positional embeddings, and the DDPM training objective.
+**Prerequisites**: Part II (CNNs, Vision Transformers), Part III (Self-Supervised Learning), Part IV (Diffusion Models), and the Foundation Segmentation Models chapter (@sec-segmentation). Familiarity with 2D convolution, multi-head self-attention, rotary positional embeddings, and the DDPM training objective.
 
 ---
