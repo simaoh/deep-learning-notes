@@ -311,10 +311,29 @@ where $||\mathbf{m}||_0 \ll |\theta|$ (e.g., 10-20% of weights).
 
 ---
 
+### Grokking
+
+**Discovery** (Power et al., 2022) [@power2022grokking]: Training a small transformer on algorithmic tasks (e.g., modular division) can produce **grokking**—training accuracy hits ~100% almost immediately, while validation accuracy stays at chance for $10^2$–$10^3\times$ longer before *suddenly* jumping to ~100% as well, long after the model appears to have "finished" overfitting.
+
+![Grokking on modular division (97 residues, 50% training split): training accuracy (red) saturates almost immediately, but validation accuracy (green) only generalizes long after—far past the point classical theory would call "overfit." *Source: Power et al., "Grokking: Generalization Beyond Overfitting on Small Algorithmic Datasets" (2022), Figure 1 (left).*](/images/generalization/grokking_acc.png){#fig-grokking width=55%}
+
+**Why This Occurs**: Mechanistic-interpretability work (Nanda et al., 2023) [@nanda2023progress] shows the network passes through distinct phases: it first **memorizes** the training set with a high-norm, non-generalizing solution, then—driven by weight decay—slowly **forms a generalizing circuit** (e.g., Fourier-based algorithms for modular arithmetic) that coexists with the memorized solution, and finally **cleans up** the memorization once the generalizing circuit dominates. Validation accuracy only rises once this circuit formation crosses a threshold—long after training loss has bottomed out.
+
+**The Slingshot Effect** (Thilak et al., 2022) [@thilak2022slingshot] offers a complementary optimizer-level account of *why* this transition happens when it does: with adaptive optimizers (Adam/AdamW) and no explicit regularization, the last layer's weight norm cycles through rapid growth, a training-loss spike, and a plateau—and grokking is observed almost exclusively to begin at the onset of one of these "slingshot" cycles.
+
+![The Slingshot Effect: cyclic weight-norm growth, a training-loss spike, and a norm plateau (red boxes), observed training a fully-connected ReLU network with Adam. *Source: Thilak et al., "The Slingshot Mechanism" (2022), Figure 1.*](/images/generalization/slingshot_effect.png){#fig-slingshot width=85%}
+
+**Interview Question**: "If training loss has converged to ~0, is there anything left to learn?"
+
+**Answer**: Not necessarily true for over-parameterized networks with weight decay. Grokking shows a model can memorize (zero training loss) long before it generalizes—weight decay keeps pressuring the optimizer toward a simpler, lower-norm solution even after the training loss plateaus, and generalization can emerge abruptly, well after training loss stops being informative.
+
+---
+
 **Synthesis**: Modern generalization is explained by multiple interacting phenomena:
 
 - **Double descent**: Over-parameterization enables simpler interpolating solutions
 - **Lottery tickets**: Initialization space contains rare good subnetworks
+- **Grokking**: Weight decay can drive a delayed transition from a memorizing to a generalizing solution, long after training loss has converged
 - **Implicit regularization**: SGD bias toward flat minima and simple solutions
 - **Architecture biases**: Convolutions, attention impose structured priors
 
@@ -366,6 +385,7 @@ Understanding these mechanisms is essential for designing scalable deep learning
 
 - **Generalization**: [Understanding Deep Learning Requires Rethinking Generalization](https://arxiv.org/abs/1611.03530)
 - **Modern Generalization**: [Deep Double Descent](https://arxiv.org/abs/1912.02292), [Lottery Ticket Hypothesis](https://arxiv.org/abs/1803.03635)
+- **Grokking**: [Power et al., 2022 (original paper)](https://arxiv.org/abs/2201.02177), [Nanda et al., 2023 (mechanistic account)](https://arxiv.org/abs/2301.05217), [Thilak et al., 2022 (Slingshot Effect)](https://arxiv.org/abs/2206.04817) — for the most in-depth, up-to-date treatment, see the survey [Bertolotti & Cazzola, "A Survey on Grokking," ACM Computing Surveys (2026)](https://doi.org/10.1145/3814603)
 
 
 This completes Part I: Deep Learning Foundations.  
