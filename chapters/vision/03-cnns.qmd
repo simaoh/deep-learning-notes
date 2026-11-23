@@ -410,7 +410,7 @@ where $\mathbf{W}_s$ adjusts channels or resolution.
 
 ---
 
-## Image Classification Task {.unnumbered}
+## Image Classification Task {#sec-classification}
 
 **Task Definition**: Given image $\mathbf{I} \in \mathbb{R}^{H \times W \times 3}$, predict class label $c \in \{1, \ldots, C\}$ with confidence $p \in [0,1]$.
 
@@ -446,7 +446,7 @@ Image (224×224×3) → CNN Backbone → Global Pooling
 - 2015: ResNet-152 (77% top-1) → Enabled ultra-deep networks
 - 2021: ViT-Huge (88.5% top-1) → Transformers match/exceed CNNs
 
-**Interview Note**: Classification is the foundation—architectures proven here (ResNet, EfficientNet) become standard backbones for detection, segmentation, and other downstream tasks.
+**Interview Note**: Classification is the foundation—architectures proven here (ResNet, EfficientNet) become standard backbones for detection (@sec-detection), segmentation (@sec-segmentation), and other downstream tasks.
 
 
 

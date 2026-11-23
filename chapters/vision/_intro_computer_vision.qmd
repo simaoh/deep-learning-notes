@@ -4,12 +4,14 @@
 
 Computer vision enables machines to extract meaning from visual data—a capability central to applications from autonomous driving to medical imaging. This chapter covers the architectural evolution from convolutional networks to transformers, the algorithmic frameworks for detection and segmentation, and modern paradigms including self-supervised learning and generative modeling.
 
+**The task ladder.** Part II follows visual understanding at increasing granularity. **Classification** predicts one label for the whole image, **detection** localizes and labels each object with a box, and **segmentation** labels every pixel. The first two chapters build the *backbones*: CNNs and Vision Transformers, introduced through image classification (@sec-classification), where architectures are developed and benchmarked on ImageNet. Detection and segmentation then reuse those backbones and add task-specific necks and heads on top.
+
 **Chapter Scope**:
 
 - **Convolutional Neural Networks** (§2.1): Core building blocks and design principles
 - **Vision Transformers** (§2.2): Attention-based backbones for vision (ViT, DeiT, CvT, Swin)
-- **Detection and Segmentation** (§2.3): Localizing and labeling objects and pixels—two-stage and single-stage detectors, feature pyramids, semantic/instance/panoptic segmentation, and transformer detectors (DETR)
-- **Foundation Segmentation Models** (§2.4): Promptable segmentation at scale (SAM, SAM 2, SAM 3)
+- **Object Detection** (§2.3): Localizing and labeling objects—two-stage and single-stage detectors, NMS, feature pyramids, and transformer detectors (DETR, Deformable DETR)
+- **Segmentation** (§2.4): Labeling pixels—semantic (U-Net, DeepLab), instance (Mask R-CNN), and universal mask-transformer models (Mask2Former), through to promptable foundation models (SAM, SAM 2, SAM 3)
 - **Self-Supervised Learning** (§2.5): Learning visual representations without labels
 - **Generative Models** (§2.6): Modeling visual data distributions
 - **Video Understanding** (§2.7): Temporal modeling and generation

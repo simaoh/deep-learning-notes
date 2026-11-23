@@ -1,3 +1,7 @@
+---
+lightbox: true
+---
+
 # Self-Supervised Learning
 
 ## Motivation and Paradigm Overview
@@ -19,23 +23,31 @@
 
 **Two Main Paradigms**:
 
-1. **Invariance-Based Learning**: Learn features invariant to augmentations 
+1. ![](/images/self-supervised-learning/siamese_invariance_objective.png){.lightbox .toc-thumb width=200px} **Invariance-Based Learning**: Learn features invariant to augmentations 
 $(f(x) \approx f(\text{Aug}(x))$.   
 The main challenge is how to prevent collapse to the constant representation.
    
    a. **Similarity-Based Methods**  
-      - **Contrastive Learning**: Explicit negative samples (SimCLR, MoCo, PIRL)
-      - **Clustering**: Discrete cluster assignments (DeepCluster, SwAV)
-      - **Self-Distillation**: Asymmetry + momentum (BYOL, SimSiam, DINO)
+      - ![](/images/self-supervised-learning/contrastive_pull_push_illustration.png){.lightbox .toc-thumb width=200px} **Contrastive Learning**: Explicit negative samples\
+        (SimCLR, MoCo, PIRL)
+      - **Clustering**: Discrete cluster assignments\
+        (DeepCluster, SwAV)
+      - ![](/images/self-supervised-learning/simclr_byol_simsiam_comparison.png){.lightbox .toc-thumb width=200px} **Self-Distillation**: Asymmetry + momentum\
+        (BYOL, SimSiam, DINO)
    
    b. **Redundancy Reduction**
       
-      - **Decorrelation Methods**: Feature covariance → identity (Barlow Twins, VICReg)
+      - ![](/images/self-supervised-learning/collapse_illustration.png){.lightbox .toc-thumb width=200px} **Decorrelation Methods**: Feature covariance → identity\
+        (Barlow Twins, VICReg)
 
-2. **Reconstructive Learning**: Learn by predicting $x$ from corrupted/masked input $\tilde{x}$ 
+2. ![](/images/self-supervised-learning/autoencoder_reconstruction_objective.png){.lightbox .toc-thumb width=200px} **Reconstructive Learning**: Learn by predicting $x$ from corrupted/masked input $\tilde{x}$ 
 (MAE, VideoMAE).  
 No collapse issue (reconstruction target is informative).   
 The main challenge is how to avoid low-level texture copying.
+
+<div style="clear: both;"></div>
+
+*Diagram sources: [REFERENCE TO BE ADDED]. Click a diagram to enlarge it.*
 
 **Organization of This Chapter**: We first cover invariance-based methods (§6.3), 
 subdivided by their collapse prevention mechanism, then reconstructive approaches (§6.4).
@@ -47,11 +59,13 @@ subdivided by their collapse prevention mechanism, then reconstructive approache
 
 **Goal**: Learn features invariant to augmentations $f(x) \approx f(\text{Aug}(x))$.   
 
+
 **Challenge**: Avoiding Collapse.  Given the objective of "making features of augmented views similar" the network could simply learn the **Trivial Solution**:
 
 $$f_\theta(x) = c \quad \forall x$$
 
 where $c$ is a constant vector. This satisfies similarity but learns nothing.
+
 
 **Collapse Types**:  
 
@@ -77,6 +91,7 @@ $$\mathcal{L}_{\text{sim}} = d(f_\theta(\text{Aug}_1(x)), f_\theta(\text{Aug}_2(
 
 where $d$ is distance metric (cosine, MSE). Methods differ in collapse prevention.
 
+
 ---
 
 ### Contrastive Learning
@@ -88,11 +103,12 @@ $$\mathcal{L} = -\log \frac{\exp(\text{sim}(f(x^+), f(x))/\tau)}{\exp(\text{sim}
 
 where $x^+$ is positive pair, $\mathcal{N}$ is negative set, $\tau=0.1$ is temperature.
 
+
 **Key Design Choice**: How to obtain negative samples?
 
 ---
 
-**SimCLR (2020): In-Batch Negatives**
+**SimCLR (2020): In-Batch Negatives** [@chen2020simclr]
 
 **Algorithm**:
 
@@ -100,6 +116,8 @@ where $x^+$ is positive pair, $\mathcal{N}$ is negative set, $\tau=0.1$ is tempe
 2. Apply two random augmentations to each → $2N$ views
 3. Encode: $\mathbf{z}_i = g(f(t_i(x)))$ where $g$ is projection MLP
 4. For each view $i$, compute loss against its positive pair $j$ and $2N-2$ negatives
+
+![SimCLR framework: each image is augmented into two views, encoded by a CNN into a representation, and projected by an MLP; the contrastive loss is computed on the projections. *Source: [REFERENCE TO BE ADDED]*](/images/self-supervised-learning/simclr_framework_animation.gif){#fig-simclr width=45% fig-align="center"}
 
 **InfoNCE Loss** (Noise Contrastive Estimation) also called  
 **NT-Xent Loss** (Normalized Temperature-scaled Cross-Entropy):
@@ -120,7 +138,15 @@ where $\text{sim}(\mathbf{u}, \mathbf{v}) = \mathbf{u}^\top \mathbf{v} / (\|\mat
 
 ---
 
-**MoCo (2020) - Queue-Based Negatives**:
+**PIRL (2020) - Memory-Bank Negatives** [@misra2020pirl]:
+
+**Pretext-Invariant Representation Learning** makes the representation of an image $I$ similar to that of its transformed version $I^t$, taking negatives from a **memory bank** of (moving averages of) the features of all images in the dataset, in contrast to SimCLR, which draws negatives from within the batch. A noise-contrastive estimation (NCE) loss is applied: for each positive pair, $N$ negatives are sampled at random from the memory bank and a softmax over the $N+1$ feature similarities is computed. The loss is applied both between the image feature and the memory-bank (moving-average) feature, and between the transformed-image feature and the memory-bank feature.
+
+![PIRL. The features of an image $\mathbf{I}$ and of its transformed version $\mathbf{I}^t$ are trained to be similar, and dissimilar to negatives drawn from a memory bank $\mathcal{M}$ of moving-average features. *Source: Misra & van der Maaten, "Self-Supervised Learning of Pretext-Invariant Representations" (CVPR 2020), Figure 3* [@misra2020pirl].](/images/self-supervised-learning/pirl_overview.png){#fig-pirl width=60% fig-align="center"}
+
+---
+
+**MoCo (2020) - Queue-Based Negatives** [@he2020moco]:
 
 **Innovation**: Decouple dictionary size from batch size using queue + momentum encoder.
 
@@ -133,6 +159,8 @@ Query Encoder f_q: Learnable (gradient descent)
 Key Encoder f_k:   Momentum EMA of f_q  
 Queue:             K=65,536 encoded keys
 ```
+
+![MoCo: a query encoder and a momentum key encoder embed two views of each of $N$ samples; the positive logits $(N,1)$ and negative logits $(N,K)$ against the dictionary (queue) of $K$ keys feed the contrastive loss. *Source: [REFERENCE TO BE ADDED]*](/images/self-supervised-learning/moco_framework_animation.gif){#fig-moco width=50% fig-align="center"}
 
 **Algorithm**:
 
@@ -207,7 +235,7 @@ where $K$ negatives sampled uniformly from memory bank.
 
 ---
 
-**DeepCluster (2018): Offline Clustering**
+**DeepCluster (2018): Offline Clustering** [@caron2018deepcluster]
 
 **Algorithm** (alternating optimization) - Repeat each epoch:  
 
@@ -215,6 +243,8 @@ where $K$ negatives sampled uniformly from memory bank.
    $$c_i = \arg\min_k \|f(x_i) - \mu_k\|^2$$
 2. **Network Training**: Train with cluster labels as pseudo-labels
    $$\mathcal{L} = -\sum_i \log p(c_i | x_i)$$
+
+![DeepCluster alternates between clustering the convnet features with $k$-means and training the convnet to classify images into the resulting clusters (pseudo-labels). *Source: Caron et al., "Deep Clustering for Unsupervised Learning of Visual Features" (ECCV 2018)* [@caron2018deepcluster].](/images/self-supervised-learning/deepcluster_pipeline.png){#fig-deepcluster width=70% fig-align="center"}
 
 **Analysis via Normalized Mutual Information**:  
 To evaluate how meaningful the learned clusters are, 
@@ -237,6 +267,9 @@ $H(A)$ and $H(B)$ — *entropies* of the cluster and class label distributions.
 - Learned Clusters roughly align with ImageNet classes (NMI ~0.4)
 - Best performance with *k* ≈ 10,000 clusters (10× more than ImageNet's 1000 classes)
 
+
+![DeepCluster analysis. (a) Clustering quality: NMI between the cluster assignments and the ImageNet labels rises over training; (b) cluster reassignment: NMI between successive assignments stabilizes; (c) influence of the number of clusters $k$ on transfer performance (best near $k=10{,}000$). *Source: Caron et al. (2018)* [@caron2018deepcluster].](/images/self-supervised-learning/deepcluster_clustering_analysis.png){#fig-deepcluster-analysis width=90% fig-align="center"}
+
 **Limitation**: k-means over full dataset is slow bottleneck (~1 hour/epoch).
 
 ---
@@ -244,9 +277,11 @@ $H(A)$ and $H(B)$ — *entropies* of the cluster and class label distributions.
 
 
 
-**SwAV (2020): - Swapped Assignment Prediction**
+**SwAV (2020): - Swapped Assignment Prediction** [@caron2020swav]
 
 **Key Innovation**: Online clustering** algorithm with Sinkhorn-Knopp normalization—no k-means needed.
+
+![Contrastive instance learning (left) compares the features of two views directly. SwAV (right) computes each view's cluster assignment (code) against a set of prototypes $\mathbf{C}$ and predicts it from the other view (swapped prediction). *Source: Caron et al., "Unsupervised Learning of Visual Features by Contrasting Cluster Assignments" (NeurIPS 2020)* [@caron2020swav].](/images/self-supervised-learning/swav_vs_contrastive_instance_learning.png){#fig-swav width=85% fig-align="center"}
 
 **Components**:
 
@@ -330,17 +365,21 @@ $$\ell(\mathbf{z}, \mathbf{q}) = -\sum_{k=1}^K q_k \log \frac{\exp(\mathbf{z}^\t
 - **Target network**: Momentum encoder (no predictor)
 - **Key**: Asymmetry between the two architectures or between their gradient updates prevents collapse (such as stopping the gradient updates of target network)
 
+![Comparison of SimCLR (contrastive: similarity to positives and dissimilarity to negatives), BYOL (predictor plus a momentum encoder updated as a moving average), and SimSiam (predictor with stop-gradient, no momentum encoder). *Source: [REFERENCE TO BE ADDED]*](/images/self-supervised-learning/simclr_byol_simsiam_comparison.png){#fig-simclr-byol-simsiam width=85% fig-align="center"}
+
 **Advantage**: No negatives or clustering needed.
 
 ---
 
-**BYOL (2020) - Bootstrap Your Own Latent**:
+**BYOL (2020) - Bootstrap Your Own Latent** [@grill2020byol]:
 
 **Architecture**:
 ```
 Online:  Encoder f_θ → Projection g_θ → Prediction h_θ
 Target:  Encoder f_ξ → Projection g_ξ  (EMA, no predictor)
 ```
+
+![BYOL: the online branch ($F_S$, projection $G_S$, prediction $Q_S$) regresses the target features $z_T$ of a momentum (EMA) target branch ($F_T$, $G_T$); gradients are stopped on the target. *Source: [REFERENCE TO BE ADDED]*](/images/self-supervised-learning/byol_architecture_diagram.png){#fig-byol width=85% fig-align="center"}
 
 
 **Algorithm**:
@@ -376,7 +415,9 @@ $$\mathcal{L(v, v')} = \left\| \frac{\mathbf{q}}{\|\mathbf{q}\|_2} - \frac{\math
 
 
 
-**SimSiam (2021) - Simplification**:
+**SimSiam (2021) - Simplification** [@chen2021simsiam]:
+
+![SimSiam: the two branches share weights (no momentum encoder); a predictor $Q_S$ on one branch matches the projection of the other, with stop-gradient on the target branch. *Source: [REFERENCE TO BE ADDED]*](/images/self-supervised-learning/simsiam_architecture_diagram.png){#fig-simsiam width=85% fig-align="center"}
 
 **Insight**: Remove momentum encoder—just use stop-gradient!
 
@@ -409,7 +450,9 @@ $$\mathcal{L} = -\frac{h(g(f(x_1))) \cdot \text{stop-gradient}(g(f(x_2)))}{\|h(g
 
 
 
-**DINO (2021) - Self-Distillation with ViT**:
+**DINO (2021) - Self-Distillation with ViT** [@caron2021dino]:
+
+![DINO: a student ($F_S$, $G_S$) is trained to match the output distribution of a momentum teacher ($F_T$, $G_T$) via cross-entropy; the teacher output is centered and sharpened, and gradients are stopped on the teacher. *Source: [REFERENCE TO BE ADDED]*](/images/self-supervised-learning/dino_self_distillation_diagram.png){#fig-dino width=90% fig-align="center"}
 
 **Innovation**: Apply self-distillation to Vision Transformers with centering to prevent dimensional collapse.
 
@@ -491,13 +534,15 @@ for t_prob in teacher_probs:
 ::: 
 ___
 
-**DINOv2 (2023) - Scaling Up**:
+**DINOv2 (2023) - Scaling Up** [@oquab2024dinov2]:
 
 **Key Changes**:
 
 - **Data**: 142M curated images (from 1B web images via retrieval + deduplication)
-- **Training**: iBOT (masked prediction) + DINO + regularizers (Sinkhorn-Knopp, KoLeo)
+- **Training**: iBOT [@zhou2022ibot] (masked prediction) + DINO + regularizers (Sinkhorn-Knopp, KoLeo)
 - **Scale**: ViT-L/14, longer training
+
+![DINOv2 data pipeline. Images from curated and uncurated sources are embedded; uncurated images are deduplicated and then retrieved by similarity to the curated ones, yielding the augmented curated dataset (LVD-142M). *Source: Oquab et al., "DINOv2: Learning Robust Visual Features without Supervision" (2023), Figure 3* [@oquab2024dinov2].](/images/self-supervised-learning/dinov2_data_pipeline.png){#fig-dinov2-data width=90% fig-align="center"}
 
 **Result**: 82.1% ImageNet linear probe (frozen features) — **outperforms supervised pre-training**.
 
@@ -506,7 +551,7 @@ SOTA across 20+ benchmarks.
 
 ---
 
-**DINOv3 (2025) - Gram Anchoring**:
+**DINOv3 (2025) - Gram Anchoring** [@simeoni2025dinov3]:
 
 **Problem**: Long training (DINOv2 style) causes feature drift — 
 dense features become “blurry” or inconsistent, hurting pixel-level tasks.
@@ -517,7 +562,7 @@ dense features become “blurry” or inconsistent, hurting pixel-level tasks.
 matching second-order statistics (co-occurrence patterns of texture/style)
 rather than exact features.
 
-**Gram Matrix** (from neural style transfer - Gatys et al., 2015):
+**Gram Matrix** (from neural style transfer, Gatys et al., 2015 [@gatys2015style]):
 $$\mathbf{G}_{ij} = \sum_{k=1}^{HW} F_{ki} F_{kj}$$
 
 where $F \in \mathbb{R}^{HW \times C}$ are spatial features ($HW$ locations, $C$ channels).
@@ -576,9 +621,13 @@ where $C_{ij} = \text{corr}(z_i, z_j)$ (correlation between feature dimensions $
 - Diagonal = 1: Features are invariant to augmentations (same image → same features)  
 - Off-diagonal = 0: Features are non-redundant (different dimensions encode different information)
 
+![Embeddings of two views ($z, z'$) of two images. What we want: views of the same image are close, different images are far apart. Collapse: all embeddings map to the same point. *Source: [REFERENCE TO BE ADDED]*](/images/self-supervised-learning/collapse_illustration.png){#fig-collapse width=90% fig-align="center"}
+
 ---
 
-**Barlow Twins (2021)**:
+**Barlow Twins (2021)** [@zbontar2021barlow]:
+
+![Barlow Twins. Two distorted views of a batch pass through the same encoder and projector; the loss drives the cross-correlation matrix $\mathcal{C}$ of the two embedding batches towards the identity $\mathcal{I}$. *Source: Zbontar et al., "Barlow Twins: Self-Supervised Learning via Redundancy Reduction" (ICML 2021)* [@zbontar2021barlow].](/images/self-supervised-learning/barlow_twins_overview.png){#fig-barlow-twins width=75% fig-align="center"}
 
 **Loss Function**:
 $$\mathcal{L}_{\text{BT}} = \sum_i (1 - C_{ii})^2 + \lambda \sum_i \sum_{j \neq i} C_{ij}^2$$
@@ -600,11 +649,22 @@ where $z_{b}^A, z_{b}^B$ are features from two augmentations, of an image $b$ in
 - Highly dependent on augmentations (like contrastive methods)
 - Benefits from high-dimensional features (e.g. 8192d projection)
 
+::: {#fig-bt-ablations layout-ncol=2}
+
+![Projector dimensionality](/images/self-supervised-learning/barlow_twins_projector_dimensionality.png){#fig-bt-dim}
+
+![Removing augmentations](/images/self-supervised-learning/barlow_twins_augmentation_robustness.png){#fig-bt-aug}
+
+Barlow Twins ablations. (a) Top-1 accuracy keeps improving as the projector dimensionality grows, while BYOL and SimCLR saturate. (b) Accuracy drop when augmentations are progressively removed: Barlow Twins and SimCLR are more sensitive to the augmentation set than BYOL. *Source: Zbontar et al. (2021)* [@zbontar2021barlow].
+:::
+
 **Performance**: ResNet-50, 73.2% ImageNet linear probe (300 epochs)
 
 ---
 
-**VICReg (2021) - Variance-Invariance-Covariance Regularization**:
+**VICReg (2021) - Variance-Invariance-Covariance Regularization** [@bardes2022vicreg]:
+
+![VICReg. Two views are encoded and expanded into embeddings $Z, Z'$; the loss combines a variance term (keep the variance of each embedding dimension above a threshold), an invariance term (minimize the distance between the two embeddings), and a covariance term (decorrelate the dimensions). *Source: Bardes et al., "VICReg: Variance-Invariance-Covariance Regularization for Self-Supervised Learning" (ICLR 2022)* [@bardes2022vicreg].](/images/self-supervised-learning/vicreg_overview.png){#fig-vicreg width=90% fig-align="center"}
 
 **More Explicit Formulation**: Three separate loss terms.
 
@@ -639,6 +699,7 @@ $$\mathcal{L}_{\text{cov}} = \frac{1}{d} \sum_{i \neq j} \text{Cov}(z_i, z_j)^2$
 
 **Different Paradigm**: Instead of learning invariances, learn by predicting masked or corrupted input.
 
+
 **No Collapse Issue**: Reconstruction target is informative (pixel values), prevents trivial solutions.
 
 **Challenge**: Avoid low-level texture copying—want semantic features, not pixel-level memorization.
@@ -647,7 +708,7 @@ $$\mathcal{L}_{\text{cov}} = \frac{1}{d} \sum_{i \neq j} \text{Cov}(z_i, z_j)^2$
 
 ## Masked Auto-Encoding 
 
-**MAE (2022) - Masked Auto-Encoding for Images**:
+**MAE (2022) - Masked Auto-Encoding for Images** [@he2022mae]:
 
 **Core Idea**: Mask 75% of image patches, reconstruct from visible 25%.
 
@@ -670,6 +731,9 @@ $$\mathcal{L}_{\text{cov}} = \frac{1}{d} \sum_{i \neq j} \text{Cov}(z_i, z_j)^2$
 - Input: &nbsp; &nbsp; Encoded visible + mask tokens (learned embeddings) 
 - Output: Reconstructed pixels for all patches
 
+
+![MAE. A large random subset of patches is masked; the encoder processes only the visible patches, mask tokens are introduced after the encoder, and a small decoder reconstructs the pixels of the full image. After pre-training the decoder is discarded and the encoder is applied to uncorrupted images. *Source: He et al., "Masked Autoencoders Are Scalable Vision Learners" (CVPR 2022)* [@he2022mae].](/images/self-supervised-learning/mae_architecture.png){#fig-mae width=70% fig-align="center"}
+
 **Loss**: MSE on masked patches only
 $$\mathcal{L} = \frac{1}{|\text{Masked}|} \sum_{p \in \text{Masked}} \|\mathbf{x}_p - \hat{\mathbf{x}}_p\|^2$$
 
@@ -678,6 +742,17 @@ $$\mathcal{L} = \frac{1}{|\text{Masked}|} \sum_{p \in \text{Masked}} \|\mathbf{x
 - Asymmetric encoder-decoder (efficient)
 - Mask tokens added after encoder (encoder sees only 25%)
 - Minimal augmentation (just random crop)
+
+| Augmentation | Fine-tuning acc. | Linear probe acc. |
+|--------------|------------------|-------------------|
+| None | 84.0 | 65.7 |
+| Crop, fixed size | 84.7 | 73.1 |
+| Crop, random size | **84.9** | **73.5** |
+| Crop + color jitter | 84.3 | 71.9 |
+
+: Effect of data augmentation on MAE (ViT-L, ImageNet). Random-size cropping alone is best; unlike contrastive methods, stronger augmentation does not help. Values from He et al. (2022) [@he2022mae].
+
+![MAE reconstructions of masked images: masked input (left), MAE reconstruction (middle), and original image (right). *Source: He et al. (2022)* [@he2022mae].](/images/self-supervised-learning/mae_reconstruction_examples.png){#fig-mae-recon width=75% fig-align="center"}
 
 
 **ImageNet Results**:
@@ -699,7 +774,9 @@ $$\mathcal{L} = \frac{1}{|\text{Masked}|} \sum_{p \in \text{Masked}} \|\mathbf{x
 
 
 
-**VideoMAE (2022)**
+**VideoMAE (2022)** [@tong2022videomae; @feichtenhofer2022stmae]
+
+The figures in this section are from the spatiotemporal MAE of Feichtenhofer et al., which introduced the 90% spacetime-agnostic masking recipe.
 
 **Adaptation for Video**:
 
@@ -707,12 +784,16 @@ $$\mathcal{L} = \frac{1}{|\text{Masked}|} \sum_{p \in \text{Masked}} \|\mathbf{x
 - Input: Video clips (16 frames × 224×224)
 - Patches: 3D spacetime patches (2×16×16)
 
+![Spatiotemporal MAE. A large random subset (e.g. 90%) of spacetime patches is masked; the encoder processes the visible patches, and a small decoder processes the encoded patches plus mask tokens to reconstruct the video (loss: MSE on masked patches). Except for patch and positional embeddings, neither the encoder, decoder, nor masking strategy has spacetime-specific inductive bias. *Source: Feichtenhofer et al., "Masked Autoencoders As Spatiotemporal Learners" (NeurIPS 2022)* [@feichtenhofer2022stmae].](/images/self-supervised-learning/st_mae_architecture.png){#fig-stmae width=80% fig-align="center"}
+
 **Why 90%?** Video has extreme redundancy:
 
 - Temporal: Adjacent frames very similar
 - Spatial: Image redundancy within each frame
 
 **Masking Strategies**: Spacetime-agnostic masking (Random) works best.
+
+![Masking strategies for video: (a) spacetime-agnostic random masking (90%), (b) space-only (90%), (c) time-only (75%), (d) block (75%). Spacetime-agnostic masking is the most effective, with an optimal ratio of 90% (vs. 75% for images). *Source: Feichtenhofer et al. (2022)* [@feichtenhofer2022stmae].](/images/self-supervised-learning/st_mae_masking_strategies.png){#fig-stmae-masking width=95% fig-align="center"}
 <br>
 
 | Strategy | Description | Performance |
@@ -727,15 +808,19 @@ $$\mathcal{L} = \frac{1}{|\text{Masked}|} \sum_{p \in \text{Masked}} \|\mathbf{x
 - Kinetics-400: &emsp; &emsp; &emsp; &emsp; &emsp; 81.1% top-1 (vs. 79.1% supervised)
 - Something-Something v2: &nbsp; 68.7% &emsp; &emsp;  (temporal reasoning dataset)
 
+![Video reconstructions at very high masking ratios: original, masked input and reconstruction at 98% and at 95% masked. *Source: Feichtenhofer et al. (2022)* [@feichtenhofer2022stmae].](/images/self-supervised-learning/st_mae_reconstruction_examples.png){#fig-stmae-recon width=85% fig-align="center"}
+
 ---
 
-**AudioMAE (2022)**
+**AudioMAE (2022)** [@huang2022audiomae]
 
 **Adaptation for Audio**:
 
 - Mask **80%** of Mel-spectogram patches
 - Input: Audio waveform → Mel-spectrogram (time-frequency representation)
 - Patches: 16×16 spectrogram patches
+
+![Audio-MAE. An audio recording is converted into a Mel-spectrogram and split into patches; 80% are masked, the encoder processes the visible 20%, and a decoder processes the order-restored embeddings plus mask tokens to reconstruct the spectrogram (MSE on the masked portion). *Source: Huang et al., "Masked Autoencoders that Listen" (NeurIPS 2022)* [@huang2022audiomae].](/images/self-supervised-learning/audio_mae_architecture.png){#fig-audiomae width=85% fig-align="center"}
 
 **Data Preprocessing**:
 
@@ -746,10 +831,14 @@ $$\mathcal{L} = \frac{1}{|\text{Masked}|} \sum_{p \in \text{Masked}} \|\mathbf{x
 
 **Masking Strategy**: Unstructured (random) beats time/frequency-aware strategies.
 
+![Audio-MAE masking strategies on Mel-spectrograms: (a) original, (b) unstructured, (c) time, (d) frequency, (e) time+frequency. Unstructured masking, with an optimal ratio of 80%, works best. *Source: Huang et al. (2022), Figure 2* [@huang2022audiomae].](/images/self-supervised-learning/audio_mae_masking_strategies.png){#fig-audiomae-masking width=95% fig-align="center"}
+
 **Performance**:
 
 - AudioSet: 91.0 mAP (competitive with contrastive methods)
 - Further Benefits on dense prediction tasks (s.a. sound event detection)
+
+![Audio-MAE reconstruction. Waveform and spectrogram of a recording with 80% of the patches masked (left), the reconstruction (bottom left), and the original (right). *Source: Huang et al. (2022)* [@huang2022audiomae].](/images/self-supervised-learning/audio_mae_reconstruction_examples.png){#fig-audiomae-recon width=85% fig-align="center"}
 
 ---
 
@@ -810,13 +899,15 @@ but dense tasks (detection, segmentation) require multi-scale feature pyramids.
 
 Two frameworks are typically used to transfer the ViT features to dense tasks:
 
-**Feature Pyramid - ViT-Adapter (2023)**:
+**Feature Pyramid - ViT-Adapter (2023)** [@chen2023vitadapter]:
 - Augments ViT with lightweight conv + cross-attention adapters
 - Fuses intermediate ViT features into feature pyramid (FPN-like)
 - Provides scale-aware features for detecting small and large objects
 
-**Segmentation Head - Mask2Former (2022)**:
-Universal architecture with three components:
+![ViT-Adapter. A spatial prior module extracts convolutional multi-scale features, and injector/extractor modules exchange information between them and the plain ViT, producing a feature pyramid for detection and segmentation heads. *Source: Chen et al., "Vision Transformer Adapter for Dense Predictions" (ICLR 2023)* [@chen2023vitadapter].](/images/self-supervised-learning/vit_adapter_architecture.png){#fig-vit-adapter width=90% fig-align="center"}
+
+**Segmentation Head - Mask2Former (2022)** [@cheng2022mask2former]:
+Universal architecture with three components (full description and diagram in @sec-mask2former and @fig-mask2former):
 
 1. **Backbone**: SSL pre-trained ViT (frozen or fine-tuned)
 2. **Pixel Decoder**: Upsamples ViT features to high resolution (interpolation + convs)

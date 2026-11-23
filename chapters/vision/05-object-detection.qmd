@@ -1,6 +1,6 @@
-# Detection and Segmentation {#sec-detection-and-segmentation}
+# Object Detection {#sec-detection}
 
-Detection and segmentation take the backbones of the previous chapters (CNNs and Vision Transformers) and add task-specific machinery on top. Almost every model in this chapter follows the same **backbone → neck → head** pattern: a backbone extracts features, a neck (e.g., a feature pyramid) fuses them across scales, and a head predicts boxes, classes, or masks. We start with detection (two-stage, single-stage, and the multi-scale FPN neck), then segmentation (semantic, instance, panoptic), and close with transformer-based detectors and segmenters, which drop much of the hand-designed machinery.
+Detection takes the backbones of the previous chapters (CNNs and Vision Transformers) and adds task-specific machinery on top. Almost every model in this chapter follows the same **backbone → neck → head** pattern: a backbone extracts features, a neck (e.g., a feature pyramid) fuses them across scales, and a head predicts boxes and classes. We start with the classical detectors (two-stage, single-stage, NMS, and the multi-scale FPN neck) and close with transformer-based detectors, which drop much of the hand-designed machinery. Dense, pixel-level prediction—semantic, instance, and panoptic segmentation—is the subject of the next chapter (@sec-segmentation), which builds directly on the detectors here (Mask R-CNN extends Faster R-CNN; Mask2Former and SAM 3 build on DETR).
 
 ## Object Detection
 
@@ -19,7 +19,7 @@ Detection and segmentation take the backbones of the previous chapters (CNNs and
 **Paradigms**:
 - **Two-Stage** (R-CNN family): Propose regions → classify/refine
 - **Single-Stage** (YOLO, SSD): Directly predict boxes at multiple scales
-- **Set Prediction** (DETR): Transformer predicts the box set directly, no anchors or NMS (see below)
+- **Set Prediction** (DETR): Transformer predicts the box set directly, no anchors or NMS (see @sec-detr)
 
 **A naive approach** is to slide a window over the image and classify each crop. It is slow and inaccurate: objects rarely fit any of the fixed windows. CNN detectors instead propose boxes ("anchors") directly on feature maps.
 
@@ -33,7 +33,7 @@ $$\text{IoU}(A, B) = \frac{|A \cap B|}{|A \cup B|}$$
 
 ---
 
-### Two-Stage Detectors: Faster R-CNN
+### Two-Stage Detectors: Faster R-CNN {#sec-faster-rcnn}
 
 **Architecture Overview**:
 
@@ -103,7 +103,7 @@ where:
 2. Divide region into $H \times W$ grid (e.g., 7×7)
 3. Max-pool within each grid cell
 
-![RoI pooling on an $8\times 8$ activation map. The region proposal is projected onto the feature map, divided into a $2\times 2$ grid of sections (here), and each section is max-pooled, producing a fixed-size output regardless of proposal size. *Source: deepsense.io, "Region of Interest Pooling Explained."*](/images/object-detection/roi_pooling_example.png){#fig-roi-pooling width=80%}
+![RoI pooling on an $8\times 8$ activation map. The region proposal is projected onto the feature map, divided into a $2\times 2$ grid of sections (here), and each section is max-pooled, producing a fixed-size output regardless of proposal size. *Source: Ochman (2025)* [@ochman2025roi].](/images/object-detection/roi_pooling_example.png){#fig-roi-pooling width=80%}
 
 **Example**: 
 - Proposal: 145×200 pixels at input
@@ -320,184 +320,9 @@ so larger RoIs are read off coarser (higher-$k$) maps and smaller RoIs off finer
 
 ---
 
-## Segmentation
+## Detection with Transformers
 
-Segmentation asks a model to reason about an image *below* the level of a single label or box. Three variants are worth distinguishing:
-
-- **Semantic Segmentation** classifies **every pixel** into a fixed set of categories. It does *not* separate two objects of the same class—all "cat" pixels get the same label however many cats are present.
-- **Instance Segmentation** additionally **distinguishes distinct objects** of the same class, producing one mask per instance.
-- **Panoptic Segmentation** unifies the two by labelling both countable **"things"** (people, cars—with instance identities) and uncountable **"stuff"** (sky, grass, road) at the pixel level.
-
-![The spectrum of recognition tasks. Semantic segmentation labels every pixel but merges instances ("no objects, just pixels"); classification+localization handles a single object; object detection places boxes around multiple objects; instance segmentation produces a separate mask per object. *Source: Stanford CS231n / public-domain example image.*](/images/segmentation/segmentation_tasks.png){#fig-seg-tasks width=95%}
-
-### Semantic Segmentation
-
-**Task**: Assign class label to every pixel: $f: \mathbb{R}^{H \times W \times 3} \rightarrow \{1, \ldots, C\}^{H \times W}$
-
-**Challenges**:
-- **Resolution**: Need pixel-level predictions (vs. classification's single label)
-- **Context**: Local and global information both matter
-- **Efficiency**: Dense predictions over full image
-
----
-
-#### U-Net (2015)
-
-**Architecture Philosophy**: Encoder-decoder with skip connections.
-
-![U-Net's symmetric encoder–decoder ("U") shape. The contracting path (Conv+BN+ReLU with pooling) reduces spatial resolution while increasing semantic depth; the expanding path (upsampling) restores resolution; skip connections bridge matching resolutions so fine detail is preserved.](/images/segmentation/unet.png){#fig-unet width=60%}
-
-**Encoder** (Contracting Path):
-```
-Input (572×572)
-→ Conv-ReLU-Conv-ReLU → Skip1 (570×570, 64 ch)
-→ MaxPool
-→ Conv-ReLU-Conv-ReLU → Skip2 (280×280, 128 ch)
-→ MaxPool
-...
-→ Bottleneck (28×28, 1024 ch)
-```
-
-**Decoder** (Expansive Path):
-```
-Bottleneck
-→ UpConv → Concat(Skip4) → Conv-ReLU-Conv-ReLU
-→ UpConv → Concat(Skip3) → Conv-ReLU-Conv-ReLU
-...
-→ Conv 1×1 → Output (388×388, C classes)
-```
-
-**Key Innovation - Skip Connections**:
-- Encoder captures *what* (semantic information)
-- Decoder recovers *where* (spatial details)
-- Skip connections provide high-res features to decoder
-
-**Why This Works**:
-- Early layers: fine details (edges, textures)
-- Deep layers: semantic meaning (object identity)
-- Combining both: precise boundaries + correct labels
-
-**Loss**: Pixel-wise softmax cross-entropy (see *Optimization* below).
-
-**U-Net Variants**:
-- **3D U-Net**: For volumetric data (medical CT/MRI)
-- **U-Net++**: Nested skip connections
-- **Attention U-Net**: Attention gates in skip connections
-
-**Applications**: Medical imaging (won ISBI challenge), satellite imagery, microscopy
-
----
-
-#### DeepLab v3+ (2018)
-
-**Background**: DeepLab (v1, 2015) tackled the downsampling problem with **dilated (atrous) convolutions**, which enlarge the receptive field without reducing resolution or adding parameters, plus a fully-connected **Conditional Random Field (CRF)** to sharpen boundaries. v3+ replaces the CRF with an encoder-decoder.
-
-**Core Ideas** (v3+):
-1. **Atrous Spatial Pyramid Pooling (ASPP)**: Multi-scale context
-2. **Encoder-Decoder**: U-Net-like structure
-3. **Depthwise Separable Convs**: Efficiency
-
-**ASPP Module**:
-```
-Feature Map
-  ├─ 1×1 conv
-  ├─ 3×3 atrous conv, rate=6
-  ├─ 3×3 atrous conv, rate=12
-  ├─ 3×3 atrous conv, rate=18
-  └─ Global Average Pool → 1×1 conv → Upsample
-      ↓
-  Concatenate → 1×1 conv → Output
-```
-
-**Why Multiple Dilation Rates?**
-- rate=6: captures medium context (~13×13 effective)
-- rate=12: large context (~25×25 effective)
-- rate=18: very large context (~37×37 effective)
-- Global pooling: image-level features
-
-**Motivation**: Objects vary in scale—need multi-scale receptive fields.
-
-**Loss Function**: pixel-wise cross-entropy, optionally with focal loss for class imbalance (see *Optimization* below).
-
-**DeepLab Performance**:
-- PASCAL VOC 2012: 89.0% mIoU
-- Cityscapes: 82.1% mIoU
-- Real-time variants exist (MobileNet backbone)
-
----
-
-### Optimization: Pixel-wise Loss and Class Imbalance
-
-The standard objective for semantic segmentation is a **pixel-wise softmax cross-entropy**, averaged over pixels:
-
-$$\mathcal{L} = -\frac{1}{H \cdot W} \sum_{i,j} \sum_{c=1}^C y_{ij}^{(c)} \log \hat{y}_{ij}^{(c)}$$
-
-Dense prediction, however, is dominated by *easy* background pixels, and foreground/background imbalance can swamp the gradient. **Focal Loss** (Lin et al., 2017) [@lin2017focal] down-weights well-classified examples with a modulating factor $(1-p_t)^{\gamma}$:
-
-$$
-\mathrm{FL}(p_t) = -\,(1-p_t)^{\gamma}\,\log(p_t),
-$$
-
-where $p_t$ is the estimated probability of the ground-truth class and $\gamma \ge 0$ is a focusing parameter ($\gamma=2$ is typical; $\gamma = 0$ recovers cross-entropy). As $\gamma$ grows, confidently classified pixels contribute almost nothing, concentrating learning on the **hard, mis-classified** ones. (Focal loss was introduced for RetinaNet, a single-stage detector, and applies equally to segmentation.)
-
-![Focal loss for several values of $\gamma$. Larger $\gamma$ suppresses the loss on well-classified ("easy") examples on the right, so the gradient is dominated by hard examples on the left. *Source: Lin et al., "Focal Loss for Dense Object Detection" (2017).*](/images/segmentation/focal_loss.png){#fig-focal width=70%}
-
----
-
-### Instance Segmentation: Mask R-CNN (2017) {#sec-maskrcnn}
-
-**Extension**: Faster R-CNN + instance segmentation head.
-
-**Architecture**:
-```
-Image → ResNet-FPN
-       → RPN → ROI Align
-       → Parallel Heads:
-           ├─ Box Classification (C+1 classes)
-           ├─ Box Regression (4 coords)
-           └─ Mask Prediction (C × 28×28 binary masks)
-```
-
-The ResNet-FPN backbone/neck is described in @sec-fpn.
-
-**Mask Head**:
-- Input: 14×14 ROI features from ROI Align
-- Architecture: 4× Conv(256, 3×3) → Deconv(256, 2×2) → Conv(C, 1×1)
-- Output: $C$ binary masks of size 28×28 (one per class)
-
-**Loss Function**:
-$$\mathcal{L} = \mathcal{L}_{\text{cls}} + \mathcal{L}_{\text{box}} + \mathcal{L}_{\text{mask}}$$
-
-where:
-$$\mathcal{L}_{\text{mask}} = -\frac{1}{m^2} \sum_{i,j} [y_{ij} \log \hat{y}_{ij} + (1-y_{ij}) \log(1-\hat{y}_{ij})]$$
-
-**Key Detail**: Loss computed only on ground-truth class mask (not all $C$ masks).
-
-**ROI Align** (see *ROI Pooling* above) replaces rounding with bilinear interpolation, keeping masks pixel-aligned.
-
-**Example**:
-- Proposal maps to feature map region [5.7, 8.3, 12.1, 15.9]
-- ROI Pooling rounds to [6, 8, 12, 16] → 0.3-0.9 pixel errors
-- ROI Align samples at exact 5.7, 8.3, etc. using interpolation
-
-**Impact**: Critical for mask accuracy (2-3% mIoU improvement).
-
-**Mask R-CNN Applications**:
-- Instance segmentation (COCO, LVIS datasets)
-- Keypoint detection (pose estimation)
-- Panoptic segmentation (with Stuff head)
-
-**Interview Question**: "Mask R-CNN vs. U-Net?" 
-**Answer**: 
-- U-Net: Semantic (no instances), faster, simpler
-- Mask R-CNN: Instance-aware, slower (two-stage), handles occlusion better
-- Use U-Net for medical imaging, Mask R-CNN for autonomous driving
-
----
-
-## Detection and Segmentation with Transformers
-
-Everything above relies on hand-designed components: anchors, NMS, RoI pooling, feature pyramids. Transformer-based detectors remove most of them by casting detection as **set prediction**, and they extend naturally to segmentation.
+Everything above relies on hand-designed components: anchors, NMS, RoI pooling, feature pyramids. Transformer-based detectors remove most of them by casting detection as **set prediction**, and they extend naturally to segmentation (@sec-mask2former).
 
 ### DETR: Detection Transformer (2020) {#sec-detr}
 
@@ -619,20 +444,9 @@ Deformable DETR: $O(N_q \cdot K \cdot D)$, where $K$ is constant → **linear**
 
 ### Core Concepts Checklist
 
-**Detection**:
-
 - [ ] IoU, anchor label assignment, and NMS (per-class, soft-NMS)
 - [ ] Two-stage (RPN → RoI pooling/align → heads) vs. single-stage (YOLO grid) trade-offs
 - [ ] Why FPN helps small objects and how RoIs are assigned to pyramid levels
-
-**Segmentation**:
-
-- [ ] Semantic vs. instance vs. panoptic
-- [ ] U-Net skip connections; DeepLab dilated convolutions and ASPP
-- [ ] Pixel-wise cross-entropy and focal loss; Mask R-CNN's per-class mask loss and RoI Align
-
-**Transformer detectors**:
-
 - [ ] Set prediction with Hungarian matching and object queries; why NMS is unnecessary
 - [ ] Deformable attention: learned offsets, multi-scale sampling, $O(N_q K)$ complexity
 
@@ -641,23 +455,20 @@ Deformable DETR: $O(N_q \cdot K \cdot D)$, where $K$ is constant → **linear**
 1. **"YOLO vs. Faster R-CNN—when to use each?"**
    - YOLO: real-time, simpler; Faster R-CNN: higher accuracy, better for small objects
 
-2. **"Mask R-CNN vs. U-Net?"**
-   - U-Net: semantic only, faster, simpler (medical imaging); Mask R-CNN: instance-aware, two-stage, handles occlusion (autonomous driving)
-
-3. **"Why doesn't DETR need NMS?"**
+2. **"Why doesn't DETR need NMS?"**
    - Bipartite matching ensures one-to-one assignment → no duplicate predictions
 
-4. **"Explain DETR's training process."**
+3. **"Explain DETR's training process."**
    - Hungarian matching between the 100 predictions and the (padded) ground truth
    - Loss: classification (CE) + box ($\ell_1$ + GIoU)
 
-5. **"Deformable DETR vs. DETR trade-offs?"**
+4. **"Deformable DETR vs. DETR trade-offs?"**
    - 10× faster training, better small objects, slightly more complex architecture
 
-6. **"Why does deformable attention help small objects?"**
+5. **"Why does deformable attention help small objects?"**
    - Standard attention diffuses over large feature maps; deformable attention focuses on a small learned set of locations, and multi-scale sampling brings in high-resolution features.
 
-7. **"How to implement bilinear sampling for non-integer coordinates?"**
+6. **"How to implement bilinear sampling for non-integer coordinates?"**
    - PyTorch's `F.grid_sample` with `mode='bilinear'`. Also used in Spatial Transformer Networks (2015) and Deformable Convolutions (2017).
 
 ### Interview Preparation Tips
@@ -669,7 +480,7 @@ Deformable DETR: $O(N_q \cdot K \cdot D)$, where $K$ is constant → **linear**
 
 ### Further Reading
 
-- **Detection**: [Object Detection in 20 Years](https://arxiv.org/abs/1905.05055)
-- **Papers**: [Faster R-CNN](https://arxiv.org/abs/1506.01497) • [FPN](https://arxiv.org/abs/1612.03144) • [Mask R-CNN](https://arxiv.org/abs/1703.06870) • [DETR](https://arxiv.org/abs/2005.12872) • [Deformable DETR](https://arxiv.org/abs/2010.04159)
+- [Object Detection in 20 Years](https://arxiv.org/abs/1905.05055)
+- **Papers**: [Faster R-CNN](https://arxiv.org/abs/1506.01497) • [FPN](https://arxiv.org/abs/1612.03144) • [DETR](https://arxiv.org/abs/2005.12872) • [Deformable DETR](https://arxiv.org/abs/2010.04159)
 
-The next chapter covers foundation models for segmentation (SAM, SAM 2, SAM 3), which build on a ViT backbone and DETR-style detectors.
+The next chapter covers segmentation, from U-Net and Mask R-CNN through Mask2Former to the promptable SAM family.

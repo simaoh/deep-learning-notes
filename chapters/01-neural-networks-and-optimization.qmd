@@ -131,97 +131,180 @@ Use all neurons without dropout ($\mathbf{a}_{\text{test}} = \mathbf{a}$). The t
 
 #### Batch Normalization
 
-**Motivation**: During training, the distribution of inputs to each layer changes as parameters update (internal covariate shift). This forces layers to continuously adapt, slowing convergence. Batch Normalization stabilizes these distributions.
+**Intuition**: As earlier layers update, the distribution of inputs to each later layer keeps shifting, which slows training. Batch Normalization (BatchNorm) [@ioffe2015batchnorm] standardizes each feature to zero mean and unit variance using the current mini-batch, then lets the network learn the scale and shift it actually wants.
 
-**Algorithm** (applied per mini-batch):
+For one feature over a mini-batch $\{x_1, \ldots, x_m\}$, with learnable $\gamma, \beta$ and a small $\epsilon$ (e.g. $10^{-5}$):
 
-Given a mini-batch $\mathcal{B} = \{\mathbf{z}^{(1)}, \ldots, \mathbf{z}^{(B)}\}$ where $\mathbf{z}^{(i)} \in \mathbb{R}^d$:
+$$\mu = \frac{1}{m}\sum_{i} x_i, \qquad \sigma^2 = \frac{1}{m}\sum_{i}(x_i - \mu)^2, \qquad \hat{x}_i = \frac{x_i - \mu}{\sqrt{\sigma^2 + \epsilon}}, \qquad y_i = \gamma\,\hat{x}_i + \beta$$
 
-1. **Compute statistics per dimension** $j = 1, \ldots, d$:
-   $$\mu_j = \frac{1}{B} \sum_{i=1}^B z_j^{(i)}$$
-   $$\sigma_j^2 = \frac{1}{B} \sum_{i=1}^B (z_j^{(i)} - \mu_j)^2$$
+- **Normalize** ($\hat{x}_i$): zero mean, unit variance across the batch. $\epsilon$ avoids division by zero.
+- **Scale and shift** ($y_i$): $\gamma, \beta$ let the layer undo the normalization if that is better (setting $\gamma = \sqrt{\sigma^2+\epsilon}$, $\beta = \mu$ recovers the identity), so no expressiveness is lost.
+- **Axes**: in a dense layer each feature has its own $\mu, \sigma^2$ (over the batch). In a conv layer the statistics are **per channel over $(N, H, W)$**.
 
-2. **Normalize**:
-   $$\hat{z}_j^{(i)} = \frac{z_j^{(i)} - \mu_j}{\sqrt{\sigma_j^2 + \epsilon}}$$
-   
-   where $\epsilon \approx 10^{-5}$ prevents division by zero
+**Inference**: the output must not depend on other examples in the batch, so BatchNorm uses **running averages** of $\mu$ and $\sigma^2$ collected during training (an exponential moving average, with momentum $\alpha$; the running variance uses Bessel's correction $\tfrac{N}{N-1}$). Hence BatchNorm behaves differently in train and eval mode.
 
-3. **Scale and shift** (learnable parameters):
-   $$y_j^{(i)} = \gamma_j \hat{z}_j^{(i)} + \beta_j$$
+**Placement and benefits**: usually before the activation. It allows higher learning rates, makes training less sensitive to initialization, and acts as a mild regularizer (the batch statistics add noise).
 
-**Parameters**: Each dimension has learnable $\gamma_j$ (scale) and $\beta_j$ (shift). This allows the network to undo normalization if beneficial.
-
-**Inference**: Use running averages of $\mu_j$ and $\sigma_j^2$ computed during training:
-$$\mu_{\text{running}} \leftarrow \alpha \mu_{\text{running}} + (1-\alpha) \mu_{\text{batch}}$$
-$$\sigma^2_{\text{running}} \leftarrow \alpha \sigma^2_{\text{running}} + (1-\alpha) \sigma^2_{\text{batch}}$$
-
-where $\alpha \approx 0.9$ is the momentum parameter.
-
-**Placement**: Typically applied *before* activation functions (though after activation is also used):
-$$\mathbf{y} = \text{Activation}(\text{BatchNorm}(\mathbf{W}^\top \mathbf{x} + \mathbf{b}))$$
-
-**Benefits**:
-
-1. Enables higher learning rates (gradients don't explode/vanish as easily)
-2. Acts as regularizer (each sample sees different normalizations due to batch sampling)
-3. Reduces sensitivity to initialization
-
-**Numpy Implementation** (forward pass only):
-
-```python
-def batch_norm_forward(x, gamma, beta, eps=1e-5):
-    """
-    x: (N, D) input
-    gamma, beta: (D,) scale and shift parameters
-    """
-    # Compute statistics
-    mu = np.mean(x, axis=0)  # (D,)
-    var = np.var(x, axis=0)  # (D,)
-    
-    # Normalize
-    x_normalized = (x - mu) / np.sqrt(var + eps)
-    
-    # Scale and shift
-    out = gamma * x_normalized + beta
-    
-    # Cache for backward pass
-    cache = (x, x_normalized, mu, var, gamma, beta, eps)
-    return out, cache
-```
-
-**Interview Deep-Dive**: Be ready to explain:
-
-- Why running statistics are needed at test time (batch size = 1)
-- Why BatchNorm breaks in small batches or sequence models (→ LayerNorm)
-- The controversy around "internal covariate shift" vs. just smoothing loss landscape
+**Interview Deep-Dive**: why running statistics are needed at test time; why BatchNorm breaks with small batches or in sequence models (→ LayerNorm); whether it works through "internal covariate shift" or by smoothing the loss landscape [@santurkar2018bn].
 
 ---
 
-#### Normalization Variants for Images
+#### Other Normalization Layers
 
-For convolutional networks with spatial dimensions, different normalization strategies are used:
+BatchNorm is one of several normalization layers. They all compute the same four steps (mean, variance, normalize, scale and shift) and differ only in **which values share a mean and variance**. @fig-norm-variants shows this for an image-feature tensor $\mathbf{X} \in \mathbb{R}^{N \times C \times H \times W}$, where $N$ is the batch size, $C$ the channels, and $H, W$ the spatial dimensions (drawn flattened into a single axis).
 
-| Method | Normalization Axes | Use Case |
-|--------|-------------------|----------|
-| **Batch Norm** | $(N, H, W)$ per channel | Standard CNNs with moderate batch size |
-| **Layer Norm** | $(C, H, W)$ per sample | Small batches, sequence models |
-| **Instance Norm** | $(H, W)$ per channel per sample | Style transfer, GANs |
-| **Group Norm** | Groups of channels $(G, H, W)$ | Very small batches |
+![Normalization methods. Each subplot shows the feature tensor with $N$ (batch), $C$ (channels), and the flattened spatial axis $(H, W)$. The blue cells are normalized together, i.e. they share the same mean and variance. *Source: Wu & He, "Group Normalization" (ECCV 2018), Figure 2* [@wu2018groupnorm].](/images/neural-networks/normalization_layers.png){#fig-norm-variants width=95%}
 
-**Tensor Notation**: For input $\mathbf{X} \in \mathbb{R}^{N \times C \times H \times W}$:
+| Method | Statistics computed over | Shared across | Use Case |
+|--------|-------------------------|---------------|----------|
+| **Batch Norm** | $(N, H, W)$, per channel | the whole batch | Standard CNNs with moderate/large batch size |
+| **Layer Norm** | $(C, H, W)$, per sample | all channels of one sample | Small batches, Transformers, sequence models |
+| **Instance Norm** | $(H, W)$, per sample and channel | one channel of one sample | Style transfer, GANs |
+| **Group Norm** | $(C/G, H, W)$, per sample and channel group | one group of channels of one sample | Very small batches (detection, segmentation) |
 
-- $N$ = batch size
-- $C$ = channels
-- $H, W$ = spatial dimensions
+: Normalization layers compared. Sources: Batch Norm [@ioffe2015batchnorm]; Layer Norm [@ba2016layernorm]; Instance Norm [@ulyanov2016instancenorm]; Group Norm [@wu2018groupnorm]. {#tbl-norm-layers}
 
-**BatchNorm2D**: Normalize across $(N, H, W)$ for each channel $c$:
-$$\hat{x}_{n,c,h,w} = \frac{x_{n,c,h,w} - \mu_c}{\sqrt{\sigma_c^2 + \epsilon}}$$
-where $\mu_c, \sigma_c^2$ are computed over all $N \times H \times W$ spatial positions.
+Reading the figure: Batch Norm's blue slab spans all of $N$ for one channel; Layer Norm's spans all of $C$ for one sample; Instance Norm is a single (sample, channel) pair; Group Norm sits in between, splitting the channels into $G$ groups (Layer Norm is $G=1$, Instance Norm is $G=C$).
 
-**LayerNorm**: Normalize across $(C, H, W)$ for each sample $n$:
-$$\hat{x}_{n,c,h,w} = \frac{x_{n,c,h,w} - \mu_n}{\sqrt{\sigma_n^2 + \epsilon}}$$
+**Layer Norm** applies the same four steps but averages over the features of a *single* sample, $\mu_n = \tfrac{1}{CHW}\sum_{c,h,w} x_{n,c,h,w}$ (and likewise $\sigma_n^2$). It needs no running statistics, behaves identically in training and inference, and is independent of batch size.
 
-**Why LayerNorm for Transformers?** Sequence lengths vary, making batch statistics unstable. LayerNorm computes statistics per sample, avoiding this issue. It's now standard in Transformers (BERT, GPT, ViT).
+**Why LayerNorm for Transformers?** Sequence lengths vary and batches are often small, making batch statistics noisy; per-sample statistics avoid this. It is now standard in Transformers (BERT, GPT, ViT). (There, the normalized set is the feature vector of one token.)
+
+#### Implementation Exercises
+
+Implementing normalization layers from scratch is a common interview question. Interviewers look for (1) the **correct axes** for the mean and variance, (2) **normalize, then scale and shift**, with $\epsilon$ inside the square root, and, for BatchNorm, (3) the **train/eval distinction** with running statistics.
+
+::: {.callout-note collapse="true" title="Exercise: implement BatchNorm2D and LayerNorm2D (forward pass)"}
+Fill in the `...` gaps, then open the solution to check.
+
+**BatchNorm2D**
+
+```python
+import numpy as np
+
+class BatchNorm2D:
+    def __init__(self, num_features: int, epsilon: float = 1e-5, momentum: float = 0.1):
+        self.epsilon, self.momentum = epsilon, momentum
+        self.gamma = np.ones((1, num_features, 1, 1))    # scale, per channel
+        self.beta = np.zeros((1, num_features, 1, 1))    # shift, per channel
+        self.mu_run = np.zeros((1, num_features, 1, 1))  # running statistics
+        self.var_run = np.ones((1, num_features, 1, 1))
+        self.training = True
+
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        # x: (B, C, H, W)
+        B, C, H, W = x.shape
+        N = B * H * W
+
+        if self.training:
+            x_mu = ...    # per-channel mean. Which axes? keepdims=True
+            x_var = ...   # per-channel (biased) variance
+            x_bar = ...   # normalize
+            y = ...       # scale and shift
+            # update running stats (EMA with self.momentum);
+            # the running variance uses Bessel's correction N / (N - 1)
+            self.mu_run = ...
+            self.var_run = ...
+        else:
+            x_bar = ...   # normalize with the running statistics
+            y = ...       # scale and shift
+        return y
+
+    def train(self): self.training = True
+    def eval(self): self.training = False
+```
+
+::: {.callout-tip collapse="true" title="Show solution: BatchNorm2D"}
+```python
+import numpy as np
+
+class BatchNorm2D:
+    def __init__(self, num_features: int, epsilon: float = 1e-5, momentum: float = 0.1):
+        self.num_features = num_features
+        self.epsilon = epsilon
+        self.momentum = momentum
+
+        # Learnable scale and shift, one per channel (broadcast over B, H, W)
+        self.gamma = np.ones((1, num_features, 1, 1))
+        self.beta = np.zeros((1, num_features, 1, 1))
+
+        # Running statistics, used at inference
+        self.mu_run = np.zeros((1, num_features, 1, 1))
+        self.var_run = np.ones((1, num_features, 1, 1))
+
+        self.training = True
+
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        # x: (B, C, H, W)
+        B, C, H, W = x.shape
+        N = B * H * W  # values that share one mean/variance (per channel)
+
+        if self.training:
+            x_mu = np.mean(x, axis=(0, 2, 3), keepdims=True)
+            x_var = np.var(x, axis=(0, 2, 3), keepdims=True)  # biased (divides by N)
+            x_bar = (x - x_mu) / np.sqrt(x_var + self.epsilon)
+            y = self.gamma * x_bar + self.beta
+
+            # Running statistics (exponential moving average). The running
+            # variance uses Bessel's correction N/(N-1): the batch variance
+            # is a biased estimate of the population variance.
+            self.mu_run = (1 - self.momentum) * self.mu_run + self.momentum * x_mu
+            self.var_run = (1 - self.momentum) * self.var_run + self.momentum * x_var * (N / (N - 1))
+        else:
+            x_bar = (x - self.mu_run) / np.sqrt(self.var_run + self.epsilon)
+            y = self.gamma * x_bar + self.beta
+        return y
+
+    def train(self):
+        self.training = True
+
+    def eval(self):
+        self.training = False
+```
+
+Mean and variance are taken over `axis=(0, 2, 3)`, everything *except* the channel axis; `keepdims=True` keeps the result broadcastable. Training normalizes with *batch* statistics, evaluation with the *running* ones. The result matches `torch.nn.BatchNorm2d`.
+:::
+
+**LayerNorm2D** (no running statistics, no train/eval switch; only the axes change)
+
+```python
+class LayerNorm2D:
+    def __init__(self, normalized_shape: tuple, epsilon: float = 1e-5):
+        # normalized_shape: (C, H, W)
+        self.epsilon = epsilon
+        self.gamma = ...   # learnable scale, shape (1, C, H, W)
+        self.beta = ...    # learnable shift, shape (1, C, H, W)
+
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        # x: (B, C, H, W)
+        x_mu = ...    # statistics per *sample*. Which axes?
+        x_var = ...
+        x_bar = ...
+        return ...    # scale and shift
+```
+
+::: {.callout-tip collapse="true" title="Show solution: LayerNorm2D"}
+```python
+class LayerNorm2D:
+    def __init__(self, normalized_shape: tuple, epsilon: float = 1e-5):
+        # normalized_shape: (C, H, W), the dimensions each sample is normalized over
+        self.epsilon = epsilon
+
+        # Learnable scale and shift, one per normalized element (shared across the batch)
+        self.gamma = np.ones((1, *normalized_shape))
+        self.beta = np.zeros((1, *normalized_shape))
+
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        # x: (B, C, H, W). Statistics are computed independently for each sample.
+        x_mu = np.mean(x, axis=(1, 2, 3), keepdims=True)
+        x_var = np.var(x, axis=(1, 2, 3), keepdims=True)
+        x_bar = (x - x_mu) / np.sqrt(x_var + self.epsilon)
+        return self.gamma * x_bar + self.beta
+```
+
+The only change in the statistics is `axis=(1, 2, 3)` instead of `(0, 2, 3)`. `gamma` and `beta` are per-feature, so their shape does not depend on the batch size. Matches `torch.nn.LayerNorm([C, H, W])`.
+:::
+:::
 
 ---
 
@@ -399,6 +482,8 @@ where $\alpha > 0$ is the learning rate.
    - Balances gradient accuracy and computational efficiency
    - Batch size affects generalization (smaller often better)
 
+![Optimization paths of the three variants on the same loss contours (the + marks the minimum). Batch gradient descent follows a smooth, direct path; SGD is noisy because each step uses a single sample; mini-batch gradient descent is a compromise. Image Source: [@ng2015coursera].](/images/neural-networks/grad_descent.jpg){#fig-gd-variants width=45% fig-align="center"}
+
 **Why Mini-Batches Work**: 
 
 - Vectorized operations on GPUs/TPUs are efficient
@@ -431,6 +516,8 @@ where $\beta \in [0, 1)$ is the momentum coefficient (typically $\beta = 0.9$).
 
 - Pure SGD oscillates across narrow dimension
 - Momentum dampens oscillations while accelerating along the ravine
+
+![SGD without momentum (left) oscillates across the narrow direction of the loss surface, while SGD with momentum (right) damps those oscillations and makes faster progress toward the minimum. Image Source: Hirol (2023) [@hirol2023momentum].](/images/neural-networks/momentum.jpg){#fig-momentum width=55% fig-align="left"}
 
 ---
 
@@ -608,7 +695,7 @@ When data is limited, use $k$-fold CV on train+validation, reserve test set for 
 - [ ] Linear layer dimensions and parameter count
 - [ ] Activation function properties (saturation, gradients)
 - [ ] Dropout training vs. inference behavior
-- [ ] BatchNorm vs. LayerNorm (when to use each)
+- [ ] BatchNorm vs. LayerNorm vs. InstanceNorm vs. GroupNorm (axes, when to use each); implementing BatchNorm/LayerNorm forward passes
 - [ ] Initialization strategies (Xavier, He) and why
 
 **Learning**:
@@ -628,6 +715,12 @@ When data is limited, use $k$-fold CV on train+validation, reserve test set for 
 
 2. **"Why does BatchNorm work?"**
    - Stabilizes distributions, enables higher LR, acts as regularizer
+
+   **"Which axes does BatchNorm average over for a conv layer, and how does LayerNorm differ?"**
+   - BatchNorm: per channel over $(N, H, W)$; LayerNorm: per sample over $(C, H, W)$. LayerNorm needs no running statistics and is independent of batch size (see @fig-norm-variants and the implementation exercises).
+
+   **"Why does BatchNorm behave differently in train and eval mode?"**
+   - Training uses batch statistics; evaluation uses running averages collected during training (with Bessel's correction on the variance), so a single example can be processed deterministically.
 
 3. **"What's the dying ReLU problem?"**
    - Neurons with large negative bias never activate → zero gradient

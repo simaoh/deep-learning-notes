@@ -1,4 +1,4 @@
-# Variational Autoencoders (VAEs)
+# Variational Autoencoders (VAEs) {#sec-vae}
 
 > Many of the ideas and illustrations in this section are adapted from 
 > Joseph Rocca’s excellent Medium article, 
@@ -12,6 +12,8 @@
 
 $$(e^*, d^*) = \arg\min_{(e,d) \in \mathcal{E} \times \mathcal{D}} \sum_{x_i \in \mathcal{D}} \|x_i - d(e(x_i))\|^2$$
 
+
+![The general encoder–decoder (bottleneck) scheme. The encoder $e$ compresses the data $x \in \mathbb{R}^n$ into a lower-dimensional latent code $e(x) \in \mathbb{R}^m$ ($m<n$), and the decoder $d$ maps it back to the original space. If $x = d(e(x))$ the encoding is lossless; otherwise information is lost in the reduction. *Adapted from Rocca [@rocca2021vae].*](/images/vaes/general_encoder_decoder.png){#fig-encoder-decoder width=90% fig-align="center"}
 
 **Linear Case - Principal Component Analysis (PCA)**:
 
@@ -76,6 +78,8 @@ Regular vs. Irregular Variational Autoencoder latent spaces. The VAE’s regular
 
 
 **Variational Autoencoders Solution**: Regularize latent space during training to enforce these properties.
+
+![Without regularization (left) the encoder places the encoded distributions far apart, so points in between decode to meaningless outputs. With regularization (right) the encoded distributions overlap and fill the latent space, giving the continuity and completeness we want. *Adapted from Rocca [@rocca2021vae].*](/images/vaes/regularization_goal_side_by_side.png){#fig-regularization-goal width=90% fig-align="center"}
 
 
 ## Probabilistic Formulation
@@ -379,6 +383,8 @@ $$\frac{\partial \mathcal{L}}{\partial E(x)} = \frac{\partial \mathcal{L}}{\part
 $$\hat{x} = D(z_q^{\text{top}}, z_q^{\text{bottom}})$$
 Top-level quantized (codebook) representations are upsampled to match the spatial resolution 
 of the bottom-level codes and concatenated along the channel dimension.
+
+![VQ-VAE-2 overview. *Left:* training of the hierarchical encoder/decoder. The image is encoded to a bottom-level map, which is further encoded to a top-level map; both are vector-quantized (VQ) with separate codebooks, and the decoder reconstructs the image from the top codes (upsampled) together with the bottom codes. *Right:* generation. A prior samples the top-level codes, a second prior samples the bottom-level codes conditioned on them, and the decoder maps the codes to an image. Figure from Razavi et al. [@razavi2019vqvae2].](/images/vaes/vq_vae2_architecture.png){#fig-vqvae2 width=95% fig-align="center"}
 
 ---
 
