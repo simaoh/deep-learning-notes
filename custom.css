@@ -155,3 +155,15 @@
   color: #2d3728; 
 }
 */
+/* Indent the momentum figure image only (not its caption) */
+#fig-momentum img {
+  margin-left: 3em;
+}
+
+/* Small pictorial thumbnails flushed to the right of taxonomy list items */
+.toc-thumb,
+a:has(> img.toc-thumb) {
+  float: right;
+  clear: right;
+  margin: 0 0 0.4em 1em;
+}

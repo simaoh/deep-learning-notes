@@ -28,10 +28,13 @@ To learn more about Quarto books visit <https://quarto.org/docs/books>.
    - Convolution operations
    - Classic architectures (LeNet → ResNet)
    - Design principles
-4. Object Detection and Segmentation
+4. Object Detection
    - Two-stage detectors
    - Single-stage detectors
-   - Instance and panoptic segmentation
+   - Transformer detectors (DETR)
+   - Segmentation
+   - Semantic, instance, and panoptic segmentation (Mask2Former)
+   - Promptable segmentation (SAM)
 5. Vision Transformers
    - Attention mechanisms (formal introduction)
    - ViT, DeiT, Swin
