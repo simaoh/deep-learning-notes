@@ -1,0 +1,218 @@
+# Video Tracking and Segmentation {#sec-video-tracking}
+
+A detector tells you *what is in a frame*. A tracker tells you *that the person in frame 10 is the same person in frame 900*, even after they walked behind a bus. That one extra piece of information, **identity over time**, is what turns per-frame perception into video understanding, and it is what makes robots, sports analytics and video editing work. This chapter covers the four tracking tasks (single-object, multi-object, point tracking, video object segmentation), the classical machinery they share (Kalman filters, the Hungarian algorithm), and the modern learned replacements (transformers, memory networks). Detectors are in @sec-detection, DETR in @sec-detr, optical flow in @sec-video-fundamentals, and SAM 2 in @sec-sam2.
+
+## The Tracking Zoo {#sec-tracking-zoo}
+
+All four tasks ask "where did it go?", but they differ in *what is given*, *what is the target*, and *what is the output*.
+
+- **Single-object tracking (SOT)**: you get a box in frame 1 and must output a box in every later frame. The target class is arbitrary and unseen at training time (class-agnostic), so the tracker is really a *matcher*: "find the thing that looks like this template". Analogy: pointing at one stranger in a crowd and asking a friend to keep an eye on them.
+- **Multi-object tracking (MOT)**: nothing is given. Detect *all* objects of some class (usually pedestrians or vehicles) in every frame and assign each a persistent ID. The hard part is not detecting but **association**: deciding which box in frame $t+1$ continues which track from frame $t$.
+- **Point tracking** (Tracking Any Point, TAP): you get a pixel $(x,y)$ in some frame and must output its position in every other frame, *plus whether it is visible*. It is finer than a box and longer-range than optical flow.
+- **Video object segmentation (VOS)**: like SOT but the output is a pixel mask. In the standard *semi-supervised* setting the first-frame mask is given.
+
+| Task | Given | Output per frame | Core difficulty |
+|---|---|---|---|
+| SOT | 1 box (frame 1) | 1 box | appearance change, distractors |
+| MOT | nothing (class) | set of ID'd boxes | association, crowds, occlusion |
+| Point tracking | 1 point | $(x,y)$ + visibility | drift, long occlusions |
+| VOS | 1 mask (frame 1) | mask | thin structures, long videos, similar objects |
+
+: The tracking tasks at a glance. {#tbl-tracking-zoo}
+
+Why not just run optical flow (@sec-video-fundamentals)? Flow is a *dense, two-frame* estimate of instantaneous motion. Chaining flow over hundreds of frames accumulates error (drift) and has no notion of occlusion: when the point disappears, flow happily returns garbage. Tracking is the long-horizon, identity-preserving version of the problem.
+
+## Single-Object Tracking {#sec-sot}
+
+SOT is **template-search matching**: crop a template $z$ around the target in frame 1 and a larger search region $x$ around the last known position in the current frame, then locate $z$ inside $x$.
+
+### Siamese trackers
+
+**SiamFC** [@bertinetto2016siamfc] embeds both crops with the *same* (hence "Siamese") fully convolutional network $\varphi$ and slides the template embedding over the search embedding as a convolution kernel:
+$$f(z,x) = \varphi(z) \star \varphi(x) + b .$$
+The result is a response map whose peak is the target location. Because it is a cross-correlation, it is translation equivariant and runs at hundreds of FPS with no online fine-tuning. Its weakness is that it predicts only a position, with the scale found by testing a few resized search crops. **SiamRPN** [@li2018siamrpn] fixes this by feeding the correlation features into a region-proposal head (classification plus box regression per anchor, as in Faster R-CNN, @sec-detection), so the box shape is regressed instead of searched.
+
+### Transformer trackers
+
+Siamese trackers correlate *after* feature extraction, so the backbone never sees the template and the search region together, and a cross-correlation is a rather blunt relation. Transformer trackers let attention do the matching. **MixFormer** [@cui2022mixformer] inserts a *mixed attention module* into the backbone so that feature extraction and template-search integration happen in one step. **OSTrack** [@ye2022ostrack] takes the idea to its simplest form, a **one-stream** design: patchify template and search crops, concatenate all tokens, and run a plain ViT (@sec-vit) over the joint sequence. Self-attention across the two sets is the matching, and a light head predicts the box from the search tokens. OSTrack also drops search tokens that attend weakly to the template (*early candidate elimination*), which is a cheap speed-up because most of the search region is background.
+
+The pattern should feel familiar: dense correlation heads were replaced by attention, as detectors were replaced by DETR. The recurring SOT failure modes are **distractors** (a lookalike walks by), **target loss after occlusion** (the template is stale and the search window is too small) and **template drift** when templates are updated online.
+
+## Multi-Object Tracking {#sec-mot}
+
+### Tracking-by-detection
+
+The dominant MOT paradigm splits the problem: run a detector on every frame, then link detections across frames. The linking pipeline is the same in SORT, DeepSORT and ByteTrack:
+
+1. **Predict** each existing track's box in the new frame with a motion model.
+2. **Build a cost matrix** between predicted tracks and new detections.
+3. **Solve the assignment** with the Hungarian algorithm.
+4. **Update** matched tracks, start tracks for unmatched detections, and retire tracks that stay unmatched for too long.
+
+**Motion model.** SORT [@bewley2016sort] uses a constant-velocity **Kalman filter** per track. The state holds box center, area, aspect ratio and their velocities, $\mathbf{x}=(u,v,s,r,\dot u,\dot v,\dot s)^\top$. With transition matrix $F$, observation matrix $H$ and noise covariances $Q,R$:
+$$\hat{\mathbf{x}}_{t|t-1}=F\mathbf{x}_{t-1},\qquad P_{t|t-1}=FP_{t-1}F^\top+Q,$$
+$$K_t=P_{t|t-1}H^\top\big(HP_{t|t-1}H^\top+R\big)^{-1},\qquad \mathbf{x}_t=\hat{\mathbf{x}}_{t|t-1}+K_t(\mathbf{z}_t-H\hat{\mathbf{x}}_{t|t-1}).$$
+The predict step is what lets a track "coast" through a missed detection; the update step blends the prediction with the measurement $\mathbf z_t$, weighted by how much each is trusted.
+
+**Association as an assignment problem.** Let there be $N$ tracks and $M$ detections, with cost $C_{ij}$ for matching track $i$ to detection $j$. SORT uses $C_{ij}=1-\mathrm{IoU}(\hat b_i, d_j)$ between the Kalman-predicted box and the detection. We want the one-to-one matching of minimal total cost:
+$$\min_{X\in\{0,1\}^{N\times M}}\ \sum_{i,j} C_{ij}X_{ij}\quad\text{s.t.}\quad \sum_j X_{ij}\le 1,\ \ \sum_i X_{ij}\le 1 .$$
+The **Hungarian algorithm** solves this exactly in $O(n^3)$. It is a *global* optimum: unlike greedy matching (give each track its best box), it will sacrifice one good pair if that enables a better total. After solving, matches with IoU below a gate (0.3 in SORT) are rejected, which is how unmatched tracks and new detections arise. This is the same bipartite matching DETR uses for its training loss (@sec-detr), only here it is used at inference time. SORT is only a few hundred lines and runs at hundreds of FPS, but it breaks under occlusion because the IoU cost carries no appearance information, so every identity swap in a crowd is permanent.
+
+::: {.callout-note collapse="true" title="Code: Hungarian association with an IoU cost matrix"}
+```python
+import numpy as np
+from scipy.optimize import linear_sum_assignment
+
+def iou_matrix(a, b):
+    """a: (N,4), b: (M,4) boxes as [x1, y1, x2, y2]. Returns (N,M) IoU."""
+    x1 = np.maximum(a[:, None, 0], b[None, :, 0])
+    y1 = np.maximum(a[:, None, 1], b[None, :, 1])
+    x2 = np.minimum(a[:, None, 2], b[None, :, 2])
+    y2 = np.minimum(a[:, None, 3], b[None, :, 3])
+    inter = np.clip(x2 - x1, 0, None) * np.clip(y2 - y1, 0, None)
+    area_a = (a[:, 2] - a[:, 0]) * (a[:, 3] - a[:, 1])
+    area_b = (b[:, 2] - b[:, 0]) * (b[:, 3] - b[:, 1])
+    return inter / (area_a[:, None] + area_b[None, :] - inter + 1e-9)
+
+def associate(tracks, dets, iou_min=0.3):
+    iou = iou_matrix(tracks, dets)
+    rows, cols = linear_sum_assignment(1.0 - iou)      # minimise total (1 - IoU)
+    matches = [(i, j) for i, j in zip(rows, cols) if iou[i, j] >= iou_min]
+    matched_t = {i for i, _ in matches}
+    matched_d = {j for _, j in matches}
+    unmatched_tracks = [i for i in range(len(tracks)) if i not in matched_t]
+    unmatched_dets = [j for j in range(len(dets)) if j not in matched_d]
+    return matches, unmatched_tracks, unmatched_dets
+
+tracks = np.array([[10, 10, 50, 90], [100, 20, 140, 100]], dtype=float)
+dets = np.array([[102, 24, 143, 104], [12, 12, 52, 92], [300, 50, 340, 130]], dtype=float)
+print(associate(tracks, dets))   # tracks 0,1 -> dets 1,0 ; det 2 spawns a new track
+```
+:::
+
+### DeepSORT and ByteTrack
+
+**DeepSORT** [@wojke2017deepsort] adds the missing appearance cue. A small re-identification CNN produces an embedding per detection; each track keeps a gallery of recent embeddings. The cost blends motion and appearance, with the Mahalanobis distance of the Kalman prediction used as a *gate* and the cosine distance of embeddings as the main cost:
+$$C_{ij}=\lambda\, d_{\text{Maha}}(i,j)+(1-\lambda)\, d_{\text{cos}}(i,j).$$
+A *matching cascade* serves recently seen tracks first, so a track hidden for a long time cannot steal a detection from a track that was just seen. The price is a second network per detection.
+
+**ByteTrack** [@zhang2022bytetrack] makes an observation that is obvious in hindsight: trackers throw away low-confidence detections (say below 0.6), but an *occluded* person produces exactly such a low-confidence box. Discarding them causes fragmented tracks and missed objects. ByteTrack's **BYTE** association keeps every box and runs two rounds:
+
+1. Match **high-score** detections to all tracks (IoU or appearance cost).
+2. Match the **low-score** detections to the tracks *left over* from round 1, using IoU only.
+
+Low-score boxes that match no track are discarded as background; those that match rescue an occluded object (@fig-bytetrack). A confident-looking false positive with no track is not trusted, while a doubtful box that lines up with an existing track is. With a strong YOLOX detector and no appearance model, ByteTrack reports 80.3 MOTA, 77.3 IDF1 and 63.1 HOTA on MOT17 at about 30 FPS [@zhang2022bytetrack]. The lesson for interviews: *association quality often matters more than a fancier motion or appearance model.*
+
+![BYTE association. (a) Detections with scores. (b) Thresholding drops the 0.4 and 0.1 boxes, so the occluded person's track (red) is lost. (c) Matching low-score boxes to unmatched tracks recovers the identity; the dashed box is the Kalman prediction. Figure from [@zhang2022bytetrack].](/images/video/bytetrack_association.png){#fig-bytetrack width=70% fig-align="center"}
+
+### Tracking-by-query
+
+Tracking-by-detection has many hand-built parts (detector, motion, appearance, thresholds). Inspired by DETR (@sec-detr), **MOTR** [@zeng2022motr] and **TrackFormer** [@meinhardt2022trackformer] make tracking end-to-end: the decoder's *track queries* are carried from frame to frame. Each tracked object owns a query. In frame $t$, the queries of the live tracks plus a few fresh *detect queries* attend to the image features; the output embedding of a track query yields that object's box, and *the same query is passed to frame $t+1$*. Identity is thus carried by the query itself and needs no association step. A track ends when its query predicts "no object", and new objects appear through detect queries. Training uses a DETR-style matching, where track queries inherit their ground-truth identity and only the detect queries are matched by Hungarian matching. In practice, query-based trackers gave elegant designs and strong results on DanceTrack-like data, but were long weaker than ByteTrack-style systems on MOT17 and are heavier to train; the field is mixed.
+
+### Metrics: MOTA, IDF1, HOTA
+
+- **MOTA** [@bernardin2008clear] $=1-\dfrac{\mathrm{FN}+\mathrm{FP}+\mathrm{IDSW}}{\mathrm{GT}}$. Intuitive, but dominated by detection errors (FN, FP are far more numerous than identity switches), so it barely rewards good association.
+- **IDF1** [@ristani2016idf1] $=\dfrac{2\,\mathrm{IDTP}}{2\,\mathrm{IDTP}+\mathrm{IDFP}+\mathrm{IDFN}}$: match whole *trajectories* to ground-truth identities once, globally, and compute an F1 of identity-correct detections. It measures long-range consistency.
+- **HOTA** [@luiten2021hota] $=\sqrt{\mathrm{DetA}\cdot\mathrm{AssA}}$, averaged over localization thresholds $\alpha\in\{0.05,\dots,0.95\}$. DetA is detection Jaccard, $\frac{\mathrm{TP}}{\mathrm{TP}+\mathrm{FN}+\mathrm{FP}}$; AssA averages, over true positives, the Jaccard of the associated set of detections for that identity. HOTA balances the two halves explicitly and is the main MOT metric today.
+
+## Point Tracking {#sec-point-tracking}
+
+A box says where a person is; a point says where *their left elbow* is, which is what you need for robot manipulation, video editing (attach a sticker that sticks) and 3D reconstruction from video. **TAP-Vid** [@doersch2022tapvid] formalized *Tracking Any Point*: given a query point in any frame, predict its $(x,y)$ and a visibility flag in all frames. It supplies real videos with human-annotated tracks (DAVIS, Kinetics, RGB-Stacking) and a synthetic Kubric set for training.
+
+**Metrics.** For each query, the visible ground-truth points are scored with:
+
+- $\delta^x_{\text{avg}}$ (position accuracy): the fraction of visible points predicted within $1,2,4,8,16$ pixels (at $256\times256$ resolution) of the truth, averaged over these thresholds.
+- **OA** (occlusion accuracy): classification accuracy of the visibility flag.
+- **AJ** (Average Jaccard): a joint score that counts a prediction as a true positive only if the point is visible *and* close, and penalizes false positives (predicted visible when occluded) and false negatives.
+
+**PIPs** [@harley2022pips] ("particle video revisited") tracks a point through 8-frame windows with iterative refinement of the whole trajectory, chaining windows for longer videos; it explicitly handles occlusion rather than failing silently. **TAPIR** [@doersch2023tapir] combines two ideas: a TAP-Net-style *per-frame initialization* (compare the query feature to every frame independently, so occlusion cannot corrupt other frames) and a PIPs-style *temporal refinement* (iterated local updates using a depthwise-convolutional network over the trajectory), with an extra uncertainty estimate (@fig-tapir).
+
+![TAPIR. A cost volume between the query feature and each frame gives an initial track with occlusion and uncertainty; local features around that estimate are refined iteratively by a temporal depthwise-convolutional network. Figure from [@doersch2023tapir].](/images/video/tapir_architecture.png){#fig-tapir width=55% fig-align="center"}
+
+**CoTracker** [@karaev2024cotracker] argues that independent per-point trackers waste information: points on the same object move together. It tracks many points **jointly** with a transformer whose attention runs both across time and *across tracks*, using sliding windows for long videos plus *support points* sampled on a grid for context. Joint tracking avoids the failure in @fig-cotracker, where background points are dragged along with a moving foreground. CoTracker3 [@karaev2025cotracker3] simplifies the architecture and trains on pseudo-labels from real videos, showing that the data, not the architecture, was the bottleneck.
+
+![Separate (top) versus joint (bottom) point tracking in CoTracker. Cyan points are background and magenta points are foreground; tracking separately lets background tracks follow the moving object, while attention across tracks keeps them consistent. Figure from [@karaev2024cotracker].](/images/video/cotracker_joint_vs_separate.png){#fig-cotracker width=95% fig-align="center"}
+
+## Video Object Segmentation {#sec-vos}
+
+In **semi-supervised VOS** you get the mask of one or more objects in frame 1 and must produce their masks in every later frame. It is SOT with pixels, so *boundaries* and *thin parts* matter, and the model must cope with deformation, occlusion and objects that look alike (e.g. a flock of sheep). Early methods fine-tuned a network on the first frame at test time (slow). Modern methods are **propagation by memory**.
+
+### Memory networks: STM
+
+**STM** (Space-Time Memory) [@oh2019stm] treats past frames *with their masks* as an external memory. Each memory frame is encoded into a key $k^M\in\mathbb R^{THW\times C_k}$ (where to look) and a value $v^M\in\mathbb R^{THW\times C_v}$ (what is there, including the mask). The current frame produces query keys $k^Q$, and each query pixel reads from every memory pixel by soft attention:
+$$\mathrm{read}(p)=\sum_{q}\frac{\exp\big(k^Q_p\cdot k^M_q\big)}{\sum_{q'}\exp\big(k^Q_p\cdot k^M_{q'}\big)}\,v^M_q .$$
+This is dot-product attention with space-time pixels as tokens, and the read value is decoded into the current mask, which is added to the memory. Dense pixel-to-pixel matching handles occlusion and large appearance change far better than the previous frame alone. The catch is that the memory *grows linearly* with video length, so STM's GPU memory limits it to short clips.
+
+### Long videos: XMem
+
+**XMem** [@cheng2022xmem] borrows the Atkinson-Shiffrin model of human memory (@fig-xmem). It keeps three stores: a **sensory memory** (a small recurrent state updated every frame, good for fine temporal continuity), a **working memory** (high-resolution STM-style key/value features from every $r$-th frame, bounded in size) and a **long-term memory**. When working memory fills, it is *consolidated* into the long-term memory by selecting the most representative prototype features, and rarely used long-term features are forgotten, so GPU memory stays bounded for videos of thousands of frames. Reading uses all three.
+
+![XMem. Each query frame reads from sensory, working and long-term memory; working memory is consolidated into compact long-term memory when full. Figure from [@cheng2022xmem].](/images/video/xmem_memory.png){#fig-xmem width=75% fig-align="center"}
+
+### SAM 2 as the unification
+
+**SAM 2** (@sec-sam2) can be read as the end point of this line. It keeps the memory-attention idea of STM/XMem (a bank of past frame features and predicted masks that the current frame attends to), but makes the prompt *interactive and general*: the first-frame mask can be replaced by clicks or boxes on any frame, and corrections can be added later. It also adds an explicit occlusion head and a large video dataset (SA-V). One model thus serves as SOT, semi-supervised VOS and interactive annotation; that is why the older specialist trackers are now mostly baselines. See @sec-sam2 for the architecture and data engine rather than a repeat here.
+
+### Metrics and referring VOS
+
+The standard metric is $\mathcal J\&\mathcal F$: $\mathcal J$ is the region similarity (IoU between predicted and true masks), $\mathcal F$ the boundary accuracy (F-measure of contour pixels within a small tolerance), and the score is their mean over objects and frames. YouTube-VOS reports it separately for *seen* and *unseen* classes. **Referring VOS** replaces the first-frame mask by a sentence ("the dog that jumps over the fence"). Models condition mask decoding on a language embedding, typically reusing a text-image backbone; MeViS [@ding2023mevis] stresses motion-based expressions that cannot be resolved from a single frame.
+
+## Benchmarks {#sec-tracking-benchmarks}
+
+| Benchmark | Task | Main metric | What it stresses |
+|---|---|---|---|
+| MOT17 / MOT20 [@dendorfer2020mot20] | MOT, pedestrians | HOTA, MOTA, IDF1 | detection quality; MOT20 has extreme crowding |
+| DanceTrack [@sun2022dancetrack] | MOT | HOTA, AssA | uniform appearance and complex motion, i.e. pure association |
+| LaSOT [@fan2019lasot] | SOT, long videos | AUC of success plot | long-term, re-detection after loss |
+| GOT-10k [@huang2019got10k] | SOT | average overlap (AO) | class-disjoint train/test, generalization |
+| DAVIS 2017 [@ponttuset2017davis] | semi-supervised VOS | $\mathcal J\&\mathcal F$ | high-quality masks, multiple objects |
+| YouTube-VOS [@xu2018ytbvos] | semi-supervised VOS | $\mathcal J\&\mathcal F$ (seen / unseen) | scale and generalization to unseen classes |
+| MeViS [@ding2023mevis] | referring VOS | $\mathcal J\&\mathcal F$ | motion language |
+| TAP-Vid [@doersch2022tapvid] | point tracking | $\delta_{\text{avg}}$, OA, AJ | long-term tracking and occlusion |
+
+: Main tracking benchmarks. {#tbl-tracking-bench}
+
+A practical reading: MOT17 is nearly saturated by detection quality, so DanceTrack (where everyone looks the same) is the better test of the association itself.
+
+## Summary
+
+- Tracking is *identity over time*; SOT, MOT, point tracking and VOS differ in what is given (box, nothing, point, mask) and what is output.
+- SOT is template-search matching: Siamese cross-correlation (SiamFC, SiamRPN) gave way to one-stream transformers (OSTrack, MixFormer) where attention does the matching.
+- MOT by detection = motion model (Kalman) + cost matrix + Hungarian assignment; DeepSORT adds appearance, ByteTrack adds low-score boxes in a second round.
+- Tracking-by-query (MOTR, TrackFormer) carries identity inside DETR-style track queries and removes the association step.
+- MOTA is dominated by detection errors, IDF1 measures long-range identity, HOTA balances detection and association.
+- Point tracking differs from optical flow by being long-range and occlusion-aware; TAPIR and CoTracker are evaluated by $\delta_{\text{avg}}$, OA and AJ on TAP-Vid.
+- VOS has moved from per-video fine-tuning to memory propagation (STM, XMem) and now to promptable models (SAM 2).
+
+## Interview Questions
+
+::: {.callout-note collapse="true" title="1. Why is the Hungarian algorithm used for association rather than greedy matching, and what does the cost matrix contain?"}
+Greedy matching assigns each track its best detection in turn and can give two tracks the same detection or block a globally better pairing. Hungarian solves the linear assignment problem exactly in $O(n^3)$, minimizing the total cost. The matrix holds $1-\mathrm{IoU}$ between Kalman-predicted track boxes and detections (SORT), optionally mixed with appearance cosine distance and Mahalanobis gating (DeepSORT). A threshold after solving rejects poor matches so tracks can end and new ones begin.
+:::
+
+::: {.callout-note collapse="true" title="2. What does ByteTrack change relative to SORT, and why does it help?"}
+It does not discard low-score detections. It first associates high-score boxes with tracks, then associates the remaining low-score boxes with the tracks that are still unmatched. Occluded objects yield low-confidence boxes, so this recovers them and cuts fragmentation and ID switches; low-score boxes matching no track are dropped as background. No appearance model is needed.
+:::
+
+::: {.callout-note collapse="true" title="3. MOTA, IDF1, HOTA: when do they disagree?"}
+MOTA counts FN, FP and ID switches per frame, so it is driven by detection and barely penalizes a tracker that swaps identities rarely but persistently. IDF1 scores whole trajectories and favors long-term identity consistency. HOTA is the geometric mean of detection and association accuracy and can be decomposed (DetA, AssA), which shows whether errors come from the detector or from linking. A good detector with poor association scores high MOTA and low IDF1 and AssA.
+:::
+
+::: {.callout-note collapse="true" title="4. How does tracking-by-query (MOTR) remove the association step?"}
+Each tracked object owns a decoder query that is propagated to the next frame. Its output in frame $t+1$ is the same object's box, so identity is inherited rather than computed by matching. New objects come from additional detect queries, and a track ends when its query predicts no object. Hungarian matching is still used in the loss, but only for the detect queries.
+:::
+
+::: {.callout-note collapse="true" title="5. Why can't you track points by chaining optical flow, and what do TAP methods do differently?"}
+Flow is a short-range, dense two-frame estimate: errors accumulate on chaining (drift) and it has no concept of occlusion, so a point behind an object gets a meaningless flow. TAP methods compare the query-point feature to features in *every* frame (a global cost volume, so a track can be re-found after an occlusion), refine the trajectory with temporal context, and predict a visibility flag. They are evaluated with $\delta_{\text{avg}}$, OA and AJ on TAP-Vid.
+:::
+
+::: {.callout-note collapse="true" title="6. How does STM work and why does XMem need three memories?"}
+STM stores past frames and their masks as key-value memory; each pixel of the current frame attends over all memory pixels to read mask information. Cost grows linearly with video length. XMem bounds it with a short-lived sensory memory, a periodically sampled working memory and a compact long-term memory built by consolidating prototypes, forgetting rarely used ones, so thousands of frames fit in fixed GPU memory without eagerly compressing high-resolution features.
+:::
+
+## Key Papers
+
+- [SiamFC](https://arxiv.org/abs/1606.09549), [OSTrack](https://arxiv.org/abs/2203.11991) (SOT)
+- [SORT](https://arxiv.org/abs/1602.00763), [DeepSORT](https://arxiv.org/abs/1703.07402), [ByteTrack](https://arxiv.org/abs/2110.06864), [MOTR](https://arxiv.org/abs/2105.03247) (MOT)
+- [TAP-Vid](https://arxiv.org/abs/2211.03726), [TAPIR](https://arxiv.org/abs/2306.08637), [CoTracker](https://arxiv.org/abs/2307.07635) (point tracking)
+- [STM](https://arxiv.org/abs/1904.00607), [XMem](https://arxiv.org/abs/2207.07115) (VOS)

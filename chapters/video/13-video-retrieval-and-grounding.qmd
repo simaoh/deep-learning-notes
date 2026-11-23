@@ -1,0 +1,209 @@
+# Retrieval and Temporal Grounding {#sec-video-retrieval}
+
+A video is a haystack, and the user's query ("the moment the dog steals the sandwich") is a needle. Two questions follow. *Which* video contains the needle? That is **text-video retrieval**. *Where* inside the video is it? That is **moment retrieval** (temporal grounding). Production search systems answer both, usually in the same pipeline: a cheap embedding model narrows millions of clips to a few hundred, a slower model re-ranks them, and a grounding model pins down the exact $(t_s, t_e)$. This chapter covers the dual encoders and rerankers behind the first question, the DETR-style and LLM-based models behind the second, a short preprocessing section on shot and scene boundaries (the units you index), and the metrics that score all of it.
+
+## Text-Video Retrieval
+
+### Dual encoders and the contrastive loss
+
+The problem: a video is a stack of frames and a query is a sentence; we want a score $s(q, v)$ that is high for matching pairs, computable for *millions* of videos in milliseconds. The trick is to make the score a dot product of two independently computed embeddings, so the video side can be pre-computed offline and indexed.
+
+The canonical recipe is **CLIP4Clip** [@luo2022clip4clip]: take a pretrained image-text model (CLIP, @radford2021clip), embed each sampled frame with the image encoder, embed the query with the text encoder, and fuse the frame embeddings into one video vector. The only real design question is *how to aggregate over time*, and the paper compares three "similarity calculators" (@fig-clip4clip):
+
+- **Parameter-free**: mean-pool the frame embeddings, then cosine similarity. No temporal modelling at all, yet a strong baseline (a sobering reminder of how much of video retrieval is "bag of frames").
+- **Sequential**: add position embeddings and run an LSTM or Transformer encoder over the frame embeddings, then pool. This can model order ("sit down" vs "stand up") and wins when there is enough training data.
+- **Tight**: concatenate text and frame tokens into one Transformer and predict the similarity with a linear head. This is a cross-encoder: the best accuracy, but it needs one forward pass *per* (query, video) pair, so it cannot be indexed.
+
+![The CLIP4Clip framework: a text encoder and a ViT video encoder produce text and per-frame embeddings, which a similarity calculator turns into a score. Bottom: the three calculators. Source: [@luo2022clip4clip].](/images/video/clip4clip_framework.png){#fig-clip4clip width=95% fig-align="center"}
+
+Training uses the **InfoNCE** loss [@oord2018cpc] over a batch of $B$ matching (video, text) pairs. With normalised embeddings $\mathbf{v}_i, \mathbf{t}_j$ and a learned temperature $\tau$, define $s_{ij} = \mathbf{v}_i^\top \mathbf{t}_j / \tau$. The symmetric loss treats the other $B-1$ items in the batch as negatives in both directions:
+
+$$
+\mathcal{L} = -\frac{1}{2B}\sum_{i=1}^{B}\left[\log\frac{e^{s_{ii}}}{\sum_{j=1}^{B} e^{s_{ij}}} + \log\frac{e^{s_{ii}}}{\sum_{j=1}^{B} e^{s_{ji}}}\right].
+$$ {#eq-infonce-video}
+
+Two interview-grade remarks. First, the batch *is* the negative set, so bigger batches mean harder, more numerous negatives (CLIP4Clip's own ablation varies batch size). Second, false negatives are common in video-text data: two clips of "someone cooking pasta" are both correct for the query, but the loss pushes one away. That is why retrieval benchmarks with one caption per clip underestimate real performance.
+
+::: {.callout-note collapse="true" title="Code: symmetric InfoNCE for video-text retrieval"}
+```python
+import torch
+import torch.nn.functional as F
+
+def video_text_infonce(video_emb, text_emb, logit_scale):
+    """video_emb, text_emb: (B, D) unnormalised; logit_scale: learned scalar (1 / temperature)."""
+    v = F.normalize(video_emb, dim=-1)
+    t = F.normalize(text_emb, dim=-1)
+    logits = logit_scale * v @ t.T               # (B, B); diagonal = positives
+    labels = torch.arange(v.size(0), device=v.device)
+    return 0.5 * (F.cross_entropy(logits, labels) + F.cross_entropy(logits.T, labels))
+```
+:::
+
+### Why two stages: retrieve, then rerank
+
+A dual encoder compresses a whole video into one vector *before* it has seen the query, so it cannot attend to the specific detail the query asks about. A cross-encoder sees both together and is far more precise, but costs one forward pass per candidate. Scoring a corpus of $N$ videos with a cross-encoder is $O(N)$ transformer passes per query; a dual encoder with an approximate-nearest-neighbour index is roughly $O(\log N)$. The standard answer is the same as in text search (BM25 then a BERT cross-encoder): **retrieve a top-$K$ cheaply, rerank those $K$ expensively**, as sketched below.
+
+<!-- TODO figure: two-stage retrieve-then-rerank pipeline (bi-encoder + ANN index -> top-K -> cross-encoder/LLM reranker); no clean single-source diagram identified, draw or cite later. -->
+
+```text
+query ──► text encoder ──► ANN search over pre-computed video embeddings ──► top-K (K ~ 100-1000)
+                                                                              │
+                                      cross-modal reranker (query + candidate jointly) ◄──┘
+                                                                              │
+                                                                       final ranking
+```
+
+Stage 1 is bounded by recall (a video lost here is lost forever); stage 2 is bounded by the budget of $K$ expensive passes.
+
+The pre-LLM first stage was CLIP4Clip-style frame pooling, or a clip-level video transformer (TimeSformer, ViViT; see @sec-video-fundamentals), trained with @eq-infonce-video on corpora like HowTo100M [@miech2019howto100m] and WebVid-10M [@bain2021frozen]. The modern variant turns a video LLM into an embedding model: continue training with a bidirectional (non-causal) attention mask, pool the token outputs (mean pooling or a special token), and fine-tune contrastively, the same recipe that turned decoder LLMs into text embedders. For training data, WebVid-10M was withdrawn in 2024 after a copyright dispute; InternVid [@wang2024internvid] and Panda-70M [@chen2024panda70m] are the usual open replacements.
+
+### Rerankers
+
+A reranker takes a query and one candidate and outputs a relevance score. Three flavours, in increasing cost:
+
+- **Late interaction** (ColBERT-style). Keep per-token embeddings for query and video; score = sum over query tokens of the max dot product with any video token. Almost as indexable as a dual encoder, noticeably more expressive.
+- **Cross-encoder.** Joint transformer over text and video tokens with a scalar head, trained with a pairwise margin loss on (positive, hard-negative) pairs mined from stage 1:
+
+$$
+\mathcal{L}_{\text{rank}} = \max\bigl(0,\; m - s(q, d^{+}) + s(q, d^{-})\bigr).
+$$ {#eq-rerank-margin}
+
+  Examples are CrossTVR [@li2024crosstvr] and the cascaded design of [@xie2024cascadeddesign] (coarse retrieval, then refined scoring).
+- **MLLM-as-reranker.** Prompt a multimodal LLM with query and candidate ("is this video relevant?") and use the logit of "yes" as the score, or distil that judge into a small model. UniME-V2 [@gu2025unimev2] uses an MLLM teacher to provide soft relevance labels instead of binary ones.
+
+The mining of hard negatives from stage 1 matters: a reranker trained on random negatives learns nothing the dual encoder did not already know.
+
+## Moment Retrieval and Temporal Grounding {#sec-moment-retrieval}
+
+### The task family
+
+Retrieving the right video is often not enough: nobody wants to scrub through a two-hour movie to find a ten-second scene. Three tasks ask "find *when*":
+
+- **Moment retrieval (VMR / temporal grounding).** Given one untrimmed video and a sentence, predict the segment $(t_s, t_e)$. Success is measured by temporal IoU with the ground truth.
+- **Highlight detection (HD).** Predict a saliency score for every clip of the video, optionally conditioned on a query. Moments are intervals; saliency is a per-clip curve.
+- **Video corpus moment retrieval (VCMR).** No video is given: search a whole corpus for the best (video, moment) pair. This is retrieval and grounding glued together, and in practice it *is* the two-stage pipeline above, with a grounder as the second stage [@lei2020tvr].
+
+Predicted and ground-truth moments are compared with the temporal IoU,
+
+$$
+\text{IoU}(\hat m, m) = \frac{|\hat m \cap m|}{|\hat m \cup m|},
+$$ {#eq-tiou}
+
+and the headline metric is $\text{R@}N,\ \text{IoU}{=}\tau$: the fraction of queries for which at least one of the top-$N$ predicted moments has $\text{IoU} \ge \tau$ with the ground truth (typically $N{=}1$, $\tau \in \{0.5, 0.7\}$).
+
+### Three ways to predict a segment
+
+1. **Regression.** Pool query and video features and regress $(t_s, t_e)$ directly. Simple, but one query yields one moment and the loss ignores that a few frames of error matter less for a long moment than for a short one.
+2. **Proposals.** Generate many candidate segments (sliding windows or 2D moment maps), score each against the query, pick the best (and apply NMS). Strong on small benchmarks, but the proposal set is hand-designed and the cost grows with video length.
+3. **DETR-style set prediction.** Treat moments like objects: a fixed set of learned queries, a transformer decoder, bipartite matching to the ground truth, no proposals, no NMS. The idea is borrowed from object detection (@sec-detr); a moment is just a 1D box with centre and width.
+
+### Moment-DETR, QD-DETR, UniVTG
+
+**Moment-DETR** [@lei2021qvhighlights] was introduced alongside the QVHighlights dataset and is the DETR of this area (@fig-moment-detr). Video clip features and text token features (CLIP) are concatenated and fed to a Transformer encoder. A decoder takes $N$ learnable *moment queries* and, for each, predicts a normalised centre and width plus a foreground/background label. A linear head on the encoder output predicts a per-clip saliency score for highlight detection. The loss combines (i) a Hungarian-matched span loss, $L_1$ plus generalised IoU on $(c, w)$, (ii) a cross-entropy foreground/background loss, and (iii) a saliency loss that ranks a relevant clip above an irrelevant one with a hinge. Moments and highlights thus share one model and one backbone, which is the main reason the benchmark took off.
+
+![Moment-DETR: an encoder-decoder transformer with three heads: per-clip saliency, foreground/background classification and span (centre, width) regression over learnable moment queries. Source: [@lei2021qvhighlights].](/images/video/moment_detr_architecture.png){#fig-moment-detr width=90% fig-align="center"}
+
+Moment-DETR's weakness is that it *concatenates* video and text and hopes self-attention figures out the interaction; with many similar clips, the text can be drowned out. **QD-DETR** [@moon2023qddetr] fixes this by making the *video representation itself query-dependent*: cross-attention layers first let clips attend to the query, and negative video-query pairs (the same video with an unrelated sentence) are trained to receive low saliency, forcing the model to use the query (@fig-qd-detr). A learnable saliency token and adaptive anchors in the decoder round out the design.
+
+![QD-DETR: a cross-attention transformer makes clip features query-dependent before the Moment-DETR style encoder-decoder; negative pairs and a saliency token supervise highlight scores. Source: [@moon2023qddetr].](/images/video/qd_detr_architecture.png){#fig-qd-detr width=95% fig-align="center"}
+
+**UniVTG** [@lin2023univtg] takes the unification further. Moment retrieval, highlight detection and video summarisation are all recast as predicting, for each clip, a triple of *foreground indicator*, *boundary offsets to the nearest moment edges* and a *saliency score*. One model is then pretrained on a union of grounding datasets (some with pseudo-labels generated from captions) and transfers across tasks. The lesson mirrors NLP: a common output format lets heterogeneous labels train one model.
+
+### LLM-based grounding with timestamps
+
+Video LLMs (@sec-video-vlm) were built for question answering and are bad at "when" by default: sparse frame sampling plus no explicit notion of time. Fixes fall into three groups.
+
+- **Timestamps as input.** TimeChat [@ren2024timechat] adds a time-aware Q-Former, whose queries are conditioned on each frame's absolute time, and interleaves timestamps in the prompt. LLaVA-MR [@lu2024llavamr] interleaves explicit time tokens with frame tokens and compresses non-key frames.
+- **Timestamps as pixels.** NumPro [@wu2024numpro] overlays the frame index as a large number on each frame, so an off-the-shelf VLM can simply *read* the time. It is a delightfully crude trick and works surprisingly well.
+- **Timestamps as output.** Emit $t_s$ and $t_e$ as text tokens, trained with next-token loss on grounding data. This is easy and general, but token-level cross-entropy gives no notion that "12.5" is close to "12.6", which is one reason DETR-style heads with IoU losses still win on standard benchmarks in the fine-tuned regime.
+
+The practical trade-off to state in an interview: specialised DETR models are small, fast and accurate on their benchmark but narrow; LLM-based grounders are general (they take free-form questions, and can ground *and* answer) but slower and, on precise localisation, weaker.
+
+## Shot and Scene Boundary Detection {#sec-shot-scene}
+
+Moment retrieval answers "when" in seconds. To index a library of long videos in the first place, you must decide what a *document* is: embedding a whole two-hour film into one vector is useless, and fixed 10-second windows cut sentences and actions in half. So pipelines first segment each video into **shots** (continuous camera takes, delimited by editing cuts) and group shots into **scenes** (semantic units of place, time and narrative), then index segments.
+
+**Classical shot detection.** Reduce the video to a one-dimensional dissimilarity signal and look for peaks. The standard choice is a colour-histogram distance between consecutive frames, in HSV to reduce sensitivity to illumination,
+
+$$
+d(t) = \sum_{b=1}^{B} \frac{\bigl(h_t[b] - h_{t+1}[b]\bigr)^2}{h_t[b] + h_{t+1}[b]},
+$$ {#eq-hist-diff}
+
+with $h_t$ the normalised histogram of frame $t$. A hard cut is an impulse in $d(t)$ and a threshold catches it; adaptive variants flag $d(t) > \mu_W + k\sigma_W$ over a rolling window (this is essentially PySceneDetect's content detector [@castellano2025pyscenedetect]). It fails on **gradual transitions** (dissolves, fades, wipes): a dissolve of $L$ frames spreads the same total change over $L$ steps, so the peak of $d(t)$ shrinks like $1/L$ and becomes indistinguishable from camera motion. Raising sensitivity just floods you with false positives in action scenes.
+
+**Learned detectors.** The fix is to aggregate evidence over a temporal window. **TransNet V2** [@soucek2024transnetv2] (@fig-transnet) stacks dilated 3D convolutions over a sequence of frames downsampled to $48{\times}27$, adds RGB-histogram and learned frame-similarity features, and outputs a per-frame probability of being a transition. It is cheap, runs far faster than real time and is still the default production detector; AutoShot [@zhu2023autoshot] improves it with a more modern short-video training set. One property sets shot detection apart from other video tasks: the event lives *between two adjacent frames*, so you cannot subsample in time. The compute budget is instead paid for in space (tiny frames), the opposite of video LLMs, which keep resolution and drop frames.
+
+![TransNet V2: dilated 3D-conv (DDCNN) cells over $48{\times}27$ frames, combined with RGB-histogram and learned frame-similarity features, predicting single-frame and all-frame transition probabilities. Source: [@soucek2024transnetv2].](/images/video/transnet_v2_architecture.png){#fig-transnet width=65% fig-align="center"}
+
+**Scene detection.** Scenes are interpretations rather than editing facts, so this is much harder. The input is the sequence of shots $s_1, \dots, s_M$ (each a few keyframes, optionally with subtitles) and the output is a binary label per shot: does it close a scene? Early work clustered visually similar shots, but visual similarity is the wrong invariant: a shot/reverse-shot dialogue is visually *dis*continuous yet one scene. Learned methods treat it as sequence labelling over shot embeddings, with a local-to-global design (LGSS [@rao2020lgss] on the MovieNet dataset [@huang2020movienet]) and self-supervised, boundary-aware pretraining (ShotCoL [@chen2021shotcol], BaSSL [@mun2022bassl]). Recent work casts the problem as generation: Scene-VLM [@berman2026scenevlm] fine-tunes a video-language model to emit a Yes/No boundary decision for each shot, so each decision conditions on the previous ones, and reports a MovieNet F1 of 62.1, a large gain over earlier encoder-based methods. Zero-shot frontier models reportedly fall well short without fine-tuning. Note the ceiling: ~0.6 F1 versus ~0.97 for shot detection on legacy broadcast data, partly because scene boundaries are subjective.
+
+**Metrics.** Predicted boundaries are matched to ground truth within a tolerance (a couple of frames for shots; precision, recall, F1, micro-averaged across videos); scene detection reports **AP** (threshold-free) and F1 at a tuned threshold, which is optimistic. Numbers are not comparable across tolerances. F1 can also hide the interesting failures: a detector can score well while placing every dissolve boundary in the middle of the dissolve, so recent benchmarks add transition-interval IoU.
+
+## Benchmarks and Metrics
+
+Retrieval is scored by ranking; grounding by IoU; highlights by ranking of clip saliency. @tbl-retrieval-bench lists the benchmarks worth knowing.
+
+| Task | Benchmark | What it is | Metrics |
+|:--|:--|:--|:--|
+| Text-video retrieval | MSR-VTT [@xu2016msrvtt] | 10K YouTube clips, 20 captions each; the 1K-A test split is the de facto standard | R@1/5/10, median rank (MdR) |
+| Text-video retrieval | DiDeMo [@hendricks2017didemo], MSVD, LSMDC, ActivityNet Captions | Flickr / short clips / movie clips / long paragraphs | R@K, MdR |
+| Moment retrieval | Charades-STA [@gao2017charadessta] | Indoor activities, ~30 s videos; short and now saturated | R@1/5, IoU 0.3/0.5/0.7; mIoU |
+| Moment retrieval | ActivityNet Captions, TACoS | 2 min web videos; ~5 min cooking videos | R@N, IoU; mIoU |
+| MR + highlights | QVHighlights [@lei2021qvhighlights] | ~10K vlogs and news clips, multiple moments per query and per-clip saliency | R1@0.5, R1@0.7, mAP; HD: mAP, HIT@1 |
+| Corpus moment retrieval | TVR [@lei2020tvr], MAD [@soldan2022mad] | TV episodes with subtitles; full-length movies with audio descriptions | R@N, IoU over (video, moment) |
+
+: Retrieval and grounding benchmarks. {#tbl-retrieval-bench}
+
+The metrics in one place:
+
+- **Recall@K** (retrieval): fraction of queries whose ground-truth video appears in the top $K$. Reported separately for text-to-video and video-to-text.
+- **Median rank (MdR)**: median position of the correct item. Robust, and the more interpretable number when recall saturates.
+- **R@N, IoU=$\tau$** (grounding): see @eq-tiou. **mIoU** averages the IoU of the top-1 prediction.
+- **mAP** (QVHighlights moments): average precision of ranked predicted moments averaged over IoU thresholds. **HIT@1** (highlights): whether the top-scored clip is rated "very good" by annotators.
+
+Evaluation caveat for retrieval: a single caption per video makes retrieval look harder than it is (other videos may be equally valid answers) and encourages overfitting to MSR-VTT's quirks, so compare methods under the same protocol (zero-shot vs fine-tuned, same split, same backbone, same number of sampled frames).
+
+## Interview Questions
+
+::: {.callout-tip collapse="true" appearance="minimal" title="1. Why do production retrieval systems use a dual encoder followed by a reranker instead of one cross-encoder?"}
+A cross-encoder is more accurate because it lets query and video attend to each other, but its cost is one transformer pass per (query, video) pair, which is infeasible over a large corpus. A dual encoder produces independent embeddings, so the video side is pre-computed and searched with ANN in sub-linear time, at the price of compressing the video before knowing the query. Combining them keeps the recall of stage 1 and the precision of stage 2; the key failure mode is stage-1 recall: a video not in the top-$K$ cannot be rescued.
+:::
+
+::: {.callout-tip collapse="true" appearance="minimal" title="2. What does InfoNCE do in CLIP4Clip, and what are its pitfalls for video?"}
+It treats each in-batch (video, text) pair as a positive and all other pairings as negatives, with a cross-entropy over the similarity row (and column) scaled by a temperature. Larger batches supply more and harder negatives. Pitfalls: false negatives (many clips legitimately match a generic caption), the temperature must be tuned or learned, and video-text corpora have noisy weak captions (ASR-aligned HowTo100M).
+:::
+
+::: {.callout-tip collapse="true" appearance="minimal" title="3. Why is Moment-DETR formulated as set prediction? What do the learnable moment queries do?"}
+A query may have several relevant moments, and the number is unknown. A fixed set of $N$ learnable queries each predict a (centre, width, foreground/background) triple; Hungarian matching assigns predictions to ground-truth moments one-to-one, so no NMS or hand-designed proposals are needed. The queries behave like learned anchors that specialise to typical moment locations and lengths.
+:::
+
+::: {.callout-tip collapse="true" appearance="minimal" title="4. How does QD-DETR improve on Moment-DETR, and why was that necessary?"}
+Moment-DETR concatenates video and text tokens, so the query can be drowned out when many clips look alike. QD-DETR conditions the video clips on the query through cross-attention and trains with negative video-query pairs (an unrelated query paired with the same video should give low saliency), so the video representation becomes explicitly query-dependent.
+:::
+
+::: {.callout-tip collapse="true" appearance="minimal" title="5. Why do video LLMs struggle with temporal grounding, and what are the common fixes?"}
+They sample frames sparsely and usually have no explicit notion of absolute time, so they cannot tell *when* something happens, and token-level cross-entropy does not reflect temporal distance. Fixes: timestamp-aware encoders (TimeChat), interleaved time tokens (LLaVA-MR), rendering the frame index on the pixels (NumPro), and specialised heads or IoU-based losses.
+:::
+
+::: {.callout-tip collapse="true" appearance="minimal" title="6. Why can't a colour-histogram threshold detect dissolves, and what is different about shot detection compared with most video tasks?"}
+A dissolve spreads the change of a cut over $L$ frames, so the per-frame difference shrinks as $\approx 1/L$ and is indistinguishable from motion. Learned detectors aggregate evidence over a temporal window. Shot detection cannot subsample frames in time (the event is *between* two adjacent frames), so detectors such as TransNet V2 use very low spatial resolution to afford dense temporal input.
+:::
+
+## Summary
+
+- Text-video retrieval uses dual encoders (CLIP4Clip: frame embeddings from CLIP, aggregated by mean pooling, sequence models or a tight cross-encoder) trained with in-batch InfoNCE.
+- Because cross-encoders are too slow for a corpus, systems retrieve top-$K$ with an ANN index and rerank with a cross-encoder, late-interaction model or MLLM judge; recall of stage 1 caps the whole system.
+- Moment retrieval predicts $(t_s, t_e)$ for a query in one video; highlight detection predicts per-clip saliency; VCMR is retrieval plus grounding over a corpus.
+- Moment-DETR brought DETR-style set prediction to grounding; QD-DETR makes clip features query-dependent; UniVTG unifies moments, highlights and saliency in one output format.
+- Video LLMs ground by reading timestamps (time tokens, time-aware Q-Formers, index overlays) or emitting them as text; specialised DETR models are still stronger on standard benchmarks.
+- Shot detection is signal-based (histogram differences, adaptive thresholds) or learned (TransNet V2); gradual transitions defeat thresholds. Scene detection is sequence labelling over shots and is much harder and more subjective.
+- Metrics: Recall@K and median rank for retrieval; R@N at IoU, mIoU and mAP for grounding; HIT@1 for highlights; boundary F1 with a tolerance for segmentation.
+
+## Key Papers
+
+- Luo et al., *CLIP4Clip* [@luo2022clip4clip]. [arXiv:2104.08860](https://arxiv.org/abs/2104.08860)
+- Lei et al., *QVHighlights / Moment-DETR* [@lei2021qvhighlights]. [arXiv:2107.09609](https://arxiv.org/abs/2107.09609)
+- Moon et al., *QD-DETR* [@moon2023qddetr]. [arXiv:2303.13874](https://arxiv.org/abs/2303.13874)
+- Lin et al., *UniVTG* [@lin2023univtg]. [arXiv:2307.16715](https://arxiv.org/abs/2307.16715)
+- Ren et al., *TimeChat* [@ren2024timechat].
+- Souček and Lokoč, *TransNet V2* [@soucek2024transnetv2]. [arXiv:2008.04838](https://arxiv.org/abs/2008.04838)
